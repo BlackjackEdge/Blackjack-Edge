@@ -344,6 +344,12 @@ export default function App() {
     setPlayMessage(message);
   }
 
+  function showRoundBannerDelayed(banner: { type: "win" | "lose" | "push" | "blackjack"; title: string; subtitle: string }, delay = 650) {
+    window.setTimeout(() => {
+      setRoundBanner(banner);
+    }, delay);
+  }
+
   function addChip(amount: number) {
     if (playPhase !== "betting" && playPhase !== "roundOver") return;
 
@@ -489,15 +495,15 @@ export default function App() {
       if (playerBJ && dealerBJ) {
         payout = bet;
         result = "Push. Both you and the dealer have blackjack.";
-        setRoundBanner({ type: "push", title: "PUSH", subtitle: "Both you and the dealer have blackjack." });
+        showRoundBannerDelayed({ type: "push", title: "PUSH", subtitle: "Both you and the dealer have blackjack." });
       } else if (playerBJ) {
         payout = bet + bet * 1.5;
         result = "Blackjack. Paid 3:2.";
-        setRoundBanner({ type: "blackjack", title: "BLACKJACK!", subtitle: `Paid 3:2 • +$${(bet * 1.5).toFixed(0)}` });
+        showRoundBannerDelayed({ type: "blackjack", title: "BLACKJACK!", subtitle: `Paid 3:2 • +$${(bet * 1.5).toFixed(0)}` }, 800);
       } else {
         payout = 0;
         result = "Dealer blackjack. Hand over.";
-        setRoundBanner({ type: "lose", title: "DEALER BLACKJACK", subtitle: `Lost $${bet}` });
+        showRoundBannerDelayed({ type: "lose", title: "DEALER BLACKJACK", subtitle: `Lost $${bet}` });
       }
 
       setBankroll((b) => b + payout);
@@ -677,11 +683,11 @@ export default function App() {
     const net = totalReturn - totalBet;
 
     if (net > 0) {
-      setRoundBanner({ type: "win", title: "YOU WIN", subtitle: `+$${net}` });
+      showRoundBannerDelayed({ type: "win", title: "YOU WIN", subtitle: `+$${net}` });
     } else if (net < 0) {
-      setRoundBanner({ type: "lose", title: "DEALER WINS", subtitle: `-$${Math.abs(net)}` });
+      showRoundBannerDelayed({ type: "lose", title: "DEALER WINS", subtitle: `-$${Math.abs(net)}` });
     } else {
-      setRoundBanner({ type: "push", title: "PUSH", subtitle: "Bet returned." });
+      showRoundBannerDelayed({ type: "push", title: "PUSH", subtitle: "Bet returned." });
     }
 
     setPlayMessage(net > 0 ? `You won $${net}.` : net < 0 ? `You lost $${Math.abs(net)}.` : "Push round.");

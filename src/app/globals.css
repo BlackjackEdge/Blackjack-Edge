@@ -1984,3 +1984,49 @@ button,input{font:inherit}button{cursor:pointer}
     padding:8px 10px;
   }
 }
+
+
+/* v0.4.1 result banner delay/visibility polish */
+.table-result-banner{
+  background:
+    radial-gradient(circle at 50% 0%,rgba(255,255,255,.12),transparent 36%),
+    linear-gradient(145deg,rgba(0,0,0,.56),rgba(0,0,0,.34))!important;
+  backdrop-filter:blur(5px);
+  border-color:rgba(244,208,111,.38)!important;
+  box-shadow:0 18px 54px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,255,255,.08)!important;
+  opacity:.92;
+  padding:16px 14px;
+}
+
+.table-result-banner strong{
+  font-size:clamp(28px,7.5vw,62px)!important;
+}
+
+.table-result-banner span{
+  color:rgba(255,255,255,.76)!important;
+}
+
+.table-result-banner.blackjack{
+  background:
+    radial-gradient(circle at 50% 0%,rgba(255,240,168,.24),transparent 38%),
+    linear-gradient(145deg,rgba(26,18,5,.66),rgba(0,0,0,.42) 70%)!important;
+}
+
+.table-result-banner.win{
+  border-color:rgba(143,241,155,.52)!important;
+}
+
+.table-result-banner.lose{
+  border-color:rgba(255,100,110,.48)!important;
+}
+
+@media(max-width:700px){
+  .table-result-banner{
+    width:84%;
+    padding:14px 10px;
+  }
+
+  .table-result-banner strong{
+    font-size:clamp(27px,10vw,50px)!important;
+  }
+}
