@@ -327,3 +327,112 @@ button,input{font:inherit}button{cursor:pointer}
     grid-column:auto;
   }
 }
+
+
+/* v0.3.6 Overlapping Play Blackjack cards */
+.play-screen .dealer-zone .cards,
+.play-screen .split-hand .cards{
+  flex-wrap:nowrap;
+  gap:0;
+  justify-content:center;
+  max-width:100%;
+  overflow:visible;
+  padding:4px 0;
+}
+
+.play-screen .dealer-zone .cards .playing-card,
+.play-screen .split-hand .cards .playing-card{
+  width:84px;
+  height:122px;
+  flex:0 0 auto;
+  transition:transform .16s ease, margin .16s ease;
+}
+
+.play-screen .dealer-zone .cards .playing-card:not(:first-child),
+.play-screen .split-hand .cards .playing-card:not(:first-child){
+  margin-left:-38px;
+}
+
+.play-screen .dealer-zone .cards .playing-card:nth-child(2),
+.play-screen .split-hand .cards .playing-card:nth-child(2){
+  transform:translateY(3px) rotate(1deg);
+}
+
+.play-screen .dealer-zone .cards .playing-card:nth-child(3),
+.play-screen .split-hand .cards .playing-card:nth-child(3){
+  transform:translateY(6px) rotate(2deg);
+}
+
+.play-screen .dealer-zone .cards .playing-card:nth-child(4),
+.play-screen .split-hand .cards .playing-card:nth-child(4){
+  transform:translateY(9px) rotate(3deg);
+}
+
+.play-screen .dealer-zone .cards .playing-card:nth-child(5),
+.play-screen .split-hand .cards .playing-card:nth-child(5){
+  transform:translateY(12px) rotate(4deg);
+}
+
+.play-screen .dealer-zone .cards .playing-card:nth-child(n+6),
+.play-screen .split-hand .cards .playing-card:nth-child(n+6){
+  transform:translateY(15px) rotate(5deg);
+}
+
+.play-screen .dealer-zone .cards .playing-card:hover,
+.play-screen .split-hand .cards .playing-card:hover{
+  transform:translateY(-6px) scale(1.03);
+  z-index:10;
+}
+
+.play-screen .dealer-zone .cards .card-corner strong,
+.play-screen .split-hand .cards .card-corner strong{
+  font-size:13px;
+}
+
+.play-screen .dealer-zone .cards .card-corner span,
+.play-screen .split-hand .cards .card-corner span{
+  font-size:12px;
+}
+
+.play-screen .dealer-zone .cards .pip-field strong,
+.play-screen .split-hand .cards .pip-field strong{
+  font-size:38px;
+}
+
+.play-screen .dealer-zone .cards .pip-field span,
+.play-screen .split-hand .cards .pip-field span{
+  font-size:32px;
+}
+
+.split-hand{
+  overflow:hidden;
+}
+
+.split-hand .cards{
+  min-height:140px;
+}
+
+.dealer-zone .cards{
+  min-height:138px;
+}
+
+@media(max-width:700px){
+  .play-screen .dealer-zone .cards .playing-card,
+  .play-screen .split-hand .cards .playing-card{
+    width:74px;
+    height:108px;
+  }
+
+  .play-screen .dealer-zone .cards .playing-card:not(:first-child),
+  .play-screen .split-hand .cards .playing-card:not(:first-child){
+    margin-left:-34px;
+  }
+
+  .split-hand .cards{
+    min-height:126px;
+  }
+
+  .dealer-zone .cards{
+    min-height:124px;
+  }
+}
