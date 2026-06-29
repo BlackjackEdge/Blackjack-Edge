@@ -1037,6 +1037,10 @@ export default function App() {
             <div className="play-hud money-hud">
               <div className="bankroll-box"><strong>${bankroll.toLocaleString()}</strong><span>Bankroll</span></div>
               <div className="bet-box"><strong>${bet.toLocaleString()}</strong><span>Bet</span></div>
+              <div className="cards-left-box">
+                <strong>{playShoe.length.toLocaleString()}/{(playDecks * 52).toLocaleString()}</strong>
+                <span>{playDecks} Deck{playDecks > 1 ? "s" : ""}</span>
+              </div>
             </div>
           </div>
 
@@ -1197,7 +1201,7 @@ export default function App() {
       )}
 
       {hudOpen && (
-        <div className="overlay">
+        <div className="overlay hud-overlay">
           <div className="hud-sheet">
             <div className="sheet-header luxury-sheet-header">
               <div>

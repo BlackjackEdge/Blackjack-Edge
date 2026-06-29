@@ -3380,3 +3380,127 @@ button,input{font:inherit}button{cursor:pointer}
     bottom:46px!important;
   }
 }
+
+
+/* v0.4.9 Cards remaining + HUD safe-area spacing */
+
+/* Add compact cards-left box to Play BJ money bar */
+.play-topbar .money-hud{
+  grid-template-columns:minmax(0,1fr) 92px 108px!important;
+}
+
+.play-topbar .cards-left-box{
+  text-align:center;
+  padding-left:8px!important;
+  padding-right:8px!important;
+  overflow:hidden;
+}
+
+.play-topbar .cards-left-box strong{
+  display:block;
+  color:var(--gold);
+  font-size:clamp(15px,3.6vw,22px);
+  line-height:1;
+  white-space:nowrap;
+  letter-spacing:-.03em;
+}
+
+.play-topbar .cards-left-box span{
+  white-space:nowrap;
+}
+
+/* HUD modal needs room below iPhone camera/status area */
+.hud-overlay{
+  padding-top:calc(env(safe-area-inset-top,0px) + 14px)!important;
+  box-sizing:border-box;
+}
+
+.hud-overlay .hud-sheet{
+  max-height:calc(100dvh - env(safe-area-inset-top,0px) - 16px)!important;
+  padding-top:calc(env(safe-area-inset-top,0px) + 18px)!important;
+}
+
+/* Portrait sizing for 3 boxes: Bankroll gets most room, Bet and Cards stay compact */
+@media(max-width:700px) and (orientation:portrait){
+  .play-topbar .money-hud{
+    grid-template-columns:minmax(0,1fr) 72px 86px!important;
+    gap:4px!important;
+  }
+
+  .play-topbar .money-hud > div{
+    min-height:42px!important;
+    padding-top:3px!important;
+    padding-bottom:3px!important;
+  }
+
+  .play-topbar .bankroll-box{
+    padding-left:9px!important;
+  }
+
+  .play-topbar .bankroll-box strong{
+    font-size:clamp(18px,5.7vw,27px)!important;
+  }
+
+  .play-topbar .bet-box strong{
+    font-size:clamp(16px,4.8vw,23px)!important;
+  }
+
+  .play-topbar .cards-left-box strong{
+    font-size:clamp(13px,4vw,18px)!important;
+  }
+
+  .play-topbar .money-hud span{
+    font-size:7.5px!important;
+  }
+
+  .hud-overlay{
+    padding-top:calc(env(safe-area-inset-top,0px) + 18px)!important;
+  }
+
+  .hud-overlay .hud-sheet{
+    padding-top:calc(env(safe-area-inset-top,0px) + 20px)!important;
+  }
+}
+
+/* Landscape: money/cards bar stays left enough to avoid top-right utility buttons */
+@media (orientation: landscape) and (max-height:540px){
+  .play-topbar .money-hud{
+    left:34%!important;
+    width:min(49vw,390px)!important;
+    grid-template-columns:minmax(0,1fr) 70px 96px!important;
+  }
+
+  .play-topbar .cards-left-box strong{
+    font-size:14px!important;
+  }
+
+  .play-topbar .cards-left-box span{
+    font-size:7.5px!important;
+  }
+
+  .hud-overlay{
+    padding-top:calc(env(safe-area-inset-top,0px) + 12px)!important;
+  }
+
+  .hud-overlay .hud-sheet{
+    max-height:calc(100dvh - env(safe-area-inset-top,0px) - 14px)!important;
+    padding-top:calc(env(safe-area-inset-top,0px) + 16px)!important;
+  }
+}
+
+/* Very short landscape phones: keep cards remaining visible but compact */
+@media (orientation: landscape) and (max-height:430px){
+  .play-topbar .money-hud{
+    left:33%!important;
+    width:min(48vw,350px)!important;
+    grid-template-columns:minmax(0,1fr) 64px 84px!important;
+  }
+
+  .play-topbar .cards-left-box strong{
+    font-size:12px!important;
+  }
+
+  .play-topbar .cards-left-box span{
+    font-size:6.8px!important;
+  }
+}
