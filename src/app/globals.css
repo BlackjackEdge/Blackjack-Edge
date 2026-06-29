@@ -2939,3 +2939,209 @@ button,input{font:inherit}button{cursor:pointer}
     max-width:420px!important;
   }
 }
+
+
+/* v0.4.5 Chips restored in both views + landscape money position fix */
+
+/* Base: force Play BJ betting chips to be visible when the chip tray is rendered */
+.play-screen .chip-tray{
+  display:grid!important;
+  visibility:visible!important;
+  opacity:1!important;
+}
+
+.play-screen .chip{
+  display:grid!important;
+  visibility:visible!important;
+  opacity:1!important;
+}
+
+/* Portrait: compact chip rail under the player cards */
+@media(max-width:700px) and (orientation:portrait){
+  .play-screen{
+    grid-template-rows:auto minmax(0,1fr) auto auto auto!important;
+    gap:5px!important;
+  }
+
+  .play-screen .play-table{
+    min-height:0!important;
+    height:100%!important;
+    padding-bottom:7px!important;
+  }
+
+  .play-screen .player-zone{
+    padding-bottom:2px!important;
+  }
+
+  .play-screen .chip-tray{
+    position:relative!important;
+    left:auto!important;
+    right:auto!important;
+    top:auto!important;
+    bottom:auto!important;
+    width:100%!important;
+    z-index:12!important;
+    display:grid!important;
+    grid-template-columns:repeat(7,minmax(32px,1fr))!important;
+    gap:4px!important;
+    align-items:center!important;
+    justify-content:center!important;
+    padding:2px 0!important;
+    margin:0!important;
+    overflow:visible!important;
+  }
+
+  .play-screen .chip{
+    width:36px!important;
+    height:36px!important;
+    min-width:36px!important;
+    min-height:36px!important;
+    font-size:8.5px!important;
+    justify-self:center!important;
+  }
+
+  .play-screen .clear-bet-button,
+  .play-screen .deal-button{
+    min-height:34px!important;
+    height:34px!important;
+    font-size:10.5px!important;
+    padding:5px 4px!important;
+    margin-top:2px!important;
+  }
+
+  .play-screen .clear-bet-button{
+    grid-column:1 / 4!important;
+  }
+
+  .play-screen .deal-button{
+    grid-column:4 / 8!important;
+  }
+
+  .play-screen .play-actions{
+    margin-top:0!important;
+  }
+
+  .play-screen .play-bottom-bar{
+    margin-top:0!important;
+  }
+}
+
+/* Very short portrait phones: shrink chips but keep them visible */
+@media(max-width:430px) and (orientation:portrait) and (max-height:760px){
+  .play-screen .chip{
+    width:32px!important;
+    height:32px!important;
+    min-width:32px!important;
+    min-height:32px!important;
+    font-size:7.5px!important;
+  }
+
+  .play-screen .chip-tray{
+    gap:3px!important;
+  }
+
+  .play-screen .clear-bet-button,
+  .play-screen .deal-button{
+    min-height:31px!important;
+    height:31px!important;
+    font-size:9.5px!important;
+  }
+}
+
+/* Landscape: chips as a bottom rail and money shifted left to avoid Tip/Help overlap */
+@media (orientation: landscape) and (max-height: 540px){
+  .play-topbar .money-hud{
+    left:36%!important;
+    width:min(36vw,270px)!important;
+    transform:translateX(-50%)!important;
+    grid-template-columns:minmax(0,1fr) 70px!important;
+  }
+
+  .play-screen .play-bottom-bar{
+    width:min(38vw,270px)!important;
+  }
+
+  .play-screen .chip-tray{
+    position:absolute!important;
+    left:80px!important;
+    right:80px!important;
+    bottom:38px!important;
+    top:auto!important;
+    width:auto!important;
+    z-index:18!important;
+    display:grid!important;
+    grid-template-columns:repeat(7,minmax(34px,42px)) 58px 58px!important;
+    justify-content:center!important;
+    align-items:center!important;
+    align-content:center!important;
+    gap:5px!important;
+    padding:0!important;
+    margin:0!important;
+    overflow:visible!important;
+    pointer-events:auto!important;
+  }
+
+  .play-screen .chip{
+    width:36px!important;
+    height:36px!important;
+    min-width:36px!important;
+    min-height:36px!important;
+    font-size:8px!important;
+    justify-self:center!important;
+  }
+
+  .play-screen .clear-bet-button,
+  .play-screen .deal-button{
+    grid-column:auto!important;
+    width:56px!important;
+    height:32px!important;
+    min-height:32px!important;
+    border-radius:999px!important;
+    font-size:8.5px!important;
+    padding:3px!important;
+    justify-self:center!important;
+  }
+
+  .play-screen .play-table{
+    padding-bottom:76px!important;
+  }
+
+  .play-screen .player-zone{
+    padding-bottom:26px!important;
+  }
+}
+
+/* Smaller landscape phones: tighten bottom rail so chips do not disappear off-screen */
+@media (orientation: landscape) and (max-height: 430px){
+  .play-screen .chip-tray{
+    left:74px!important;
+    right:74px!important;
+    bottom:34px!important;
+    grid-template-columns:repeat(7,32px) 52px 52px!important;
+    gap:4px!important;
+  }
+
+  .play-screen .chip{
+    width:32px!important;
+    height:32px!important;
+    min-width:32px!important;
+    min-height:32px!important;
+    font-size:7px!important;
+  }
+
+  .play-screen .clear-bet-button,
+  .play-screen .deal-button{
+    width:52px!important;
+    height:29px!important;
+    min-height:29px!important;
+    font-size:7.5px!important;
+  }
+
+  .play-screen .play-actions{
+    bottom:38px!important;
+  }
+
+  .play-screen .play-bottom-bar{
+    width:min(36vw,245px)!important;
+  }
+}
