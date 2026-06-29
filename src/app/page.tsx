@@ -1,33 +1,26 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Brain, ChevronLeft, ChevronRight, Clock, RotateCcw, Sparkles, PlayCircle } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Brain, ChevronLeft, ChevronRight, Clock, RotateCcw, Sparkles, PlayCircle, Lightbulb, Gauge, Settings2 } from "lucide-react";
 import {
   buildShoe,
+  correctAction,
+  formatMove,
   generateTrainingHand,
   handLabel,
+  handValue,
   hiLo,
+  isBlackjack,
+  isBust,
+  isPair,
   moveNames,
+  shouldDealerHit,
   type Move,
   type TrainingHand,
-  handValue,
-  isBust,
-  isBlackjack,
-  isPair,
-  shouldDealerHit,
 } from "@/lib/blackjack";
 import { Coach, Logo, PlayingCard, StrategyCardOverlay } from "@/components/ui";
 
-type Screen =
-  | "home"
-  | "basic"
-  | "basicDrill"
-  | "basicResults"
-  | "counting"
-  | "countLearn"
-  | "countDrill"
-  | "play";
-
+type Screen = "home" | "basic" | "basicDrill" | "basicResults" | "counting" | "countLearn" | "countDrill" | "play";
 type HandResult = { hand: TrainingHand; choice: Move; seconds: number };
 type SwipeValue = -1 | 0 | 1;
 
@@ -45,6 +38,7 @@ type PlayPhase = "betting" | "player" | "dealer" | "roundOver";
 
 const avg = (values: number[]) => values.length ? values.reduce((a, b) => a + b, 0) / values.length : 0;
 const swipeValue = (card: string): SwipeValue => hiLo(card) === 1 ? 1 : hiLo(card) === -1 ? -1 : 0;
+const chipValues = [5, 25, 50, 100, 250];
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>("home");
@@ -73,13 +67,16 @@ export default function App() {
 
   const [playDecks, setPlayDecks] = useState(6);
   const [playShoe, setPlayShoe] = useState<string[]>([]);
-  const [bankroll, setBankroll] = useState(500);
+  const [seenCards, setSeenCards] = useState<string[]>([]);
+  const [bankroll, setBankroll] = useState(1000);
   const [bet, setBet] = useState(5);
   const [dealerHand, setDealerHand] = useState<string[]>([]);
   const [playerHands, setPlayerHands] = useState<PlayerHand[]>([]);
   const [activeHand, setActiveHand] = useState(0);
   const [playPhase, setPlayPhase] = useState<PlayPhase>("betting");
-  const [playMessage, setPlayMessage] = useState("Choose your bet and deal.");
+  const [playMessage, setPlayMessage] = useState("Place your chips and deal.");
+  const [hudOpen, setHudOpen] = useState(false);
+  const [tipOpen, setTipOpen] = useState(false);
 
   useEffect(() => {
     const i = window.setInterval(() => setNow(Date.now()), 50);
@@ -93,6 +90,22 @@ export default function App() {
   const decksRemaining = Math.max(shoe.length / 52, 0.1);
   const finalTrue = finalRunning / decksRemaining;
 
+  const playRunning = seenCards.reduce((sum, c) => sum + hiLo(c), 0);
+  const playDecksRemaining = Math.max(playShoe.length / 52, 0.1);
+  const playTrue = playRunning / playDecksRemaining;
+  const penetration = Math.round(((playDecks * 52 - playShoe.length) / (playDecks * 52)) * 100);
+
+  const activePlayHand = playerHands[activeHand];
+  const dealerUpcard = dealerHand[0];
+  const canAct = playPhase === "player" && activePlayHand && !activePlayHand.stood && !activePlayHand.busted;
+  const canSplit = Boolean(canAct && isPair(activePlayHand.cards) && bankroll >= activePlayHand.bet);
+  const canDouble = Boolean(canAct && activePlayHand.cards.length === 2 && bankroll >= activePlayHand.bet);
+  const tipMove = activePlayHand && dealerUpcard ? correctAction(activePlayHand.cards, dealerUpcard) : null;
+
+  useEffect(() => {
+    if (!playShoe.length) setPlayShoe(buildShoe(playDecks));
+  }, []);
+
   function startBasic() {
     setResults([]);
     setHandIndex(0);
@@ -105,7 +118,6 @@ export default function App() {
 
   function chooseMove(move: Move) {
     if (!currentHand) return;
-
     const seconds = (Date.now() - start) / 1000;
     const ok = move === currentHand.answer;
 
@@ -158,7 +170,6 @@ export default function App() {
 
   function chooseCount(value: SwipeValue) {
     if (!countCard) return;
-
     const expected = swipeValue(countCard);
     const ms = Date.now() - cardStart;
     const nextDealt = [...dealt, countCard];
@@ -174,7 +185,6 @@ export default function App() {
     }
 
     const { nextCard, nextShoe } = getNextDifferentCard(countCard, shoe);
-
     window.setTimeout(() => {
       setShoe(nextShoe);
       setCountCard(nextCard);
@@ -185,10 +195,12 @@ export default function App() {
   function drawFromPlayShoe(shoeList: string[], count = 1) {
     let working = shoeList.length < 52 ? buildShoe(playDecks) : [...shoeList];
     const drawn: string[] = [];
+
     for (let i = 0; i < count; i++) {
       if (!working.length) working = buildShoe(playDecks);
       drawn.push(working.pop()!);
     }
+
     return { drawn, nextShoe: working };
   }
 
@@ -197,10 +209,20 @@ export default function App() {
     if (!playShoe.length) setPlayShoe(buildShoe(playDecks));
   }
 
-  function changeBet(amount: number) {
+  function addChip(amount: number) {
     if (playPhase !== "betting" && playPhase !== "roundOver") return;
-    const nextBet = Math.max(5, Math.min(bankroll, bet + amount));
-    setBet(nextBet);
+    setBet((current) => Math.max(5, Math.min(5000, Math.min(bankroll, current + amount))));
+  }
+
+  function clearBet() {
+    if (playPhase !== "betting" && playPhase !== "roundOver") return;
+    setBet(5);
+  }
+
+  function resetShoe(decks = playDecks) {
+    setPlayShoe(buildShoe(decks));
+    setSeenCards([]);
+    setPlayMessage(`${decks}-deck shoe loaded.`);
   }
 
   function dealBlackjack() {
@@ -212,8 +234,12 @@ export default function App() {
     const { drawn, nextShoe } = drawFromPlayShoe(playShoe, 4);
     const player = [drawn[0], drawn[2]];
     const dealer = [drawn[1], drawn[3]];
+    const visibleNow = [drawn[0], drawn[2], drawn[1]];
 
+    setTipOpen(false);
+    setHudOpen(false);
     setPlayShoe(nextShoe);
+    setSeenCards((prev) => [...prev, ...visibleNow]);
     setBankroll((b) => b - bet);
     setDealerHand(dealer);
     setPlayerHands([{ cards: player, bet }]);
@@ -223,18 +249,21 @@ export default function App() {
     const dealerBJ = isBlackjack(dealer);
 
     if (playerBJ || dealerBJ) {
+      const reveal = dealer[1];
+      setSeenCards((prev) => [...prev, reveal]);
+
       let payout = 0;
       let result = "";
 
       if (playerBJ && dealerBJ) {
         payout = bet;
-        result = "Push. Both blackjack.";
+        result = "Push. Both you and the dealer have blackjack.";
       } else if (playerBJ) {
         payout = bet + bet * 1.5;
-        result = "Blackjack pays 3:2.";
+        result = "Blackjack. Paid 3:2.";
       } else {
         payout = 0;
-        result = "Dealer blackjack.";
+        result = "Dealer blackjack. Hand over.";
       }
 
       setBankroll((b) => b + payout);
@@ -245,7 +274,7 @@ export default function App() {
     }
 
     setPlayPhase("player");
-    setPlayMessage("Your move.");
+    setPlayMessage("Dealer has a hole card. Your move.");
   }
 
   function finishHand(updatedHands: PlayerHand[], nextIndex = activeHand + 1) {
@@ -267,12 +296,20 @@ export default function App() {
     const hand = updated[activeHand];
 
     setPlayShoe(nextShoe);
+    setSeenCards((prev) => [...prev, drawn[0]]);
 
     if (isBust(hand.cards)) {
       hand.busted = true;
       hand.stood = true;
       hand.result = "Bust";
       setPlayMessage("Bust. Moving to next hand.");
+      finishHand(updated);
+      return;
+    }
+
+    if (handValue(hand.cards).total === 21) {
+      hand.stood = true;
+      setPlayMessage("21. Standing automatically.");
       finishHand(updated);
       return;
     }
@@ -287,24 +324,25 @@ export default function App() {
   }
 
   function doublePlayHand() {
-    if (playPhase !== "player") return;
+    if (playPhase !== "player" || !activePlayHand) return;
 
-    const hand = playerHands[activeHand];
-    if (hand.cards.length !== 2) {
+    if (activePlayHand.cards.length !== 2) {
       setPlayMessage("Double is only available on your first two cards.");
       return;
     }
-    if (bankroll < hand.bet) {
+
+    if (bankroll < activePlayHand.bet) {
       setPlayMessage("Not enough bankroll to double.");
       return;
     }
 
     const { drawn, nextShoe } = drawFromPlayShoe(playShoe, 1);
     const updated = [...playerHands];
+
     updated[activeHand] = {
-      ...hand,
-      cards: [...hand.cards, drawn[0]],
-      bet: hand.bet * 2,
+      ...activePlayHand,
+      cards: [...activePlayHand.cards, drawn[0]],
+      bet: activePlayHand.bet * 2,
       doubled: true,
       stood: true,
     };
@@ -314,32 +352,34 @@ export default function App() {
       updated[activeHand].result = "Bust";
     }
 
-    setBankroll((b) => b - hand.bet);
+    setBankroll((b) => b - activePlayHand.bet);
     setPlayShoe(nextShoe);
+    setSeenCards((prev) => [...prev, drawn[0]]);
     finishHand(updated);
   }
 
   function splitPlayHand() {
-    if (playPhase !== "player") return;
+    if (playPhase !== "player" || !activePlayHand) return;
 
-    const hand = playerHands[activeHand];
-    if (!isPair(hand.cards)) {
+    if (!isPair(activePlayHand.cards)) {
       setPlayMessage("You can only split matching pairs.");
       return;
     }
-    if (bankroll < hand.bet) {
+
+    if (bankroll < activePlayHand.bet) {
       setPlayMessage("Not enough bankroll to split.");
       return;
     }
 
     const { drawn, nextShoe } = drawFromPlayShoe(playShoe, 2);
-    const first: PlayerHand = { cards: [hand.cards[0], drawn[0]], bet: hand.bet };
-    const second: PlayerHand = { cards: [hand.cards[1], drawn[1]], bet: hand.bet };
+    const first: PlayerHand = { cards: [activePlayHand.cards[0], drawn[0]], bet: activePlayHand.bet };
+    const second: PlayerHand = { cards: [activePlayHand.cards[1], drawn[1]], bet: activePlayHand.bet };
     const updated = [...playerHands];
     updated.splice(activeHand, 1, first, second);
 
-    setBankroll((b) => b - hand.bet);
+    setBankroll((b) => b - activePlayHand.bet);
     setPlayShoe(nextShoe);
+    setSeenCards((prev) => [...prev, ...drawn]);
     setPlayerHands(updated);
     setPlayMessage("Split. Playing first hand.");
   }
@@ -349,20 +389,25 @@ export default function App() {
 
     let dealer = [...dealerHand];
     let workingShoe = [...playShoe];
+    const newlySeen: string[] = [];
+
+    if (dealer[1]) newlySeen.push(dealer[1]);
 
     const anyLiveHand = hands.some((h) => !isBust(h.cards));
+
     if (anyLiveHand) {
       while (shouldDealerHit(dealer, true)) {
         const draw = drawFromPlayShoe(workingShoe, 1);
         dealer = [...dealer, draw.drawn[0]];
         workingShoe = draw.nextShoe;
+        newlySeen.push(draw.drawn[0]);
       }
     }
 
     const dealerTotal = handValue(dealer).total;
     const dealerBust = isBust(dealer);
-
     let totalReturn = 0;
+
     const settled = hands.map((hand) => {
       const playerTotal = handValue(hand.cards).total;
       let result = "";
@@ -370,7 +415,6 @@ export default function App() {
 
       if (isBust(hand.cards)) {
         result = "Bust";
-        payout = 0;
       } else if (dealerBust) {
         result = "Win";
         payout = hand.bet * 2;
@@ -379,7 +423,6 @@ export default function App() {
         payout = hand.bet * 2;
       } else if (playerTotal < dealerTotal) {
         result = "Lose";
-        payout = 0;
       } else {
         result = "Push";
         payout = hand.bet;
@@ -391,56 +434,56 @@ export default function App() {
 
     setDealerHand(dealer);
     setPlayShoe(workingShoe);
+    setSeenCards((prev) => [...prev, ...newlySeen]);
     setPlayerHands(settled);
     setBankroll((b) => b + totalReturn);
     setPlayPhase("roundOver");
 
-    const net = totalReturn - hands.reduce((sum, h) => sum + h.bet, 0);
+    const totalBet = hands.reduce((sum, h) => sum + h.bet, 0);
+    const net = totalReturn - totalBet;
     setPlayMessage(net > 0 ? `You won $${net}.` : net < 0 ? `You lost $${Math.abs(net)}.` : "Push round.");
   }
 
-  const activePlayHand = playerHands[activeHand];
-  const canAct = playPhase === "player" && activePlayHand && !activePlayHand.stood && !activePlayHand.busted;
-  const canSplit = canAct && isPair(activePlayHand.cards) && bankroll >= activePlayHand.bet;
-  const canDouble = canAct && activePlayHand.cards.length === 2 && bankroll >= activePlayHand.bet;
+  const dealerVisibleHand = playPhase === "player" && dealerHand.length > 1 ? [dealerHand[0]] : dealerHand;
 
   return (
     <main className="app">
       <div className="bg" />
 
       <header className="top">
-        <button onClick={() => setScreen("home")} className="brand">
-          <span className="brand-spade">♠</span>
-          Blackjack Edge
+        <button onClick={() => setScreen("home")} className="brand brand-with-logo">
+          <Logo compact />
+          <span>Blackjack Edge</span>
         </button>
 
         {screen.startsWith("basic") && (
-          <button onClick={() => setStrategyOpen(true)} className="small-btn">
-            Strategy Card
-          </button>
+          <button onClick={() => setStrategyOpen(true)} className="small-btn">Strategy Card</button>
+        )}
+
+        {screen === "play" && (
+          <button onClick={() => setHudOpen(true)} className="small-btn"><Gauge size={16} /> HUD</button>
         )}
       </header>
 
       {screen === "home" && (
-        <section className="home">
-          <div className="hero-frame">
-            <Logo />
-            <span className="eyebrow">Private table training</span>
+        <section className="home compact-home">
+          <div className="home-title-block">
+            <span className="eyebrow">Blackjack Edge</span>
             <h1>Master the Game.</h1>
-            <p>Perfect basic strategy. Train the count. Then sit down and play the shoe.</p>
+            <p>Perfect strategy, professional card counting, and live shoe practice in one premium trainer.</p>
           </div>
 
           <div className="home-actions home-actions-three">
             <button onClick={() => setScreen("basic")} className="big-card">
               <Sparkles />
               <strong>Basic Strategy</strong>
-              <span>Train perfect decisions and reference the full strategy card anytime.</span>
+              <span>Train perfect decisions and reference the strategy card anytime.</span>
             </button>
 
             <button onClick={() => setScreen("counting")} className="big-card">
               <Brain />
               <strong>Card Counting</strong>
-              <span>Learn Hi-Lo and build one-card recognition speed.</span>
+              <span>Learn Hi-Lo, then build one-card recognition speed.</span>
             </button>
 
             <button onClick={openPlay} className="big-card play-card">
@@ -463,9 +506,7 @@ export default function App() {
 
           <div className="selector">
             {[10, 25, 50].map((n) => (
-              <button key={n} className={roundSize === n ? "selected" : ""} onClick={() => setRoundSize(n)}>
-                {n} hands
-              </button>
+              <button key={n} className={roundSize === n ? "selected" : ""} onClick={() => setRoundSize(n)}>{n} hands</button>
             ))}
           </div>
 
@@ -484,11 +525,8 @@ export default function App() {
             <div className="player-zone">
               <span>Your hand</span>
               <h2>{handLabel(currentHand)}</h2>
-
               <div className="cards">
-                {currentHand.player.map((c, i) => (
-                  <PlayingCard key={`${c}-${i}`} value={c} />
-                ))}
+                {currentHand.player.map((c, i) => <PlayingCard key={`${c}-${i}`} value={c} />)}
               </div>
             </div>
           </div>
@@ -539,9 +577,7 @@ export default function App() {
 
           <div className="selector">
             {[10, 20, 40, 60].map((n) => (
-              <button key={n} className={countCards === n ? "selected" : ""} onClick={() => setCountCards(n)}>
-                {n} cards
-              </button>
+              <button key={n} className={countCards === n ? "selected" : ""} onClick={() => setCountCards(n)}>{n} cards</button>
             ))}
           </div>
 
@@ -552,14 +588,39 @@ export default function App() {
       )}
 
       {screen === "countLearn" && (
-        <section className="panel">
+        <section className="panel learn-panel">
           <span className="eyebrow">Counting Basics</span>
-          <h1>You are not memorizing cards.</h1>
-          <p className="text">You're tracking whether the remaining shoe is becoming better or worse for the player.</p>
+          <h1>You are tracking the shoe.</h1>
+          <p className="text">Card counting is not memorizing every card. You are keeping a simple score that estimates whether the remaining deck is rich in high cards or low cards.</p>
 
-          <div className="count-guide"><strong>2-6</strong><span>+1</span><p>Low cards leaving the shoe are good for the player.</p></div>
-          <div className="count-guide"><strong>7-9</strong><span>0</span><p>Neutral cards.</p></div>
-          <div className="count-guide"><strong>10-A</strong><span>-1</span><p>High cards leaving the shoe lower the count.</p></div>
+          <div className="lesson-stack">
+            <div className="lesson-card plus">
+              <strong>Low cards leaving is good.</strong>
+              <span>2 • 3 • 4 • 5 • 6</span>
+              <em>+1</em>
+              <p>When low cards leave the shoe, more 10s and Aces remain. That helps blackjacks, doubles, and dealer busts.</p>
+            </div>
+
+            <div className="lesson-card neutral">
+              <strong>Middle cards are neutral.</strong>
+              <span>7 • 8 • 9</span>
+              <em>0</em>
+              <p>These cards do not strongly shift the shoe in either direction.</p>
+            </div>
+
+            <div className="lesson-card minus">
+              <strong>High cards leaving is bad.</strong>
+              <span>10 • J • Q • K • A</span>
+              <em>-1</em>
+              <p>When high cards leave the shoe, fewer premium cards remain for the player.</p>
+            </div>
+          </div>
+
+          <div className="action-plan">
+            <p><strong>Running count:</strong> the live total as cards are seen.</p>
+            <p><strong>True count:</strong> running count divided by decks remaining.</p>
+            <p><strong>Goal:</strong> keep the count in your head while cards move quickly.</p>
+          </div>
 
           <button className="primary" onClick={startCounting}>Start Swipe Drill</button>
         </section>
@@ -601,47 +662,29 @@ export default function App() {
       )}
 
       {screen === "play" && (
-        <section className="drill">
+        <section className="drill play-screen">
           <div className="play-hud">
             <div><strong>${bankroll.toFixed(0)}</strong><span>Bankroll</span></div>
             <div><strong>${bet}</strong><span>Bet</span></div>
             <div><strong>{playShoe.length}</strong><span>Cards left</span></div>
           </div>
 
-          <div className="play-controls-top">
-            <div className="selector deck-selector">
-              {[1, 2, 6, 8].map((n) => (
-                <button
-                  key={n}
-                  className={playDecks === n ? "selected" : ""}
-                  onClick={() => {
-                    if (playPhase === "betting" || playPhase === "roundOver") {
-                      setPlayDecks(n);
-                      setPlayShoe(buildShoe(n));
-                      setPlayMessage(`${n}-deck shoe loaded.`);
-                    }
-                  }}
-                >
-                  {n}D
-                </button>
-              ))}
-            </div>
-          </div>
-
           <div className="table play-table">
             <div className="dealer-zone">
               <span>Dealer</span>
               <div className="cards">
-                {dealerHand.map((card, i) => (
-                  <PlayingCard key={`${card}-${i}`} value={card} />
-                ))}
+                {dealerHand.length ? (
+                  <>
+                    {dealerVisibleHand.map((card, i) => <PlayingCard key={`${card}-${i}`} value={card} />)}
+                    {playPhase === "player" && dealerHand[1] && <PlayingCard value="back" faceDown />}
+                  </>
+                ) : <PlayingCard value="back" faceDown />}
               </div>
-              <h2>{dealerHand.length ? handValue(dealerHand).total : ""}</h2>
+              <h2>{dealerHand.length ? (playPhase === "player" ? handValue([dealerHand[0]]).total : handValue(dealerHand).total) : ""}</h2>
             </div>
 
             <div className="player-zone">
               <span>Your hands</span>
-
               <div className="split-hands">
                 {playerHands.length ? playerHands.map((hand, index) => (
                   <div key={index} className={index === activeHand && playPhase === "player" ? "split-hand active" : "split-hand"}>
@@ -652,17 +695,25 @@ export default function App() {
                     <strong>{handValue(hand.cards).total}</strong>
                     {hand.result && <em>{hand.result}</em>}
                   </div>
-                )) : <p>No hand dealt yet.</p>}
+                )) : (
+                  <div className="bet-circle">
+                    <span>Bet</span>
+                    <strong>${bet}</strong>
+                  </div>
+                )}
               </div>
             </div>
           </div>
 
           {(playPhase === "betting" || playPhase === "roundOver") && (
-            <div className="bet-panel">
-              <button className="secondary" onClick={() => changeBet(-5)}>- $5</button>
-              <button className="secondary" onClick={() => changeBet(5)}>+ $5</button>
-              <button className="secondary" onClick={() => changeBet(25)}>+ $25</button>
-              <button className="primary" onClick={dealBlackjack}>Deal</button>
+            <div className="chip-tray">
+              {chipValues.map((chip) => (
+                <button key={chip} className={`chip chip-${chip}`} onClick={() => addChip(chip)}>${chip}</button>
+              ))}
+              <button className="secondary" onClick={clearBet}>Clear</button>
+              <button className="secondary" onClick={() => setBankroll((b) => b + 500)}>Add $500</button>
+              <button className="secondary" onClick={() => { setBankroll(1000); setBet(5); }}>Reset</button>
+              <button className="primary deal-button" onClick={dealBlackjack}>Deal</button>
             </div>
           )}
 
@@ -675,11 +726,75 @@ export default function App() {
             </div>
           )}
 
+          <div className="play-bottom-bar">
+            <button onClick={() => setTipOpen((v) => !v)} className="tip-button"><Lightbulb size={18} /> Tip</button>
+            <button onClick={() => setHudOpen(true)} className="tip-button"><Settings2 size={18} /> Training HUD</button>
+          </div>
+
+          {tipOpen && (
+            <div className="tip-panel">
+              <strong>Basic Strategy Tip</strong>
+              {tipMove && activePlayHand && dealerUpcard ? (
+                <p>Against dealer {dealerUpcard}, this hand says: <b>{formatMove(tipMove)}</b>.</p>
+              ) : (
+                <p>Deal a hand first and the tip will show the recommended basic strategy play.</p>
+              )}
+              <button className="secondary" onClick={() => setStrategyOpen(true)}>Open Strategy Card</button>
+            </div>
+          )}
+
           <Coach>{playMessage}</Coach>
         </section>
+      )}
+
+      {hudOpen && (
+        <div className="overlay">
+          <div className="hud-sheet">
+            <div className="sheet-header luxury-sheet-header">
+              <div>
+                <span className="eyebrow">Training HUD</span>
+                <h2>Live Shoe Data</h2>
+                <p>Counts use visible cards only. Dealer hole card counts when revealed.</p>
+              </div>
+              <button className="icon-button" onClick={() => setHudOpen(false)}><XIcon /></button>
+            </div>
+
+            <div className="hud-grid">
+              <div><strong>{playRunning >= 0 ? "+" : ""}{playRunning}</strong><span>Running Count</span></div>
+              <div><strong>{playTrue >= 0 ? "+" : ""}{playTrue.toFixed(1)}</strong><span>True Count</span></div>
+              <div><strong>{playDecksRemaining.toFixed(1)}</strong><span>Decks Remaining</span></div>
+              <div><strong>{penetration}%</strong><span>Penetration</span></div>
+            </div>
+
+            <div className="selector deck-selector">
+              {[1, 2, 6, 8].map((n) => (
+                <button
+                  key={n}
+                  className={playDecks === n ? "selected" : ""}
+                  onClick={() => {
+                    if (playPhase === "betting" || playPhase === "roundOver") {
+                      setPlayDecks(n);
+                      resetShoe(n);
+                    } else {
+                      setPlayMessage("Change decks after the round ends.");
+                    }
+                  }}
+                >
+                  {n} Deck{n > 1 ? "s" : ""}
+                </button>
+              ))}
+            </div>
+
+            <button className="primary" onClick={() => resetShoe(playDecks)}>Shuffle New Shoe</button>
+          </div>
+        </div>
       )}
 
       {strategyOpen && <StrategyCardOverlay onClose={() => setStrategyOpen(false)} />}
     </main>
   );
+}
+
+function XIcon() {
+  return <span style={{ fontSize: 20, lineHeight: 1 }}>×</span>;
 }

@@ -16,14 +16,6 @@ export const moveNames: Record<Move, string> = {
   R: "Surrender",
 };
 
-export const moveColors: Record<Move, string> = {
-  H: "blue",
-  S: "green",
-  D: "gold",
-  P: "purple",
-  R: "gray",
-};
-
 export const ranks = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
 export const suits = ["♠", "♥", "♦", "♣"];
 export const dealerRanks = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "A"];
@@ -33,7 +25,8 @@ export function cardRank(card: string) {
 }
 
 export function cardSuit(card: string) {
-  return card.replace(cardRank(card), "") || "♠";
+  const suit = card.replace(cardRank(card), "");
+  return suit || "♠";
 }
 
 export function cardValue(card: string): number {
@@ -46,13 +39,15 @@ export function cardValue(card: string): number {
 export function handValue(cards: string[]) {
   let total = cards.reduce((sum, card) => sum + cardValue(card), 0);
   let aces = cards.filter((card) => cardRank(card) === "A").length;
+
   while (total > 21 && aces > 0) {
     total -= 10;
     aces--;
   }
 
-  const raw = cards.reduce((sum, card) => sum + (cardRank(card) === "A" ? 11 : cardValue(card)), 0);
-  return { total, soft: cards.some((card) => cardRank(card) === "A") && total <= 21 && raw === total };
+  const hasUsableAce = cards.some((card) => cardRank(card) === "A") && total <= 21 && cards.reduce((sum, card) => sum + (cardRank(card) === "A" ? 11 : cardValue(card)), 0) === total;
+
+  return { total, soft: hasUsableAce };
 }
 
 export function isBlackjack(cards: string[]) {
@@ -136,7 +131,7 @@ export function correctAction(player: string[], dealer: string): Move {
   return hardChart[key][index];
 }
 
-export function randomCard() {
+export function randomTrainingRank() {
   return ranks[Math.floor(Math.random() * ranks.length)];
 }
 
@@ -145,13 +140,13 @@ export function generateTrainingHand(): TrainingHand {
   let player: string[];
 
   if (type < 0.3) {
-    const rank = randomCard();
+    const rank = randomTrainingRank();
     player = [rank, rank];
   } else if (type < 0.58) {
     player = ["A", ranks[1 + Math.floor(Math.random() * 9)]];
   } else {
     do {
-      player = [randomCard(), randomCard()];
+      player = [randomTrainingRank(), randomTrainingRank()];
     } while (handValue(player).total < 5 || handValue(player).total > 20);
   }
 
@@ -175,6 +170,7 @@ export function hiLo(card: string) {
 
 export function buildShoe(decks: number) {
   const shoe: string[] = [];
+
   for (let d = 0; d < decks; d++) {
     for (const suit of suits) {
       for (const rank of ranks) shoe.push(`${rank}${suit}`);
@@ -194,4 +190,8 @@ export function shouldDealerHit(cards: string[], hitSoft17 = true) {
   if (value.total < 17) return true;
   if (value.total === 17 && value.soft && hitSoft17) return true;
   return false;
+}
+
+export function formatMove(move: Move) {
+  return moveNames[move];
 }
