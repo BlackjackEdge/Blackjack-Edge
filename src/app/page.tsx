@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Brain, ChevronLeft, ChevronRight, Clock, RotateCcw, Sparkles, PlayCircle, Lightbulb, Gauge, Settings2 } from "lucide-react";
+import { Brain, ChevronLeft, ChevronRight, Clock, RotateCcw, Sparkles, PlayCircle, Lightbulb, Gauge, Settings2, HelpCircle } from "lucide-react";
 import {
   buildShoe,
   correctAction,
@@ -45,6 +45,7 @@ export default function App() {
   const [screen, setScreen] = useState<Screen>("home");
   const [now, setNow] = useState(Date.now());
   const [strategyOpen, setStrategyOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState<"basic" | "counting" | "play" | "strategy" | null>(null);
 
   const [roundSize, setRoundSize] = useState(10);
   const [currentHand, setCurrentHand] = useState<TrainingHand | null>(null);
@@ -262,6 +263,28 @@ export default function App() {
     setCountSubmitted(false);
     setCardStart(Date.now());
     setCountFeedback(guided ? "Guided mode: running count shows as you go." : "Hidden mode: keep the running count in your head.");
+    setScreen("countDrill");
+  }
+
+  function reDrillSameCountingCards() {
+    if (!dealt.length) {
+      startCounting();
+      return;
+    }
+
+    const repeatCards = [...dealt];
+    const firstCard = repeatCards[0];
+
+    setShoe(repeatCards.slice(1).reverse());
+    setCountCard(firstCard);
+    setDealt([]);
+    setCountCorrect(0);
+    setSwipeTimes([]);
+    setRunningGuess("");
+    setTrueGuess("");
+    setCountSubmitted(false);
+    setCardStart(Date.now());
+    setCountFeedback("Same drill loaded. Run the count again.");
     setScreen("countDrill");
   }
 
@@ -673,11 +696,22 @@ export default function App() {
       <header className="top">
         <button onClick={() => setScreen("home")} className="brand brand-with-logo">
           <Logo compact />
-          <span>Blackjack Edge</span>
+          <span>
+            Blackjack Edge
+            <em>Master The Game</em>
+          </span>
         </button>
 
         {screen.startsWith("basic") && (
           <button onClick={() => setStrategyOpen(true)} className="small-btn">Strategy Card</button>
+        )}
+
+        {(screen === "basic" || screen === "basicDrill" || screen === "basicResults") && (
+          <button onClick={() => setHelpOpen("basic")} className="small-btn help-header-btn"><HelpCircle size={16} /> Help</button>
+        )}
+
+        {(screen === "counting" || screen === "countDrill" || screen === "countLearn") && (
+          <button onClick={() => setHelpOpen("counting")} className="small-btn help-header-btn"><HelpCircle size={16} /> Help</button>
         )}
 
         {screen === "play" && (
@@ -686,30 +720,43 @@ export default function App() {
       </header>
 
       {screen === "home" && (
-        <section className="home compact-home">
-          <div className="home-title-block">
+        <section className="home compact-home v04-home">
+          <div className="home-title-block v04-home-title">
             <span className="eyebrow">Blackjack Edge</span>
-            <h1>Master the Game.</h1>
-            <p>Perfect strategy, professional card counting, and live shoe practice in one premium trainer.</p>
+            <h1>Play. Train. Count.</h1>
+            <p className="home-subtitle">Perfect strategy, professional card counting, and live shoe practice in one premium blackjack app.</p>
           </div>
 
-          <div className="home-actions home-actions-three">
-            <button onClick={() => setScreen("basic")} className="big-card">
-              <Sparkles />
-              <strong>Basic Strategy</strong>
-              <span>Train perfect decisions and reference the strategy card anytime.</span>
-            </button>
-
-            <button onClick={() => setScreen("counting")} className="big-card">
-              <Brain />
-              <strong>Card Counting</strong>
-              <span>Learn Hi-Lo, then build one-card recognition speed.</span>
-            </button>
-
-            <button onClick={openPlay} className="big-card play-card">
-              <PlayCircle />
+          <div className="home-actions home-actions-three v04-mode-grid">
+            <button onClick={openPlay} className="big-card play-card mode-card mode-play">
+              <div className="mode-art play-art">
+                <span className="art-card ace">A♠</span>
+                <span className="art-card jack">J♠</span>
+                <span className="art-chip">$</span>
+              </div>
               <strong>Play Blackjack</strong>
-              <span>6-deck shoe, H17, 3:2 blackjack, betting, double, and split.</span>
+              <span>Live shoe practice with betting, splits, doubles, H17, and 3:2 blackjack.</span>
+            </button>
+
+            <button onClick={() => setScreen("basic")} className="big-card mode-card mode-bs">
+              <div className="mode-art strategy-art">
+                <span className="mini-chart-cell good">S</span>
+                <span className="mini-chart-cell hit">H</span>
+                <span className="mini-chart-cell double">D</span>
+                <span className="mini-chart-cell split">P</span>
+              </div>
+              <strong>Basic Strategy</strong>
+              <span>Drill perfect decisions and open the strategy card anytime.</span>
+            </button>
+
+            <button onClick={() => setScreen("counting")} className="big-card mode-card mode-cc">
+              <div className="mode-art count-art">
+                <span>+1</span>
+                <span>0</span>
+                <span>-1</span>
+              </div>
+              <strong>Card Counting</strong>
+              <span>Practice Hi-Lo recognition, running count, and true count.</span>
             </button>
           </div>
         </section>
@@ -723,6 +770,7 @@ export default function App() {
 
           <button className="primary" onClick={startBasic}>Start Drill</button>
           <button className="secondary" onClick={() => setStrategyOpen(true)}>Open Strategy Card</button>
+          <button className="secondary help-inline-btn" onClick={() => setHelpOpen("basic")}><HelpCircle size={17} /> How This Works</button>
 
           <div className="selector">
             {[10, 25, 50].map((n) => (
@@ -730,7 +778,6 @@ export default function App() {
             ))}
           </div>
 
-          <Coach>Strategy Card is one tap away while drilling.</Coach>
         </section>
       )}
 
@@ -761,7 +808,7 @@ export default function App() {
             ))}
           </div>
 
-          <Coach>{feedback}</Coach>
+          <button className="floating-help" onClick={() => setHelpOpen("basic")}><HelpCircle size={18} /> Tip</button>
         </section>
       )}
 
@@ -843,6 +890,7 @@ export default function App() {
 
           <button className="primary" onClick={startCounting}>Start Swipe Drill</button>
           <button className="secondary" onClick={() => setScreen("countLearn")}>Learn the Basics</button>
+          <button className="secondary help-inline-btn" onClick={() => setHelpOpen("counting")}><HelpCircle size={17} /> Counting Help</button>
 
           <div className="selector">
             {[10, 20, 40, 60].map((n) => (
@@ -966,14 +1014,15 @@ export default function App() {
                   </div>
                 </div>
               )}
+
+              <div className="count-complete-actions">
+                <button className="primary" onClick={reDrillSameCountingCards}>Re-Drill Same Cards</button>
+                <button className="secondary" onClick={() => setScreen("counting")}>Change Drill Settings</button>
+              </div>
             </div>
           )}
 
-          {countCard ? (
-            <Coach>{countFeedback}</Coach>
-          ) : (
-            <Coach>{countSubmitted ? "Count checked. Run it again and try to keep both counts in your head." : "Drill complete. Enter your final running count and true count."}</Coach>
-          )}
+          <button className="floating-help" onClick={() => setHelpOpen("counting")}><HelpCircle size={18} /> Help</button>
         </section>
       )}
 
@@ -1053,7 +1102,8 @@ export default function App() {
             <button onClick={() => setShowPlayTotals((value) => !value)} className="tip-button">
               {showPlayTotals ? "Hide Totals" : "Show Totals"}
             </button>
-            <button onClick={() => setHudOpen(true)} className="tip-button"><Settings2 size={18} /> Training HUD</button>
+            <button onClick={() => setHudOpen(true)} className="tip-button"><Settings2 size={18} /> HUD</button>
+            <button onClick={() => setHelpOpen("play")} className="tip-button"><HelpCircle size={18} /> Help</button>
           </div>
 
           {bankrollAlert && (
@@ -1091,7 +1141,7 @@ export default function App() {
             </div>
           )}
 
-          <Coach>{playMessage}</Coach>
+          <div className="play-message-pill">{playMessage}</div>
         </section>
       )}
 
@@ -1139,6 +1189,50 @@ export default function App() {
               <button className="secondary reset-session-button" onClick={resetSavedSession}>Reset Saved Session</button>
               <button className="primary" onClick={() => resetShoe(playDecks)}>Shuffle New Shoe</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {helpOpen && (
+        <div className="overlay help-overlay">
+          <div className="help-sheet">
+            <div className="sheet-header luxury-sheet-header">
+              <div>
+                <span className="eyebrow">Blackjack Edge Help</span>
+                <h2>
+                  {helpOpen === "play" ? "Play Blackjack" : helpOpen === "counting" ? "Card Counting" : helpOpen === "strategy" ? "Strategy Card" : "Basic Strategy"}
+                </h2>
+              </div>
+              <button className="icon-button" onClick={() => setHelpOpen(null)}><XIcon /></button>
+            </div>
+
+            {helpOpen === "play" && (
+              <div className="help-copy">
+                <p>Play like a real shoe: the deck is shuffled, cards are dealt in order, and the dealer hole card is hidden until revealed.</p>
+                <p>Use the HUD for shoe data, bankroll tools, and deck settings. Use Show Totals only when you want help checking the math.</p>
+              </div>
+            )}
+
+            {helpOpen === "basic" && (
+              <div className="help-copy">
+                <p>Pick the mathematically correct move for the hand shown. The goal is to build instant recognition.</p>
+                <p>Use the Strategy Card when studying, then hide it and drill until the decisions feel automatic.</p>
+              </div>
+            )}
+
+            {helpOpen === "counting" && (
+              <div className="help-copy">
+                <p>Hi-Lo values: 2–6 are +1, 7–9 are 0, and 10 through Ace are -1.</p>
+                <p>After the drill, enter your running count and true count. You can re-drill the same sequence or change the setup.</p>
+              </div>
+            )}
+
+            {helpOpen === "strategy" && (
+              <div className="help-copy">
+                <p>Use Hard, Soft, and Pairs to quickly reference the correct move against the dealer upcard.</p>
+                <p>The v0.4 layout keeps the card compact so it works better in both portrait and landscape.</p>
+              </div>
+            )}
           </div>
         </div>
       )}

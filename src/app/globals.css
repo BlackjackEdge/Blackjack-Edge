@@ -1234,3 +1234,753 @@ button,input{font:inherit}button{cursor:pointer}
     margin-top:10px;
   }
 }
+
+
+/* v0.4 Massive Layout Update */
+:root{
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+}
+
+.top{
+  min-height:58px;
+  padding-top:max(10px, env(safe-area-inset-top,0px));
+}
+
+.brand span{
+  display:grid!important;
+  gap:1px;
+  line-height:1;
+}
+
+.brand span em{
+  display:block;
+  font-style:normal;
+  color:var(--gold);
+  font-size:10px;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+  opacity:.9;
+}
+
+.v04-home{
+  min-height:calc(100dvh - 74px);
+  display:grid;
+  grid-template-rows:auto 1fr;
+  align-content:start;
+  gap:14px;
+  padding-top:10px;
+}
+
+.v04-home-title{
+  text-align:center;
+  gap:3px;
+}
+
+.v04-home-title h1{
+  font-size:clamp(34px,8vw,62px);
+  margin:0;
+}
+
+.v04-home-title .home-subtitle{
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  max-width:100%;
+  margin:0 auto;
+  font-size:clamp(11px,2.3vw,15px)!important;
+}
+
+.v04-mode-grid{
+  display:grid;
+  grid-template-columns:1.18fr 1fr 1fr;
+  gap:12px;
+  align-items:stretch;
+  margin-top:4px;
+}
+
+.mode-card{
+  position:relative;
+  overflow:hidden;
+  min-height:220px;
+  align-content:end;
+  padding-top:108px!important;
+}
+
+.mode-card:before{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:radial-gradient(circle at 50% 0%,rgba(244,208,111,.18),transparent 42%);
+  pointer-events:none;
+}
+
+.mode-art{
+  position:absolute;
+  left:18px;
+  right:18px;
+  top:18px;
+  height:92px;
+  border-radius:24px;
+  border:1px solid rgba(244,208,111,.25);
+  background:linear-gradient(145deg,rgba(0,0,0,.42),rgba(255,255,255,.045));
+  display:grid;
+  place-items:center;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.08);
+}
+
+.art-card{
+  position:absolute;
+  width:54px;
+  height:76px;
+  display:grid;
+  place-items:center;
+  border-radius:10px;
+  background:#070707;
+  border:2px solid var(--gold);
+  color:#fff7df;
+  font-weight:950;
+  box-shadow:0 14px 22px rgba(0,0,0,.34);
+}
+
+.art-card.ace{
+  transform:translateX(-18px) rotate(-9deg);
+}
+
+.art-card.jack{
+  transform:translateX(18px) rotate(9deg);
+}
+
+.art-chip{
+  position:absolute;
+  right:14px;
+  bottom:10px;
+  width:36px;
+  height:36px;
+  display:grid;
+  place-items:center;
+  border-radius:999px;
+  border:3px dashed #fff;
+  background:var(--gold);
+  color:#111;
+  font-weight:950;
+}
+
+.strategy-art{
+  grid-template-columns:repeat(2,42px);
+  grid-template-rows:repeat(2,32px);
+  gap:5px;
+}
+
+.mini-chart-cell{
+  display:grid;
+  place-items:center;
+  width:42px;
+  height:32px;
+  border-radius:8px;
+  font-weight:950;
+  color:#111;
+}
+
+.mini-chart-cell.good{background:#66cc66}
+.mini-chart-cell.hit{background:#4da6ff}
+.mini-chart-cell.double{background:#ffd24d}
+.mini-chart-cell.split{background:#b681ff}
+
+.count-art{
+  grid-template-columns:repeat(3,1fr);
+  gap:8px;
+  padding:0 14px;
+}
+
+.count-art span{
+  width:44px;
+  height:44px;
+  display:grid;
+  place-items:center;
+  border-radius:14px;
+  border:1px solid rgba(244,208,111,.35);
+  background:rgba(0,0,0,.45);
+  color:var(--gold);
+  font-weight:950;
+  font-size:18px;
+}
+
+.help-inline-btn{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:8px;
+}
+
+.floating-help{
+  position:fixed;
+  right:14px;
+  bottom:calc(14px + var(--safe-bottom));
+  z-index:18;
+  border:1px solid rgba(244,208,111,.38);
+  background:rgba(0,0,0,.72);
+  color:var(--gold);
+  border-radius:999px;
+  padding:12px 14px;
+  display:flex;
+  align-items:center;
+  gap:7px;
+  font-weight:950;
+  box-shadow:0 18px 40px rgba(0,0,0,.35);
+  backdrop-filter:blur(10px);
+}
+
+.help-sheet{
+  width:min(94vw,560px);
+  max-height:86dvh;
+  overflow:auto;
+  margin:auto;
+  border:1px solid rgba(244,208,111,.45);
+  border-radius:28px;
+  padding:16px;
+  background:linear-gradient(145deg,#070707,#17120a);
+  box-shadow:0 30px 90px rgba(0,0,0,.7);
+}
+
+.help-copy{
+  display:grid;
+  gap:12px;
+  padding:8px 4px 4px;
+}
+
+.help-copy p{
+  margin:0;
+  color:rgba(255,255,255,.82);
+  line-height:1.45;
+}
+
+.play-message-pill{
+  text-align:center;
+  color:rgba(255,255,255,.76);
+  font-weight:800;
+  font-size:12px;
+  min-height:18px;
+}
+
+.count-complete-actions{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  margin-top:4px;
+}
+
+/* App-style Play BJ compression */
+.play-screen{
+  min-height:calc(100dvh - 74px);
+  display:grid;
+  grid-template-rows:auto minmax(0,1fr) auto auto auto;
+  gap:8px;
+  padding-bottom:calc(8px + var(--safe-bottom));
+}
+
+.play-screen .money-hud{
+  margin-bottom:0;
+}
+
+.play-screen .play-table{
+  min-height:0;
+  height:100%;
+  padding:12px;
+  display:grid;
+  align-content:space-between;
+  gap:6px;
+  overflow:hidden;
+  border-radius:34px;
+}
+
+.play-screen .dealer-zone,
+.play-screen .player-zone{
+  gap:4px;
+}
+
+.play-screen .dealer-zone > span{
+  font-size:11px;
+}
+
+.play-screen .playing-card{
+  width:82px;
+  height:120px;
+}
+
+.play-screen .dealer-zone .cards,
+.play-screen .split-hand .cards{
+  min-height:118px;
+}
+
+.play-screen .bet-circle{
+  width:112px;
+  height:112px;
+}
+
+.play-screen .chip-tray{
+  gap:6px;
+}
+
+.play-screen .chip{
+  width:52px;
+  height:52px;
+  font-size:11px;
+}
+
+.play-screen .chip-tray .secondary,
+.play-screen .chip-tray .primary{
+  min-height:46px;
+}
+
+.play-screen .play-actions{
+  gap:6px;
+}
+
+.play-screen .play-actions .move{
+  min-height:54px;
+}
+
+.play-screen .play-bottom-bar{
+  grid-template-columns:repeat(4,1fr);
+  gap:6px;
+}
+
+.play-screen .tip-button{
+  min-height:42px;
+  padding:10px 7px;
+  font-size:12px;
+  border-radius:16px;
+}
+
+.play-screen .coach{
+  display:none;
+}
+
+/* Strategy card no-scroll style */
+.strategy-sheet{
+  overflow:hidden!important;
+  display:grid;
+  grid-template-rows:auto auto auto minmax(0,1fr);
+}
+
+.strategy-sheet .sheet-header{
+  margin-bottom:8px;
+}
+
+.strategy-sheet .strategy-tabs{
+  margin:6px 0;
+}
+
+.strategy-sheet .strategy-legend{
+  padding-bottom:6px;
+  overflow:hidden;
+  flex-wrap:wrap;
+}
+
+.premium-matrix-card{
+  min-height:0;
+  overflow:hidden;
+}
+
+.premium-matrix{
+  transform-origin:top left;
+}
+
+/* Landscape phone/tablet: single-screen app board */
+@media (orientation: landscape) and (max-height: 520px){
+  .app{
+    min-height:100dvh;
+    overflow:hidden;
+  }
+
+  .top{
+    min-height:48px;
+    padding:6px 12px;
+  }
+
+  .brand-with-logo .compact-logo{
+    width:38px;
+    height:38px;
+  }
+
+  .brand span{
+    font-size:15px;
+  }
+
+  .brand span em{
+    font-size:8px;
+  }
+
+  .v04-home{
+    min-height:calc(100dvh - 50px);
+    gap:8px;
+    padding:4px 12px 10px;
+  }
+
+  .v04-home-title h1{
+    font-size:34px;
+  }
+
+  .v04-mode-grid{
+    grid-template-columns:1.15fr 1fr 1fr;
+    gap:10px;
+  }
+
+  .mode-card{
+    min-height:168px;
+    padding:92px 14px 14px!important;
+  }
+
+  .mode-art{
+    height:70px;
+    top:12px;
+  }
+
+  .art-card{
+    width:44px;
+    height:62px;
+  }
+
+  .panel,
+  .drill{
+    max-width:100%;
+  }
+
+  .play-screen{
+    min-height:calc(100dvh - 50px);
+    height:calc(100dvh - 50px);
+    grid-template-columns:170px minmax(0,1fr) 152px;
+    grid-template-rows:auto minmax(0,1fr) auto;
+    gap:7px;
+    padding:6px 10px 8px;
+    overflow:hidden;
+  }
+
+  .play-screen .money-hud{
+    grid-column:1 / -1;
+    grid-template-columns:minmax(0,1fr) 112px!important;
+  }
+
+  .play-screen .play-table{
+    grid-column:2;
+    grid-row:2 / 4;
+    padding:8px 10px;
+    border-radius:30px;
+  }
+
+  .play-screen .chip-tray{
+    grid-column:1;
+    grid-row:2;
+    grid-template-columns:repeat(2,1fr);
+    align-content:start;
+  }
+
+  .play-screen .chip{
+    width:46px;
+    height:46px;
+  }
+
+  .play-screen .clear-bet-button,
+  .play-screen .deal-button{
+    grid-column:1 / -1;
+  }
+
+  .play-screen .play-actions{
+    grid-column:3;
+    grid-row:2;
+    grid-template-columns:1fr;
+    align-content:start;
+  }
+
+  .play-screen .play-bottom-bar{
+    grid-column:1 / 2;
+    grid-row:3;
+    grid-template-columns:1fr 1fr;
+  }
+
+  .play-screen .playing-card{
+    width:66px;
+    height:96px;
+  }
+
+  .play-screen .dealer-zone .cards,
+  .play-screen .split-hand .cards{
+    min-height:94px;
+  }
+
+  .play-screen .bet-circle{
+    width:86px;
+    height:86px;
+  }
+
+  .play-screen .play-message-pill{
+    display:none;
+  }
+
+  .table-result-banner{
+    width:min(82%,520px);
+  }
+
+  .drill:not(.play-screen){
+    height:calc(100dvh - 50px);
+    overflow:hidden;
+    align-content:start;
+    gap:8px;
+    padding:8px 12px;
+  }
+
+  .drill:not(.play-screen) .table,
+  .count-table{
+    padding:12px;
+  }
+
+  .drill:not(.play-screen) .playing-card{
+    width:78px;
+    height:114px;
+  }
+
+  .moves{
+    grid-template-columns:repeat(5,1fr);
+    gap:6px;
+  }
+
+  .move{
+    min-height:56px;
+  }
+
+  .count-table{
+    min-height:150px;
+  }
+
+  .swipe-buttons{
+    grid-template-columns:repeat(3,1fr);
+  }
+
+  .strategy-sheet{
+    width:100vw;
+    height:100dvh;
+    max-height:100dvh;
+    border-radius:0;
+    padding:10px;
+  }
+
+  .premium-matrix{
+    transform:scale(.76);
+    width:132%;
+  }
+}
+
+/* Portrait: compact but readable */
+@media(max-width:700px) and (orientation: portrait){
+  .app{
+    overflow-x:hidden;
+  }
+
+  .top{
+    padding-left:10px;
+    padding-right:10px;
+  }
+
+  .brand span{
+    display:grid!important;
+    font-size:14px;
+  }
+
+  .brand span em{
+    font-size:7px;
+    letter-spacing:.11em;
+  }
+
+  .v04-home{
+    min-height:calc(100dvh - 68px);
+    padding:6px 12px 12px;
+    gap:10px;
+  }
+
+  .v04-home-title h1{
+    font-size:clamp(30px,10vw,44px);
+  }
+
+  .v04-home-title .home-subtitle{
+    font-size:10.5px!important;
+  }
+
+  .v04-mode-grid{
+    grid-template-columns:1fr;
+    gap:9px;
+  }
+
+  .mode-card{
+    min-height:132px;
+    padding:20px 18px 18px 118px!important;
+    text-align:left;
+  }
+
+  .mode-art{
+    left:14px;
+    right:auto;
+    width:86px;
+    height:86px;
+    top:50%;
+    transform:translateY(-50%);
+    border-radius:22px;
+  }
+
+  .art-card{
+    width:38px;
+    height:54px;
+    font-size:13px;
+  }
+
+  .art-chip{
+    width:28px;
+    height:28px;
+    font-size:12px;
+  }
+
+  .strategy-art{
+    grid-template-columns:repeat(2,31px);
+    grid-template-rows:repeat(2,24px);
+  }
+
+  .mini-chart-cell{
+    width:31px;
+    height:24px;
+    font-size:12px;
+  }
+
+  .count-art span{
+    width:28px;
+    height:34px;
+    font-size:12px;
+    border-radius:10px;
+  }
+
+  .play-screen{
+    min-height:calc(100dvh - 68px);
+    padding:6px 9px calc(8px + var(--safe-bottom));
+    gap:6px;
+  }
+
+  .play-screen .money-hud{
+    grid-template-columns:minmax(0,1fr) 94px!important;
+  }
+
+  .play-screen .money-hud .bankroll-box strong{
+    font-size:clamp(22px,7vw,32px);
+  }
+
+  .play-screen .play-table{
+    padding:8px;
+    border-radius:28px;
+  }
+
+  .play-screen .playing-card{
+    width:66px;
+    height:96px;
+  }
+
+  .play-screen .dealer-zone .cards,
+  .play-screen .split-hand .cards{
+    min-height:96px;
+  }
+
+  .play-screen .dealer-zone .cards .playing-card:not(:first-child),
+  .play-screen .split-hand .cards .playing-card:not(:first-child){
+    margin-left:-31px;
+  }
+
+  .play-screen .chip-tray{
+    grid-template-columns:repeat(7,1fr);
+    gap:4px;
+  }
+
+  .play-screen .chip{
+    width:38px;
+    height:38px;
+    font-size:9px;
+    border-width:2px;
+    box-shadow:0 8px 14px rgba(0,0,0,.3),inset 0 0 0 3px rgba(0,0,0,.14);
+  }
+
+  .play-screen .clear-bet-button{
+    grid-column:1 / 4;
+  }
+
+  .play-screen .deal-button{
+    grid-column:4 / 8;
+  }
+
+  .play-screen .chip-tray .secondary,
+  .play-screen .chip-tray .primary{
+    min-height:38px;
+    font-size:11px;
+  }
+
+  .play-screen .play-actions{
+    grid-template-columns:repeat(4,1fr);
+    gap:4px;
+  }
+
+  .play-screen .play-actions .move{
+    min-height:46px;
+    padding:8px 6px;
+    font-size:12px;
+  }
+
+  .play-screen .play-bottom-bar{
+    grid-template-columns:repeat(4,1fr);
+    gap:4px;
+  }
+
+  .play-screen .tip-button{
+    padding:8px 4px;
+    min-height:38px;
+    font-size:10px;
+  }
+
+  .play-screen .tip-button svg{
+    width:14px;
+    height:14px;
+  }
+
+  .play-message-pill{
+    font-size:10px;
+    line-height:1.1;
+  }
+
+  .strategy-sheet{
+    width:100vw;
+    height:100dvh;
+    max-height:100dvh;
+    border-radius:0;
+    padding:8px;
+  }
+
+  .strategy-sheet .sheet-header h2{
+    font-size:22px;
+  }
+
+  .strategy-sheet .sheet-header p{
+    font-size:11px;
+  }
+
+  .strategy-tabs button{
+    padding:8px 6px;
+  }
+
+  .legend-pill{
+    font-size:10px;
+    padding:5px 7px;
+  }
+
+  .premium-matrix{
+    transform:scale(.58);
+    width:172%;
+  }
+
+  .premium-matrix-title{
+    font-size:12px;
+    padding:8px 10px;
+  }
+}

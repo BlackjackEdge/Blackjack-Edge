@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { X } from "lucide-react";
+import { HelpCircle, X } from "lucide-react";
 import {
   cardRank,
   cardSuit,
