@@ -433,6 +433,8 @@ export default function App() {
   }
 
   function dealBlackjack() {
+    if (playPhase !== "betting" && playPhase !== "roundOver") return;
+
     if (bankroll < 5) {
       showBankrollAlert(
         "Bankroll Needed",
@@ -1073,15 +1075,32 @@ export default function App() {
             )}
           </div>
 
-          {(playPhase === "betting" || playPhase === "roundOver") && (
-            <div className="chip-tray">
-              {chipValues.map((chip) => (
-                <button key={chip} className={`chip chip-${chip}`} onClick={() => addChip(chip)}>${chip}</button>
-              ))}
-              <button className="secondary clear-bet-button" onClick={clearBet}>Clear Bet</button>
-              <button className="primary deal-button" onClick={dealBlackjack}>Deal</button>
-            </div>
-          )}
+          <div className={`chip-tray ${playPhase !== "betting" && playPhase !== "roundOver" ? "chip-tray-locked" : ""}`}>
+            {chipValues.map((chip) => (
+              <button
+                key={chip}
+                className={`chip chip-${chip}`}
+                onClick={() => addChip(chip)}
+                disabled={playPhase !== "betting" && playPhase !== "roundOver"}
+              >
+                ${chip === 1000 ? "1K" : chip}
+              </button>
+            ))}
+            <button
+              className="secondary clear-bet-button"
+              onClick={clearBet}
+              disabled={playPhase !== "betting" && playPhase !== "roundOver"}
+            >
+              Clear Bet
+            </button>
+            <button
+              className="primary deal-button"
+              onClick={dealBlackjack}
+              disabled={playPhase !== "betting" && playPhase !== "roundOver"}
+            >
+              Deal
+            </button>
+          </div>
 
           {canAct && (
             <div className="play-actions">

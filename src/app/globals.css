@@ -3145,3 +3145,35 @@ button,input{font:inherit}button{cursor:pointer}
     width:min(36vw,245px)!important;
   }
 }
+
+
+/* v0.4.6 Keep chips visible during active hands */
+.play-screen .chip-tray-locked{
+  opacity:.78!important;
+}
+
+.play-screen .chip-tray-locked .chip,
+.play-screen .chip-tray-locked .clear-bet-button,
+.play-screen .chip-tray-locked .deal-button{
+  cursor:not-allowed!important;
+  filter:saturate(.75) brightness(.82);
+}
+
+.play-screen .chip:disabled,
+.play-screen .clear-bet-button:disabled,
+.play-screen .deal-button:disabled{
+  pointer-events:none;
+}
+
+/* Active-hand chip rail should still look like chips on the table, just locked. */
+@media(max-width:700px) and (orientation:portrait){
+  .play-screen .chip-tray-locked{
+    opacity:.72!important;
+  }
+}
+
+@media (orientation: landscape) and (max-height:540px){
+  .play-screen .chip-tray-locked{
+    opacity:.74!important;
+  }
+}
