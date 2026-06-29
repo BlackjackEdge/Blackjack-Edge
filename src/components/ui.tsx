@@ -1,3 +1,4 @@
+import React from "react";
 import { X } from "lucide-react";
 import {
   dealerRanks,
@@ -19,7 +20,7 @@ export function PlayingCard({
   mini?: boolean;
 }) {
   return (
-    <div className={mini ? "mini-card luxe-card" : "playing-card luxe-card"}>
+    <div className={mini ? "mini-card real-card" : "playing-card real-card"}>
       <div className="card-corner top-left">
         <strong>{value}</strong>
         <span>♠</span>
@@ -55,7 +56,11 @@ export function Coach({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function StrategyCardOverlay({ onClose }: { onClose: () => void }) {
+export function StrategyCardOverlay({
+  onClose,
+}: {
+  onClose: () => void;
+}) {
   return (
     <div className="overlay">
       <div className="strategy-sheet">
@@ -63,7 +68,7 @@ export function StrategyCardOverlay({ onClose }: { onClose: () => void }) {
           <div>
             <span className="eyebrow">Blackjack Edge Reference</span>
             <h2>Basic Strategy Card</h2>
-            <p>6-deck, 3:2, S17, DAS, late surrender.</p>
+            <p>6-deck • 3:2 • S17 • DAS • Late Surrender</p>
           </div>
 
           <button
@@ -83,9 +88,23 @@ export function StrategyCardOverlay({ onClose }: { onClose: () => void }) {
           <span className="cell R">R Surrender</span>
         </div>
 
-        <StrategyMatrix title="Hard totals" rows={hardRows} chart={hardChart} />
-        <StrategyMatrix title="Soft totals" rows={softRows} chart={softChart} />
-        <StrategyMatrix title="Pairs" rows={pairRows} chart={pairChart} />
+        <StrategyMatrix
+          title="Hard totals"
+          rows={hardRows}
+          chart={hardChart}
+        />
+
+        <StrategyMatrix
+          title="Soft totals"
+          rows={softRows}
+          chart={softChart}
+        />
+
+        <StrategyMatrix
+          title="Pairs"
+          rows={pairRows}
+          chart={pairChart}
+        />
       </div>
     </div>
   );
@@ -105,28 +124,32 @@ function StrategyMatrix({
       <h3>{title}</h3>
 
       <div className="matrix">
+        {/* Header */}
         <div className="matrix-head">You</div>
 
         {dealerRanks.map((dealer) => (
-          <div className="matrix-head" key={dealer}>
+          <div key={dealer} className="matrix-head">
             {dealer}
           </div>
         ))}
 
+        {/* Rows */}
         {rows.map((row) => (
-          <div className="matrix-row" key={row}>
-            <div className="matrix-row-label">{row}</div>
+          <React.Fragment key={row}>
+            <div className="matrix-row-label">
+              {row}
+            </div>
 
             {chart[row].map((move, index) => (
               <div
+                key={`${row}-${index}`}
                 className={`matrix-cell ${move}`}
                 title={moveNames[move]}
-                key={`${row}-${index}`}
               >
                 {move}
               </div>
             ))}
-          </div>
+          </React.Fragment>
         ))}
       </div>
     </div>
