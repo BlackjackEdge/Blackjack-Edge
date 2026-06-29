@@ -1,22 +1,58 @@
 import { X } from "lucide-react";
-import { dealerRanks, hardChart, hardRows, moveNames, pairChart, pairRows, softChart, softRows, type Move } from "@/lib/blackjack";
+import {
+  dealerRanks,
+  hardChart,
+  hardRows,
+  moveNames,
+  pairChart,
+  pairRows,
+  softChart,
+  softRows,
+  type Move,
+} from "@/lib/blackjack";
 
-export function PlayingCard({ value, mini = false }: { value: string; mini?: boolean }) {
+export function PlayingCard({
+  value,
+  mini = false,
+}: {
+  value: string;
+  mini?: boolean;
+}) {
   return (
     <div className={mini ? "mini-card luxe-card" : "playing-card luxe-card"}>
-      <div className="card-corner top-left"><strong>{value}</strong><span>♠</span></div>
-      <div className="card-center"><strong>{value}</strong><span>♠</span></div>
-      <div className="card-corner bottom-right"><strong>{value}</strong><span>♠</span></div>
+      <div className="card-corner top-left">
+        <strong>{value}</strong>
+        <span>♠</span>
+      </div>
+
+      <div className="card-center">
+        <strong>{value}</strong>
+        <span>♠</span>
+      </div>
+
+      <div className="card-corner bottom-right">
+        <strong>{value}</strong>
+        <span>♠</span>
+      </div>
     </div>
   );
 }
 
 export function Logo({ compact = false }: { compact?: boolean }) {
-  return <div className={compact ? "brand-logo compact-logo" : "brand-logo"}><img src="/blackjack-edge-logo.jpg" alt="Blackjack Edge logo" /></div>;
+  return (
+    <div className={compact ? "brand-logo compact-logo" : "brand-logo"}>
+      <img src="/blackjack-edge-logo.jpg" alt="Blackjack Edge logo" />
+    </div>
+  );
 }
 
 export function Coach({ children }: { children: React.ReactNode }) {
-  return <div className="coach"><div className="coach-chip">♠</div><p>{children}</p></div>;
+  return (
+    <div className="coach">
+      <div className="coach-chip">♠</div>
+      <p>{children}</p>
+    </div>
+  );
 }
 
 export function StrategyCardOverlay({ onClose }: { onClose: () => void }) {
@@ -24,10 +60,29 @@ export function StrategyCardOverlay({ onClose }: { onClose: () => void }) {
     <div className="overlay">
       <div className="strategy-sheet">
         <div className="sheet-header">
-          <div><span className="eyebrow">Blackjack Edge Reference</span><h2>Basic Strategy Card</h2><p>6-deck, 3:2, S17, DAS, late surrender.</p></div>
-          <button className="icon-button" onClick={onClose} aria-label="Close strategy card"><X /></button>
+          <div>
+            <span className="eyebrow">Blackjack Edge Reference</span>
+            <h2>Basic Strategy Card</h2>
+            <p>6-deck, 3:2, S17, DAS, late surrender.</p>
+          </div>
+
+          <button
+            className="icon-button"
+            onClick={onClose}
+            aria-label="Close strategy card"
+          >
+            <X />
+          </button>
         </div>
-        <div className="legend"><span className="cell H">H Hit</span><span className="cell S">S Stand</span><span className="cell D">D Double</span><span className="cell P">P Split</span><span className="cell R">R Surrender</span></div>
+
+        <div className="legend">
+          <span className="cell H">H Hit</span>
+          <span className="cell S">S Stand</span>
+          <span className="cell D">D Double</span>
+          <span className="cell P">P Split</span>
+          <span className="cell R">R Surrender</span>
+        </div>
+
         <StrategyMatrix title="Hard totals" rows={hardRows} chart={hardChart} />
         <StrategyMatrix title="Soft totals" rows={softRows} chart={softChart} />
         <StrategyMatrix title="Pairs" rows={pairRows} chart={pairChart} />
@@ -36,6 +91,44 @@ export function StrategyCardOverlay({ onClose }: { onClose: () => void }) {
   );
 }
 
-function StrategyMatrix({ title, rows, chart }: { title: string; rows: string[]; chart: Record<string, Move[]> }) {
-  return <div className="matrix-card"><h3>{title}</h3><div className="matrix"><div className="matrix-head">You</div>{dealerRanks.map(d => <div className="matrix-head" key={d}>{d}</div>)}{rows.map(row => <><div className="matrix-row-label" key={`${row}-label`}>{row}</div>{chart[row].map((move, i) => <div className={`matrix-cell ${move}`} title={moveNames[move]} key={`${row}-${i}`}>{move}</div>)}</>)}</div></div>;
+function StrategyMatrix({
+  title,
+  rows,
+  chart,
+}: {
+  title: string;
+  rows: string[];
+  chart: Record<string, Move[]>;
+}) {
+  return (
+    <div className="matrix-card">
+      <h3>{title}</h3>
+
+      <div className="matrix">
+        <div className="matrix-head">You</div>
+
+        {dealerRanks.map((dealer) => (
+          <div className="matrix-head" key={dealer}>
+            {dealer}
+          </div>
+        ))}
+
+        {rows.map((row) => (
+          <div className="matrix-row" key={row}>
+            <div className="matrix-row-label">{row}</div>
+
+            {chart[row].map((move, index) => (
+              <div
+                className={`matrix-cell ${move}`}
+                title={moveNames[move]}
+                key={`${row}-${index}`}
+              >
+                {move}
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
