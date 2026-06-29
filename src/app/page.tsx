@@ -39,6 +39,7 @@ type PlayPhase = "betting" | "player" | "dealer" | "roundOver";
 const avg = (values: number[]) => values.length ? values.reduce((a, b) => a + b, 0) / values.length : 0;
 const swipeValue = (card: string): SwipeValue => hiLo(card) === 1 ? 1 : hiLo(card) === -1 ? -1 : 0;
 const chipValues = [5, 25, 50, 100, 250];
+const STORAGE_KEY = "blackjack-edge-v0310-session";
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>("home");
@@ -82,11 +83,94 @@ export default function App() {
   const [showPlayTotals, setShowPlayTotals] = useState(false);
   const [showBasicReview, setShowBasicReview] = useState(false);
   const [countSubmitted, setCountSubmitted] = useState(false);
+  const [hasLoadedSession, setHasLoadedSession] = useState(false);
 
   useEffect(() => {
     const i = window.setInterval(() => setNow(Date.now()), 50);
     return () => window.clearInterval(i);
   }, []);
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(STORAGE_KEY);
+
+      if (!raw) {
+        setHasLoadedSession(true);
+        return;
+      }
+
+      const saved = JSON.parse(raw);
+
+      if (typeof saved.bankroll === "number") setBankroll(saved.bankroll);
+      if (typeof saved.bet === "number") setBet(saved.bet);
+      if (typeof saved.playDecks === "number") setPlayDecks(saved.playDecks);
+      if (Array.isArray(saved.playShoe)) setPlayShoe(saved.playShoe);
+      if (Array.isArray(saved.seenCards)) setSeenCards(saved.seenCards);
+      if (Array.isArray(saved.dealerHand)) setDealerHand(saved.dealerHand);
+      if (Array.isArray(saved.playerHands)) setPlayerHands(saved.playerHands);
+      if (typeof saved.activeHand === "number") setActiveHand(saved.activeHand);
+      if (["betting", "player", "dealer", "roundOver"].includes(saved.playPhase)) setPlayPhase(saved.playPhase);
+      if (typeof saved.playMessage === "string") setPlayMessage(saved.playMessage);
+      if (saved.roundBanner === null || typeof saved.roundBanner === "object") setRoundBanner(saved.roundBanner);
+      if (typeof saved.showPlayTotals === "boolean") setShowPlayTotals(saved.showPlayTotals);
+
+      if (typeof saved.countDecks === "number") setCountDecks(saved.countDecks);
+      if (typeof saved.countCards === "number") setCountCards(saved.countCards);
+      if (typeof saved.guided === "boolean") setGuided(saved.guided);
+
+      setPlayMessage((message) => message || "Session restored. Continue playing.");
+    } catch {
+      window.localStorage.removeItem(STORAGE_KEY);
+    } finally {
+      setHasLoadedSession(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!hasLoadedSession) return;
+
+    const saved = {
+      bankroll,
+      bet,
+      playDecks,
+      playShoe,
+      seenCards,
+      dealerHand,
+      playerHands,
+      activeHand,
+      playPhase,
+      playMessage,
+      roundBanner,
+      showPlayTotals,
+      countDecks,
+      countCards,
+      guided,
+      savedAt: Date.now(),
+    };
+
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+    } catch {
+      // If browser storage is full or blocked, the app should keep working.
+    }
+  }, [
+    hasLoadedSession,
+    bankroll,
+    bet,
+    playDecks,
+    playShoe,
+    seenCards,
+    dealerHand,
+    playerHands,
+    activeHand,
+    playPhase,
+    playMessage,
+    roundBanner,
+    showPlayTotals,
+    countDecks,
+    countCards,
+    guided,
+  ]);
 
   const elapsed = start ? (now - start) / 1000 : 0;
   const accuracy = handIndex ? Math.round((correct / handIndex) * 100) : 0;
@@ -112,8 +196,9 @@ export default function App() {
   const tipMove = activePlayHand && dealerUpcard && activePlayHand.cards.length >= 2 ? correctAction(activePlayHand.cards, dealerUpcard) : null;
 
   useEffect(() => {
+    if (!hasLoadedSession) return;
     if (!playShoe.length) setPlayShoe(buildShoe(playDecks));
-  }, []);
+  }, [hasLoadedSession]);
 
   function startBasic() {
     setResults([]);
@@ -244,6 +329,29 @@ export default function App() {
     setPlayShoe(buildShoe(decks));
     setSeenCards([]);
     setPlayMessage(`${decks}-deck shoe loaded.`);
+  }
+
+  function resetSavedSession() {
+    window.localStorage.removeItem(STORAGE_KEY);
+    const freshDecks = 6;
+
+    setPlayDecks(freshDecks);
+    setPlayShoe(buildShoe(freshDecks));
+    setSeenCards([]);
+    setBankroll(1000);
+    setBet(0);
+    setDealerHand([]);
+    setPlayerHands([]);
+    setActiveHand(0);
+    setPlayPhase("betting");
+    setRoundBanner(null);
+    setHudOpen(false);
+    setTipOpen(false);
+    setShowPlayTotals(false);
+    setCountDecks(6);
+    setCountCards(20);
+    setGuided(true);
+    setPlayMessage("Saved session reset. Place your chips and deal.");
   }
 
   function dealBlackjack() {
@@ -940,6 +1048,7 @@ export default function App() {
             <div className="hud-actions">
               <button className="secondary" onClick={() => setBankroll((b) => b + 500)}>Add $500</button>
               <button className="secondary" onClick={() => { setBankroll(1000); setBet(0); }}>Reset Bankroll</button>
+              <button className="secondary reset-session-button" onClick={resetSavedSession}>Reset Saved Session</button>
               <button className="primary" onClick={() => resetShoe(playDecks)}>Shuffle New Shoe</button>
             </div>
           </div>
