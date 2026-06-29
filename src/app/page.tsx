@@ -77,6 +77,8 @@ export default function App() {
   const [playMessage, setPlayMessage] = useState("Place your chips and deal.");
   const [hudOpen, setHudOpen] = useState(false);
   const [tipOpen, setTipOpen] = useState(false);
+  const [showBasicReview, setShowBasicReview] = useState(false);
+  const [countSubmitted, setCountSubmitted] = useState(false);
 
   useEffect(() => {
     const i = window.setInterval(() => setNow(Date.now()), 50);
@@ -89,6 +91,10 @@ export default function App() {
   const finalRunning = dealt.reduce((sum, c) => sum + hiLo(c), 0);
   const decksRemaining = Math.max(shoe.length / 52, 0.1);
   const finalTrue = finalRunning / decksRemaining;
+  const guessedRunning = Number(runningGuess);
+  const guessedTrue = Number(trueGuess);
+  const runningGuessIsCorrect = countSubmitted && Number.isFinite(guessedRunning) && guessedRunning === finalRunning;
+  const trueGuessIsCorrect = countSubmitted && Number.isFinite(guessedTrue) && Math.abs(guessedTrue - Number(finalTrue.toFixed(1))) <= 0.1;
 
   const playRunning = seenCards.reduce((sum, c) => sum + hiLo(c), 0);
   const playDecksRemaining = Math.max(playShoe.length / 52, 0.1);
@@ -110,6 +116,7 @@ export default function App() {
     setResults([]);
     setHandIndex(0);
     setCorrect(0);
+    setShowBasicReview(false);
     setFeedback("Cards are out. Make the correct move.");
     setCurrentHand(generateTrainingHand());
     setStart(Date.now());
@@ -163,6 +170,7 @@ export default function App() {
     setSwipeTimes([]);
     setRunningGuess("");
     setTrueGuess("");
+    setCountSubmitted(false);
     setCardStart(Date.now());
     setCountFeedback(guided ? "Guided mode: running count shows as you go." : "Hidden mode: keep the running count in your head.");
     setScreen("countDrill");
@@ -579,11 +587,60 @@ export default function App() {
 
           <div className="action-plan">
             <p>• Under 90%? Run another 10-hand drill before moving on.</p>
-            <p>• Review soft hands and pairs inside the Strategy Card.</p>
-            <p>• Next upgrade will track your exact weakest hands automatically.</p>
+            <p>• Review any missed hands below and compare your choice to the correct Basic Strategy play.</p>
+            <p>• Tap Strategy Card anytime to study the full chart.</p>
           </div>
 
-          <button className="primary" onClick={startBasic}><RotateCcw size={18} /> Run Again</button>
+          <div className="result-actions">
+            <button className="primary" onClick={startBasic}><RotateCcw size={18} /> Run Again</button>
+            <button className="secondary" onClick={() => setShowBasicReview((value) => !value)}>
+              {showBasicReview ? "Hide Answer Review" : "Show Answer Review"}
+            </button>
+          </div>
+
+          {showBasicReview && (
+            <div className="answer-review">
+              {results.map((result, index) => {
+                const isCorrect = result.choice === result.hand.answer;
+
+                return (
+                  <div key={`${result.hand.player.join("-")}-${result.hand.dealer}-${index}`} className={isCorrect ? "review-card correct" : "review-card wrong"}>
+                    <div className="review-top">
+                      <strong>Hand {index + 1}</strong>
+                      <span>{isCorrect ? "Correct" : "Wrong"}</span>
+                    </div>
+
+                    <p>
+                      You had <b>{result.hand.player.join(" ")}</b> against dealer <b>{result.hand.dealer}</b>.
+                    </p>
+
+                    <div className="review-grid">
+                      <div>
+                        <small>Your play</small>
+                        <strong>{moveNames[result.choice]}</strong>
+                      </div>
+
+                      <div>
+                        <small>Basic Strategy</small>
+                        <strong>{moveNames[result.hand.answer]}</strong>
+                      </div>
+
+                      <div>
+                        <small>Time</small>
+                        <strong>{result.seconds.toFixed(2)}s</strong>
+                      </div>
+                    </div>
+
+                    {!isCorrect && (
+                      <p className="review-note">
+                        Basic Strategy says to <b>{moveNames[result.hand.answer]}</b> on this exact hand.
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </section>
       )}
 
@@ -655,7 +712,7 @@ export default function App() {
             <div><strong>{(avg(swipeTimes) / 1000).toFixed(2)}s</strong><span>Avg speed</span></div>
           </div>
 
-          {guided && <div className="running">Running Count: <strong>{finalRunning >= 0 ? "+" : ""}{finalRunning}</strong></div>}
+          {guided && countCard && <div className="running">Running Count: <strong>{finalRunning >= 0 ? "+" : ""}{finalRunning}</strong></div>}
 
           <div className="count-table">
             {countCard ? <PlayingCard value={countCard} /> : <div className="complete">Drill Complete</div>}
@@ -669,16 +726,52 @@ export default function App() {
               <button onClick={() => chooseCount(1)}>+1 <ChevronRight /></button>
             </div>
           ) : (
-            <div className="panel compact">
-              <h2>Final count</h2>
+            <div className="panel compact final-count-panel">
+              <h2>Final count quiz</h2>
               <p>Decks remaining: {decksRemaining.toFixed(1)}</p>
-              <input placeholder="Running count" value={runningGuess} onChange={(e) => setRunningGuess(e.target.value)} />
-              <input placeholder="True count" value={trueGuess} onChange={(e) => setTrueGuess(e.target.value)} />
-              <Coach>Actual running count: {finalRunning >= 0 ? "+" : ""}{finalRunning}. Actual true count: {finalTrue.toFixed(1)}.</Coach>
+              <p className="text">Enter your running count and true count before revealing the answer.</p>
+
+              <input
+                placeholder="Running count"
+                value={runningGuess}
+                onChange={(e) => setRunningGuess(e.target.value)}
+              />
+
+              <input
+                placeholder="True count"
+                value={trueGuess}
+                onChange={(e) => setTrueGuess(e.target.value)}
+              />
+
+              <button className="primary" onClick={() => setCountSubmitted(true)}>
+                Check My Count
+              </button>
+
+              {countSubmitted && (
+                <div className="count-grade">
+                  <div className={runningGuessIsCorrect ? "grade-card correct" : "grade-card wrong"}>
+                    <small>Running Count</small>
+                    <strong>{runningGuessIsCorrect ? "Correct" : "Wrong"}</strong>
+                    <span>Your answer: {runningGuess || "blank"}</span>
+                    <span>Actual: {finalRunning >= 0 ? "+" : ""}{finalRunning}</span>
+                  </div>
+
+                  <div className={trueGuessIsCorrect ? "grade-card correct" : "grade-card wrong"}>
+                    <small>True Count</small>
+                    <strong>{trueGuessIsCorrect ? "Correct" : "Wrong"}</strong>
+                    <span>Your answer: {trueGuess || "blank"}</span>
+                    <span>Actual: {finalTrue >= 0 ? "+" : ""}{finalTrue.toFixed(1)}</span>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
-          <Coach>{countFeedback}</Coach>
+          {countCard ? (
+            <Coach>{countFeedback}</Coach>
+          ) : (
+            <Coach>{countSubmitted ? "Count checked. Run it again and try to keep both counts in your head." : "Drill complete. Enter your final running count and true count."}</Coach>
+          )}
         </section>
       )}
 

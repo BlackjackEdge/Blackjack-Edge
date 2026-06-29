@@ -94,3 +94,158 @@ button,input{font:inherit}button{cursor:pointer}
     grid-column:1/-1;
   }
 }
+
+
+/* v0.3.3 drill review + final count quiz */
+.result-actions{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+}
+
+.answer-review{
+  display:grid;
+  gap:10px;
+}
+
+.review-card{
+  border:1px solid rgba(244,208,111,.22);
+  background:rgba(0,0,0,.34);
+  border-radius:22px;
+  padding:14px;
+  display:grid;
+  gap:10px;
+}
+
+.review-card.correct{
+  border-color:rgba(102,204,102,.45);
+}
+
+.review-card.wrong{
+  border-color:rgba(255,90,90,.5);
+}
+
+.review-top{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+}
+
+.review-top strong{
+  color:var(--gold);
+}
+
+.review-top span{
+  border-radius:999px;
+  padding:6px 10px;
+  font-size:12px;
+  font-weight:950;
+  background:rgba(255,255,255,.12);
+}
+
+.review-card.correct .review-top span{
+  background:rgba(102,204,102,.22);
+  color:#8ff19b;
+}
+
+.review-card.wrong .review-top span{
+  background:rgba(255,90,90,.2);
+  color:#ff9b9b;
+}
+
+.review-card p{
+  margin:0;
+  color:rgba(255,255,255,.78);
+}
+
+.review-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:8px;
+}
+
+.review-grid div{
+  border:1px solid rgba(255,255,255,.1);
+  background:rgba(255,255,255,.055);
+  border-radius:16px;
+  padding:10px;
+}
+
+.review-grid small{
+  display:block;
+  color:rgba(255,255,255,.58);
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  font-size:10px;
+}
+
+.review-grid strong{
+  color:#fff7df;
+}
+
+.review-note{
+  border-left:3px solid var(--gold);
+  padding-left:10px;
+}
+
+.final-count-panel{
+  gap:12px;
+}
+
+.count-grade{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+}
+
+.grade-card{
+  border:1px solid rgba(244,208,111,.22);
+  background:rgba(0,0,0,.34);
+  border-radius:18px;
+  padding:12px;
+  display:grid;
+  gap:5px;
+}
+
+.grade-card.correct{
+  border-color:rgba(102,204,102,.55);
+}
+
+.grade-card.wrong{
+  border-color:rgba(255,90,90,.55);
+}
+
+.grade-card small{
+  color:rgba(255,255,255,.62);
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  font-size:10px;
+}
+
+.grade-card strong{
+  font-size:20px;
+}
+
+.grade-card.correct strong{
+  color:#8ff19b;
+}
+
+.grade-card.wrong strong{
+  color:#ff9b9b;
+}
+
+.grade-card span{
+  color:rgba(255,255,255,.74);
+}
+
+@media(max-width:700px){
+  .result-actions,
+  .count-grade{
+    grid-template-columns:1fr;
+  }
+
+  .review-grid{
+    grid-template-columns:1fr;
+  }
+}
