@@ -3293,3 +3293,90 @@ button,input{font:inherit}button{cursor:pointer}
     min-height:64px!important;
   }
 }
+
+
+/* v0.4.8 Landscape chip spacing + larger premium chips */
+@media (orientation: landscape) and (max-height:540px){
+  .play-screen .chip-tray{
+    left:88px!important;
+    right:88px!important;
+    bottom:34px!important;
+    grid-template-columns:repeat(7,48px) 74px 74px!important;
+    gap:10px!important;
+    justify-content:center!important;
+    align-items:center!important;
+  }
+
+  .play-screen .premium-chip,
+  .play-screen .chip{
+    width:48px!important;
+    height:48px!important;
+    min-width:48px!important;
+    min-height:48px!important;
+  }
+
+  .play-screen .premium-chip img{
+    filter:drop-shadow(0 8px 13px rgba(0,0,0,.58))!important;
+  }
+
+  .play-screen .clear-bet-button,
+  .play-screen .deal-button{
+    width:74px!important;
+    height:40px!important;
+    min-height:40px!important;
+    border-radius:999px!important;
+    font-size:9.5px!important;
+    padding:4px!important;
+  }
+
+  .play-screen .play-table{
+    padding-bottom:86px!important;
+  }
+
+  .play-screen .player-zone{
+    padding-bottom:34px!important;
+  }
+
+  .play-screen .play-actions{
+    bottom:52px!important;
+  }
+}
+
+/* Very short landscape phones: still bigger than before, but compact enough to fit */
+@media (orientation: landscape) and (max-height:430px){
+  .play-screen .chip-tray{
+    left:82px!important;
+    right:82px!important;
+    bottom:31px!important;
+    grid-template-columns:repeat(7,42px) 66px 66px!important;
+    gap:8px!important;
+  }
+
+  .play-screen .premium-chip,
+  .play-screen .chip{
+    width:42px!important;
+    height:42px!important;
+    min-width:42px!important;
+    min-height:42px!important;
+  }
+
+  .play-screen .clear-bet-button,
+  .play-screen .deal-button{
+    width:66px!important;
+    height:36px!important;
+    min-height:36px!important;
+    font-size:8.5px!important;
+  }
+
+  .play-screen .play-table{
+    padding-bottom:78px!important;
+  }
+
+  .play-screen .player-zone{
+    padding-bottom:28px!important;
+  }
+
+  .play-screen .play-actions{
+    bottom:46px!important;
+  }
+}
