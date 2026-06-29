@@ -76,6 +76,7 @@ export default function App() {
   const [activeHand, setActiveHand] = useState(0);
   const [playPhase, setPlayPhase] = useState<PlayPhase>("betting");
   const [playMessage, setPlayMessage] = useState("Place your chips and deal.");
+  const [roundBanner, setRoundBanner] = useState<{ type: "win" | "lose" | "push" | "blackjack"; title: string; subtitle: string } | null>(null);
   const [hudOpen, setHudOpen] = useState(false);
   const [tipOpen, setTipOpen] = useState(false);
   const [showPlayTotals, setShowPlayTotals] = useState(false);
@@ -261,6 +262,8 @@ export default function App() {
       return;
     }
 
+    setRoundBanner(null);
+
     const { drawn, nextShoe } = drawFromPlayShoe(playShoe, 4);
     const player = [drawn[0], drawn[2]];
     const dealer = [drawn[1], drawn[3]];
@@ -289,12 +292,15 @@ export default function App() {
       if (playerBJ && dealerBJ) {
         payout = bet;
         result = "Push. Both you and the dealer have blackjack.";
+        setRoundBanner({ type: "push", title: "PUSH", subtitle: "Both you and the dealer have blackjack." });
       } else if (playerBJ) {
         payout = bet + bet * 1.5;
         result = "Blackjack. Paid 3:2.";
+        setRoundBanner({ type: "blackjack", title: "BLACKJACK!", subtitle: `Paid 3:2 • +$${(bet * 1.5).toFixed(0)}` });
       } else {
         payout = 0;
         result = "Dealer blackjack. Hand over.";
+        setRoundBanner({ type: "lose", title: "DEALER BLACKJACK", subtitle: `Lost $${bet}` });
       }
 
       setBankroll((b) => b + payout);
@@ -472,6 +478,15 @@ export default function App() {
 
     const totalBet = hands.reduce((sum, h) => sum + h.bet, 0);
     const net = totalReturn - totalBet;
+
+    if (net > 0) {
+      setRoundBanner({ type: "win", title: "YOU WIN", subtitle: `+$${net}` });
+    } else if (net < 0) {
+      setRoundBanner({ type: "lose", title: "DEALER WINS", subtitle: `-$${Math.abs(net)}` });
+    } else {
+      setRoundBanner({ type: "push", title: "PUSH", subtitle: "Bet returned." });
+    }
+
     setPlayMessage(net > 0 ? `You won $${net}.` : net < 0 ? `You lost $${Math.abs(net)}.` : "Push round.");
   }
 
@@ -812,12 +827,11 @@ export default function App() {
               )}
             </div>
 
-            <div className="player-zone">
-              <span>Your hands</span>
+            <div className="player-zone play-player-zone">
               <div className="split-hands">
                 {playerHands.length ? playerHands.map((hand, index) => (
                   <div key={index} className={index === activeHand && playPhase === "player" ? "split-hand active" : "split-hand"}>
-                    <small>Hand {index + 1} • ${hand.bet}</small>
+                    <small className="hand-bet-pill">${hand.bet}</small>
                     <div className="cards">
                       {hand.cards.map((card, i) => <PlayingCard key={`${card}-${i}`} value={card} />)}
                     </div>
@@ -833,6 +847,14 @@ export default function App() {
               </div>
             </div>
           </div>
+
+          {roundBanner && playPhase === "roundOver" && (
+            <div className={`round-banner ${roundBanner.type}`}>
+              <div className="banner-shine" />
+              <strong>{roundBanner.title}</strong>
+              <span>{roundBanner.subtitle}</span>
+            </div>
+          )}
 
           {(playPhase === "betting" || playPhase === "roundOver") && (
             <div className="chip-tray">
