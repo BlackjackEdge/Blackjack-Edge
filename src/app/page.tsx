@@ -256,7 +256,7 @@ export default function App() {
     }
 
     if (bankroll < bet) {
-      setPlayMessage("Bankroll is too low for that bet.");
+      setPlayMessage("Not enough bankroll for that bet. Lower your bet or add bankroll from the Training HUD.");
       return;
     }
 
@@ -836,9 +836,7 @@ export default function App() {
               {chipValues.map((chip) => (
                 <button key={chip} className={`chip chip-${chip}`} onClick={() => addChip(chip)}>${chip}</button>
               ))}
-              <button className="secondary" onClick={clearBet}>Clear</button>
-              <button className="secondary" onClick={() => setBankroll((b) => b + 500)}>Add $500</button>
-              <button className="secondary" onClick={() => { setBankroll(1000); setBet(0); }}>Reset</button>
+              <button className="secondary clear-bet-button" onClick={clearBet}>Clear Bet</button>
               <button className="primary deal-button" onClick={dealBlackjack}>Deal</button>
             </div>
           )}
@@ -911,7 +909,11 @@ export default function App() {
               ))}
             </div>
 
-            <button className="primary" onClick={() => resetShoe(playDecks)}>Shuffle New Shoe</button>
+            <div className="hud-actions">
+              <button className="secondary" onClick={() => setBankroll((b) => b + 500)}>Add $500</button>
+              <button className="secondary" onClick={() => { setBankroll(1000); setBet(0); }}>Reset Bankroll</button>
+              <button className="primary" onClick={() => resetShoe(playDecks)}>Shuffle New Shoe</button>
+            </div>
           </div>
         </div>
       )}
