@@ -831,3 +831,55 @@ button,input{font:inherit}button{cursor:pointer}
     padding:18px 12px;
   }
 }
+
+
+/* v0.3.12 more chips + better $100 chip visibility */
+.chip-tray{
+  grid-template-columns:repeat(7,minmax(52px,72px));
+}
+
+.clear-bet-button{
+  grid-column:2 / 4;
+}
+
+.deal-button{
+  grid-column:4 / 7;
+}
+
+.chip-100{
+  border-color:#ffffff!important;
+  outline:2px solid rgba(255,255,255,.88);
+  outline-offset:2px;
+  box-shadow:
+    0 10px 18px rgba(0,0,0,.35),
+    0 0 0 1px rgba(244,208,111,.45),
+    inset 0 0 0 5px rgba(244,208,111,.12);
+}
+
+.chip-500{
+  background:#d93d3d;
+  color:#fff7df;
+  border-color:#f4d06f;
+}
+
+.chip-1000{
+  background:
+    radial-gradient(circle at 34% 24%,rgba(255,255,255,.36),transparent 26%),
+    linear-gradient(145deg,#f4d06f,#a46b16);
+  color:#111;
+  border-color:#111;
+}
+
+@media(max-width:700px){
+  .chip-tray{
+    grid-template-columns:repeat(4,1fr);
+  }
+
+  .clear-bet-button{
+    grid-column:1 / 3;
+  }
+
+  .deal-button{
+    grid-column:3 / 5;
+  }
+}

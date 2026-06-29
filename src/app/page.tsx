@@ -38,7 +38,7 @@ type PlayPhase = "betting" | "player" | "dealer" | "roundOver";
 
 const avg = (values: number[]) => values.length ? values.reduce((a, b) => a + b, 0) / values.length : 0;
 const swipeValue = (card: string): SwipeValue => hiLo(card) === 1 ? 1 : hiLo(card) === -1 ? -1 : 0;
-const chipValues = [5, 25, 50, 100, 250];
+const chipValues = [5, 25, 50, 100, 250, 500, 1000];
 const STORAGE_KEY = "blackjack-edge-v0310-session";
 
 export default function App() {
