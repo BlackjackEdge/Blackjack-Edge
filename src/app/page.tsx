@@ -193,12 +193,22 @@ export default function App() {
   }
 
   function drawFromPlayShoe(shoeList: string[], count = 1) {
-    let working = shoeList.length < 52 ? buildShoe(playDecks) : [...shoeList];
+    let working = [...shoeList];
     const drawn: string[] = [];
+    let reshuffled = false;
 
     for (let i = 0; i < count; i++) {
-      if (!working.length) working = buildShoe(playDecks);
+      if (!working.length) {
+        working = buildShoe(playDecks);
+        setSeenCards([]);
+        reshuffled = true;
+      }
+
       drawn.push(working.pop()!);
+    }
+
+    if (reshuffled) {
+      setPlayMessage("Shoe finished. New shoe shuffled.");
     }
 
     return { drawn, nextShoe: working };
@@ -765,7 +775,7 @@ export default function App() {
               <div>
                 <span className="eyebrow">Training HUD</span>
                 <h2>Live Shoe Data</h2>
-                <p>Counts use visible cards only. Dealer hole card counts when revealed.</p>
+                <p>Counts use visible cards only. The shoe no longer resets until empty or manually shuffled.</p>
               </div>
               <button className="icon-button" onClick={() => setHudOpen(false)}><XIcon /></button>
             </div>
