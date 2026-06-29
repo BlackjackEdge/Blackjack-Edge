@@ -12,12 +12,23 @@ import {
 } from "@/lib/blackjack";
 
 export function PlayingCard({ value, mini = false }: { value: string; mini?: boolean }) {
+  return export function PlayingCard({ value, mini = false }: { value: string; mini?: boolean }) {
   return (
-    <div className={mini ? "mini-card" : "playing-card"}>
-      <span className="corner top">{value}♠</span>
-      <strong>{value}</strong>
-      <span>♠</span>
-      <span className="corner bottom">{value}♠</span>
+    <div className={mini ? "mini-card real-card" : "playing-card real-card"}>
+      <div className="card-corner top-left">
+        <strong>{value}</strong>
+        <span>♠</span>
+      </div>
+
+      <div className="card-center">
+        <strong>{value}</strong>
+        <span>♠</span>
+      </div>
+
+      <div className="card-corner bottom-right">
+        <strong>{value}</strong>
+        <span>♠</span>
+      </div>
     </div>
   );
 }

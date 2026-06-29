@@ -104,3 +104,73 @@ button{cursor:pointer}
 .playing-card{width:92px;height:132px}
 .matrix{font-size:12px;grid-template-columns:58px repeat(10,34px)}
 }
+.real-card{
+  position:relative;
+  background:linear-gradient(145deg,#fffdf5,#ece5d8);
+  color:#0b0b0b;
+  border:2px solid #f8d86d;
+  box-shadow:0 22px 36px rgba(0,0,0,.45);
+  overflow:hidden;
+}
+
+.real-card:before{
+  content:"";
+  position:absolute;
+  inset:8px;
+  border:1px solid rgba(0,0,0,.12);
+  border-radius:10px;
+}
+
+.card-corner{
+  position:absolute;
+  display:grid;
+  gap:0;
+  place-items:center;
+  line-height:1;
+  color:#111;
+  background:transparent !important;
+}
+
+.card-corner strong{
+  font-size:15px;
+  font-weight:950;
+}
+
+.card-corner span{
+  font-size:13px;
+}
+
+.top-left{
+  top:9px;
+  left:9px;
+}
+
+.bottom-right{
+  right:9px;
+  bottom:9px;
+  transform:rotate(180deg);
+}
+
+.card-center{
+  display:grid;
+  place-items:center;
+  line-height:.95;
+  z-index:2;
+}
+
+.card-center strong{
+  font-size:44px;
+  font-weight:950;
+}
+
+.card-center span{
+  font-size:30px;
+}
+
+.count-table .card-center strong{
+  font-size:64px;
+}
+
+.count-table .card-center span{
+  font-size:42px;
+}
