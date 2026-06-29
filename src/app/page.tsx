@@ -46,6 +46,7 @@ export default function App() {
   const [now, setNow] = useState(Date.now());
   const [strategyOpen, setStrategyOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState<"basic" | "counting" | "play" | "strategy" | null>(null);
+  const [exitConfirmOpen, setExitConfirmOpen] = useState(false);
 
   const [roundSize, setRoundSize] = useState(10);
   const [currentHand, setCurrentHand] = useState<TrainingHand | null>(null);
@@ -696,10 +697,10 @@ export default function App() {
   const dealerVisibleHand = playPhase === "player" && dealerHand.length > 1 ? [dealerHand[0]] : dealerHand;
 
   return (
-    <main className="app">
+    <main className={`app ${screen === "play" ? "play-app" : ""}`}>
       <div className="bg" />
 
-      <header className="top">
+      <header className={`top ${screen === "play" ? "play-top" : ""}`}>
         <button onClick={() => setScreen("home")} className="brand brand-with-logo">
           <Logo compact />
           <span>
@@ -712,17 +713,7 @@ export default function App() {
           <button onClick={() => setStrategyOpen(true)} className="small-btn">Strategy Card</button>
         )}
 
-        {(screen === "basic" || screen === "basicDrill" || screen === "basicResults") && (
-          <button onClick={() => setHelpOpen("basic")} className="small-btn help-header-btn"><HelpCircle size={16} /> Help</button>
-        )}
 
-        {(screen === "counting" || screen === "countDrill" || screen === "countLearn") && (
-          <button onClick={() => setHelpOpen("counting")} className="small-btn help-header-btn"><HelpCircle size={16} /> Help</button>
-        )}
-
-        {screen === "play" && (
-          <button onClick={() => setHudOpen(true)} className="small-btn"><Gauge size={16} /> HUD</button>
-        )}
       </header>
 
       {screen === "home" && (
@@ -735,31 +726,24 @@ export default function App() {
 
           <div className="home-actions home-actions-three v04-mode-grid">
             <button onClick={openPlay} className="big-card play-card mode-card mode-play">
-              <div className="mode-art play-art">
-                <span className="art-card ace">A♠</span>
-                <span className="art-card jack">J♠</span>
-                <span className="art-chip">$</span>
+              <div className="mode-art premium-mode-art">
+                <img src="/mode-play-blackjack.png" alt="" />
               </div>
               <strong>Play Blackjack</strong>
               <span>Live shoe practice with betting, splits, doubles, H17, and 3:2 blackjack.</span>
             </button>
 
             <button onClick={() => setScreen("basic")} className="big-card mode-card mode-bs">
-              <div className="mode-art strategy-art">
-                <span className="mini-chart-cell good">S</span>
-                <span className="mini-chart-cell hit">H</span>
-                <span className="mini-chart-cell double">D</span>
-                <span className="mini-chart-cell split">P</span>
+              <div className="mode-art premium-mode-art">
+                <img src="/mode-basic-strategy.png" alt="" />
               </div>
               <strong>Basic Strategy</strong>
               <span>Drill perfect decisions and open the strategy card anytime.</span>
             </button>
 
             <button onClick={() => setScreen("counting")} className="big-card mode-card mode-cc">
-              <div className="mode-art count-art">
-                <span>+1</span>
-                <span>0</span>
-                <span>-1</span>
+              <div className="mode-art premium-mode-art">
+                <img src="/mode-card-counting.png" alt="" />
               </div>
               <strong>Card Counting</strong>
               <span>Practice Hi-Lo recognition, running count, and true count.</span>
@@ -776,13 +760,14 @@ export default function App() {
 
           <button className="primary" onClick={startBasic}>Start Drill</button>
           <button className="secondary" onClick={() => setStrategyOpen(true)}>Open Strategy Card</button>
-          <button className="secondary help-inline-btn" onClick={() => setHelpOpen("basic")}><HelpCircle size={17} /> How This Works</button>
 
           <div className="selector">
             {[10, 25, 50].map((n) => (
               <button key={n} className={roundSize === n ? "selected" : ""} onClick={() => setRoundSize(n)}>{n} hands</button>
             ))}
           </div>
+
+          <button className="secondary help-inline-btn" onClick={() => setHelpOpen("basic")}><HelpCircle size={17} /> How This Works</button>
 
         </section>
       )}
@@ -896,7 +881,6 @@ export default function App() {
 
           <button className="primary" onClick={startCounting}>Start Swipe Drill</button>
           <button className="secondary" onClick={() => setScreen("countLearn")}>Learn the Basics</button>
-          <button className="secondary help-inline-btn" onClick={() => setHelpOpen("counting")}><HelpCircle size={17} /> Counting Help</button>
 
           <div className="selector">
             {[10, 20, 40, 60].map((n) => (
@@ -918,6 +902,8 @@ export default function App() {
           <label className="toggle">
             <input type="checkbox" checked={guided} onChange={(e) => setGuided(e.target.checked)} /> Guided mode: show running count
           </label>
+
+          <button className="secondary help-inline-btn" onClick={() => setHelpOpen("counting")}><HelpCircle size={17} /> Counting Help</button>
         </section>
       )}
 
@@ -1034,9 +1020,12 @@ export default function App() {
 
       {screen === "play" && (
         <section className="drill play-screen">
-          <div className="play-hud money-hud">
-            <div className="bankroll-box"><strong>${bankroll.toLocaleString()}</strong><span>Bankroll</span></div>
-            <div className="bet-box"><strong>${bet.toLocaleString()}</strong><span>Bet</span></div>
+          <div className="play-topbar">
+            <button className="play-exit-button" onClick={() => setExitConfirmOpen(true)}>Exit</button>
+            <div className="play-hud money-hud">
+              <div className="bankroll-box"><strong>${bankroll.toLocaleString()}</strong><span>Bankroll</span></div>
+              <div className="bet-box"><strong>${bet.toLocaleString()}</strong><span>Bet</span></div>
+            </div>
           </div>
 
           <div className="table play-table">
@@ -1149,6 +1138,31 @@ export default function App() {
 
           <div className="play-message-pill">{playMessage}</div>
         </section>
+      )}
+
+      {exitConfirmOpen && (
+        <div className="overlay exit-confirm-overlay">
+          <div className="exit-confirm-card">
+            <span className="eyebrow">Leave Table?</span>
+            <h2>Exit Play Blackjack?</h2>
+            <p>Your bankroll and shoe are saved on this device, but the table view will close.</p>
+            <div className="exit-confirm-actions">
+              <button className="secondary" onClick={() => setExitConfirmOpen(false)}>Stay</button>
+              <button
+                className="primary"
+                onClick={() => {
+                  setExitConfirmOpen(false);
+                  setTipOpen(false);
+                  setHudOpen(false);
+                  setHelpOpen(null);
+                  setScreen("home");
+                }}
+              >
+                Exit
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {hudOpen && (
