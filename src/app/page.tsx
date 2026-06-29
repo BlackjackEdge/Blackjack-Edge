@@ -39,6 +39,16 @@ type PlayPhase = "betting" | "player" | "dealer" | "roundOver";
 const avg = (values: number[]) => values.length ? values.reduce((a, b) => a + b, 0) / values.length : 0;
 const swipeValue = (card: string): SwipeValue => hiLo(card) === 1 ? 1 : hiLo(card) === -1 ? -1 : 0;
 const chipValues = [5, 25, 50, 100, 250, 500, 1000];
+
+const premiumChips: Record<number, { label: string; image: string }> = {
+  5: { label: "$5", image: "/chips/chip-5.png" },
+  25: { label: "$25", image: "/chips/chip-25.png" },
+  50: { label: "$50", image: "/chips/chip-50.png" },
+  100: { label: "$100", image: "/chips/chip-100.png" },
+  250: { label: "$250", image: "/chips/chip-250.png" },
+  500: { label: "$500", image: "/chips/chip-500.png" },
+  1000: { label: "$1K", image: "/chips/chip-1000.png" },
+};
 const STORAGE_KEY = "blackjack-edge-v0310-session";
 
 export default function App() {
@@ -1079,11 +1089,13 @@ export default function App() {
             {chipValues.map((chip) => (
               <button
                 key={chip}
-                className={`chip chip-${chip}`}
+                className={`chip premium-chip chip-${chip}`}
                 onClick={() => addChip(chip)}
                 disabled={playPhase !== "betting" && playPhase !== "roundOver"}
+                aria-label={`Add ${premiumChips[chip].label} chip`}
               >
-                ${chip === 1000 ? "1K" : chip}
+                <img src={premiumChips[chip].image} alt="" />
+                <span>{premiumChips[chip].label}</span>
               </button>
             ))}
             <button

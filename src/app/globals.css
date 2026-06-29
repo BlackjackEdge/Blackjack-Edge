@@ -3177,3 +3177,119 @@ button,input{font:inherit}button{cursor:pointer}
     opacity:.74!important;
   }
 }
+
+
+/* v0.4.7 Premium in-game chip graphics */
+.play-screen .premium-chip{
+  position:relative;
+  display:grid!important;
+  place-items:center!important;
+  padding:0!important;
+  border:none!important;
+  background:transparent!important;
+  border-radius:999px!important;
+  overflow:visible!important;
+  box-shadow:none!important;
+  color:transparent!important;
+  isolation:isolate;
+  transition:transform .13s ease, filter .13s ease, opacity .13s ease;
+}
+
+.play-screen .premium-chip img{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  display:block;
+  pointer-events:none;
+  user-select:none;
+  filter:drop-shadow(0 8px 12px rgba(0,0,0,.52));
+  z-index:1;
+}
+
+.play-screen .premium-chip span{
+  position:relative;
+  z-index:2;
+  display:none;
+}
+
+.play-screen .premium-chip:hover:not(:disabled){
+  transform:translateY(-2px) scale(1.04);
+  filter:brightness(1.08);
+}
+
+.play-screen .premium-chip:active:not(:disabled){
+  transform:scale(.94);
+}
+
+.play-screen .chip-tray-locked .premium-chip img,
+.play-screen .premium-chip:disabled img{
+  filter:drop-shadow(0 6px 9px rgba(0,0,0,.44)) saturate(.8) brightness(.78);
+}
+
+.play-screen .chip-100{
+  outline:none!important;
+  border:none!important;
+}
+
+/* Default/desktop premium chip size */
+.play-screen .premium-chip{
+  width:58px!important;
+  height:58px!important;
+  min-width:58px!important;
+  min-height:58px!important;
+}
+
+/* Portrait chip rail sizing */
+@media(max-width:700px) and (orientation:portrait){
+  .play-screen .premium-chip{
+    width:38px!important;
+    height:38px!important;
+    min-width:38px!important;
+    min-height:38px!important;
+  }
+
+  .play-screen .premium-chip img{
+    filter:drop-shadow(0 5px 8px rgba(0,0,0,.5));
+  }
+}
+
+/* Short portrait phones */
+@media(max-width:430px) and (orientation:portrait) and (max-height:760px){
+  .play-screen .premium-chip{
+    width:34px!important;
+    height:34px!important;
+    min-width:34px!important;
+    min-height:34px!important;
+  }
+}
+
+/* Landscape chip rail sizing */
+@media (orientation: landscape) and (max-height:540px){
+  .play-screen .premium-chip{
+    width:38px!important;
+    height:38px!important;
+    min-width:38px!important;
+    min-height:38px!important;
+  }
+}
+
+@media (orientation: landscape) and (max-height:430px){
+  .play-screen .premium-chip{
+    width:34px!important;
+    height:34px!important;
+    min-width:34px!important;
+    min-height:34px!important;
+  }
+}
+
+/* Large screens/tablet */
+@media(min-width:900px) and (min-height:700px){
+  .play-screen .premium-chip{
+    width:64px!important;
+    height:64px!important;
+    min-width:64px!important;
+    min-height:64px!important;
+  }
+}
