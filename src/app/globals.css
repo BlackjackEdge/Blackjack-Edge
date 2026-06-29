@@ -782,3 +782,52 @@ button,input{font:inherit}button{cursor:pointer}
     grid-column:auto;
   }
 }
+
+
+/* v0.3.11 table-centered result banner + bankroll messages */
+.play-table{
+  position:relative;
+}
+
+.table-result-banner{
+  position:absolute;
+  left:50%;
+  top:50%;
+  width:min(88%,620px);
+  transform:translate(-50%,-50%);
+  z-index:12;
+  pointer-events:none;
+  backdrop-filter:blur(10px);
+}
+
+.table-result-banner strong{
+  font-size:clamp(32px,9vw,76px);
+}
+
+.table-result-banner span{
+  font-size:clamp(11px,2.8vw,15px);
+}
+
+.table-result-banner.round-banner{
+  animation:tableBannerPop .58s cubic-bezier(.2,1.4,.3,1) both;
+}
+
+@keyframes tableBannerPop{
+  from{
+    opacity:0;
+    transform:translate(-50%,-42%) scale(.86);
+    filter:blur(4px);
+  }
+  to{
+    opacity:1;
+    transform:translate(-50%,-50%) scale(1);
+    filter:blur(0);
+  }
+}
+
+@media(max-width:700px){
+  .table-result-banner{
+    width:92%;
+    padding:18px 12px;
+  }
+}

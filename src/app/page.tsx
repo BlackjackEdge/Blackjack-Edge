@@ -317,7 +317,33 @@ export default function App() {
 
   function addChip(amount: number) {
     if (playPhase !== "betting" && playPhase !== "roundOver") return;
-    setBet((current) => Math.max(0, Math.min(5000, Math.min(bankroll, current + amount))));
+
+    if (bankroll < 5) {
+      setPlayMessage("No bankroll available. Open the Training HUD and tap Add $500 to keep playing.");
+      return;
+    }
+
+    setBet((current) => {
+      const requestedBet = current + amount;
+
+      if (current >= bankroll) {
+        setPlayMessage("Your full bankroll is already on the table. Lower the bet or add bankroll from the Training HUD.");
+        return current;
+      }
+
+      if (requestedBet > bankroll) {
+        setPlayMessage(`Bet capped at your bankroll: $${bankroll}.`);
+        return bankroll;
+      }
+
+      if (requestedBet > 5000) {
+        setPlayMessage("Maximum bet is $5,000.");
+        return 5000;
+      }
+
+      setPlayMessage(`Bet set to $${requestedBet}.`);
+      return requestedBet;
+    });
   }
 
   function clearBet() {
@@ -355,6 +381,11 @@ export default function App() {
   }
 
   function dealBlackjack() {
+    if (bankroll < 5) {
+      setPlayMessage("No bankroll available. Open the Training HUD and tap Add $500 to keep playing.");
+      return;
+    }
+
     if (bet < 5) {
       setPlayMessage("Minimum bet is $5. Tap a chip to place your bet.");
       return;
@@ -954,15 +985,15 @@ export default function App() {
                 )}
               </div>
             </div>
-          </div>
 
-          {roundBanner && playPhase === "roundOver" && (
-            <div className={`round-banner ${roundBanner.type}`}>
-              <div className="banner-shine" />
-              <strong>{roundBanner.title}</strong>
-              <span>{roundBanner.subtitle}</span>
-            </div>
-          )}
+            {roundBanner && playPhase === "roundOver" && (
+              <div className={`round-banner table-result-banner ${roundBanner.type}`}>
+                <div className="banner-shine" />
+                <strong>{roundBanner.title}</strong>
+                <span>{roundBanner.subtitle}</span>
+              </div>
+            )}
+          </div>
 
           {(playPhase === "betting" || playPhase === "roundOver") && (
             <div className="chip-tray">
