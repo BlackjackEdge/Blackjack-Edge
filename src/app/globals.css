@@ -1150,3 +1150,87 @@ button,input{font:inherit}button{cursor:pointer}
     font-size:22px!important;
   }
 }
+
+
+/* v0.3.16 homepage header/copy polish */
+.brand span{
+  display:grid;
+  gap:1px;
+  line-height:1;
+}
+
+.brand span em{
+  font-style:normal;
+  color:var(--gold);
+  font-size:10px;
+  letter-spacing:.18em;
+  text-transform:uppercase;
+  opacity:.9;
+}
+
+.home-title-block{
+  display:grid;
+  gap:6px;
+}
+
+.home-title-block h1{
+  margin-bottom:0;
+}
+
+.home-subtitle{
+  max-width:none!important;
+  white-space:nowrap;
+  font-size:clamp(13px,2.45vw,18px)!important;
+}
+
+.home-hero .eyebrow{
+  display:none;
+}
+
+.home-hero{
+  padding-top:18px;
+}
+
+.mode-grid,
+.home-grid,
+.feature-grid{
+  margin-top:16px;
+}
+
+@media(max-width:700px){
+  .brand span{
+    display:grid!important;
+  }
+
+  .brand span em{
+    font-size:8px;
+    letter-spacing:.13em;
+  }
+
+  .home-hero{
+    padding-top:10px;
+    gap:16px;
+  }
+
+  .home-title-block{
+    gap:4px;
+  }
+
+  .home-title-block h1{
+    font-size:clamp(34px,10vw,54px);
+  }
+
+  .home-subtitle{
+    font-size:clamp(11px,3vw,13px)!important;
+    letter-spacing:-.02em;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+
+  .mode-grid,
+  .home-grid,
+  .feature-grid{
+    margin-top:10px;
+  }
+}
