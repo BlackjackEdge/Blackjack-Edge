@@ -69,7 +69,7 @@ export default function App() {
   const [playShoe, setPlayShoe] = useState<string[]>([]);
   const [seenCards, setSeenCards] = useState<string[]>([]);
   const [bankroll, setBankroll] = useState(1000);
-  const [bet, setBet] = useState(5);
+  const [bet, setBet] = useState(0);
   const [dealerHand, setDealerHand] = useState<string[]>([]);
   const [playerHands, setPlayerHands] = useState<PlayerHand[]>([]);
   const [activeHand, setActiveHand] = useState(0);
@@ -97,10 +97,10 @@ export default function App() {
 
   const activePlayHand = playerHands[activeHand];
   const dealerUpcard = dealerHand[0];
-  const canAct = playPhase === "player" && activePlayHand && !activePlayHand.stood && !activePlayHand.busted;
-  const canSplit = Boolean(canAct && isPair(activePlayHand.cards) && bankroll >= activePlayHand.bet);
-  const canDouble = Boolean(canAct && activePlayHand.cards.length === 2 && bankroll >= activePlayHand.bet);
-  const tipMove = activePlayHand && dealerUpcard ? correctAction(activePlayHand.cards, dealerUpcard) : null;
+  const canAct = Boolean(playPhase === "player" && activePlayHand && !activePlayHand.stood && !activePlayHand.busted);
+  const canSplit = Boolean(canAct && activePlayHand && isPair(activePlayHand.cards) && bankroll >= activePlayHand.bet);
+  const canDouble = Boolean(canAct && activePlayHand && activePlayHand.cards.length === 2 && bankroll >= activePlayHand.bet);
+  const tipMove = activePlayHand && dealerUpcard && activePlayHand.cards.length >= 2 ? correctAction(activePlayHand.cards, dealerUpcard) : null;
 
   useEffect(() => {
     if (!playShoe.length) setPlayShoe(buildShoe(playDecks));
@@ -211,12 +211,12 @@ export default function App() {
 
   function addChip(amount: number) {
     if (playPhase !== "betting" && playPhase !== "roundOver") return;
-    setBet((current) => Math.max(5, Math.min(5000, Math.min(bankroll, current + amount))));
+    setBet((current) => Math.max(0, Math.min(5000, Math.min(bankroll, current + amount))));
   }
 
   function clearBet() {
     if (playPhase !== "betting" && playPhase !== "roundOver") return;
-    setBet(5);
+    setBet(0);
   }
 
   function resetShoe(decks = playDecks) {
@@ -226,6 +226,16 @@ export default function App() {
   }
 
   function dealBlackjack() {
+    if (bet < 5) {
+      setPlayMessage("Minimum bet is $5. Tap a chip to place your bet.");
+      return;
+    }
+
+    if (bet > 5000) {
+      setPlayMessage("Maximum bet is $5,000.");
+      return;
+    }
+
     if (bankroll < bet) {
       setPlayMessage("Bankroll is too low for that bet.");
       return;
@@ -238,6 +248,7 @@ export default function App() {
 
     setTipOpen(false);
     setHudOpen(false);
+    setActiveHand(0);
     setPlayShoe(nextShoe);
     setSeenCards((prev) => [...prev, ...visibleNow]);
     setBankroll((b) => b - bet);
@@ -712,7 +723,7 @@ export default function App() {
               ))}
               <button className="secondary" onClick={clearBet}>Clear</button>
               <button className="secondary" onClick={() => setBankroll((b) => b + 500)}>Add $500</button>
-              <button className="secondary" onClick={() => { setBankroll(1000); setBet(5); }}>Reset</button>
+              <button className="secondary" onClick={() => { setBankroll(1000); setBet(0); }}>Reset</button>
               <button className="primary deal-button" onClick={dealBlackjack}>Deal</button>
             </div>
           )}

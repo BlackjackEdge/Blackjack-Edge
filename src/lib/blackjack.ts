@@ -118,17 +118,27 @@ export const pairChart: Record<string, Move[]> = {
 };
 
 export function correctAction(player: string[], dealer: string): Move {
-  const index = dealerIndex(dealer);
-  if (isPair(player)) return pairChart[pairKey(player)][index];
+  const index = Math.max(0, dealerIndex(dealer));
+
+  if (player.length < 2) return "H";
+
+  if (isPair(player)) {
+    const pair = pairChart[pairKey(player)];
+    return pair ? pair[index] : "H";
+  }
 
   const value = handValue(player);
+
   if (value.soft && player.length === 2) {
     const nonAce = player.find((card) => cardRank(card) !== "A");
-    return softChart[`A,${cardValue(nonAce!)}`][index];
+    if (!nonAce) return "H";
+    const soft = softChart[`A,${cardValue(nonAce)}`];
+    return soft ? soft[index] : "H";
   }
 
   const key = value.total <= 8 ? "5-8" : value.total >= 17 ? "17+" : String(value.total);
-  return hardChart[key][index];
+  const hard = hardChart[key];
+  return hard ? hard[index] : "H";
 }
 
 export function randomTrainingRank() {
