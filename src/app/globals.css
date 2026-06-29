@@ -2741,3 +2741,201 @@ button,input{font:inherit}button{cursor:pointer}
     padding:0!important;
   }
 }
+
+
+/* v0.4.4 Play BJ mobile layout polish */
+
+/* Portrait: keep Exit / Bankroll / Bet below iPhone camera/status area */
+@media(max-width:700px) and (orientation:portrait){
+  .play-screen{
+    padding-top:calc(env(safe-area-inset-top,0px) + 12px)!important;
+    padding-left:7px!important;
+    padding-right:7px!important;
+    padding-bottom:calc(env(safe-area-inset-bottom,0px) + 7px)!important;
+  }
+
+  .play-topbar{
+    min-height:44px!important;
+  }
+
+  .play-exit-button{
+    min-height:42px!important;
+    padding:0 12px!important;
+  }
+
+  .play-topbar .money-hud > div{
+    min-height:42px!important;
+  }
+}
+
+/* Landscape: make the table feel full-screen, but put money centered at top */
+@media (orientation: landscape) and (max-height: 540px){
+  .play-screen{
+    padding-top:calc(env(safe-area-inset-top,0px) + 2px)!important;
+    padding-bottom:calc(env(safe-area-inset-bottom,0px) + 2px)!important;
+  }
+
+  .play-topbar{
+    position:absolute!important;
+    left:0!important;
+    right:0!important;
+    top:calc(env(safe-area-inset-top,0px) + 5px)!important;
+    z-index:20!important;
+    display:block!important;
+    min-height:36px!important;
+    pointer-events:none;
+  }
+
+  .play-exit-button{
+    position:absolute!important;
+    left:8px!important;
+    top:0!important;
+    width:56px!important;
+    height:34px!important;
+    min-height:34px!important;
+    padding:0!important;
+    pointer-events:auto;
+  }
+
+  .play-topbar .money-hud{
+    position:absolute!important;
+    left:50%!important;
+    top:0!important;
+    transform:translateX(-50%)!important;
+    width:min(45vw,310px)!important;
+    grid-template-columns:minmax(0,1fr) 76px!important;
+    pointer-events:auto;
+  }
+
+  .play-topbar .money-hud > div{
+    min-height:34px!important;
+    border-radius:14px!important;
+    padding-top:2px!important;
+    padding-bottom:2px!important;
+  }
+
+  .play-topbar .bankroll-box strong,
+  .play-topbar .bet-box strong{
+    font-size:16px!important;
+  }
+
+  .play-topbar .money-hud span{
+    font-size:8px!important;
+  }
+
+  /* Keep the table card area clear of controls */
+  .play-screen .play-table{
+    padding:42px 86px 72px!important;
+  }
+
+  /* Move Hit / Stand / Double / Split lower and closer to thumb reach */
+  .play-screen .play-actions{
+    top:auto!important;
+    bottom:44px!important;
+    right:8px!important;
+    width:68px!important;
+    gap:5px!important;
+  }
+
+  .play-screen .play-actions .move{
+    width:60px!important;
+    min-height:40px!important;
+    font-size:10px!important;
+  }
+
+  /* Bring chips back as a bottom rail under the hand */
+  .play-screen .chip-tray{
+    position:absolute!important;
+    left:86px!important;
+    right:86px!important;
+    bottom:38px!important;
+    top:auto!important;
+    width:auto!important;
+    z-index:12!important;
+    display:grid!important;
+    grid-template-columns:repeat(7,minmax(34px,42px)) 58px 58px!important;
+    justify-content:center!important;
+    align-items:center!important;
+    align-content:center!important;
+    gap:5px!important;
+    padding:0!important;
+    pointer-events:auto;
+  }
+
+  .play-screen .chip{
+    width:36px!important;
+    height:36px!important;
+    font-size:8px!important;
+    justify-self:center!important;
+  }
+
+  .play-screen .clear-bet-button,
+  .play-screen .deal-button{
+    width:56px!important;
+    height:32px!important;
+    min-height:32px!important;
+    border-radius:999px!important;
+    font-size:8.5px!important;
+    padding:3px!important;
+    justify-self:center!important;
+  }
+
+  .play-screen .clear-bet-button{
+    grid-column:auto!important;
+  }
+
+  .play-screen .deal-button{
+    grid-column:auto!important;
+  }
+
+  /* Put utility buttons up top-right so the bottom has room for cards/chips/actions */
+  .play-screen .play-bottom-bar{
+    position:absolute!important;
+    right:8px!important;
+    top:calc(env(safe-area-inset-top,0px) + 5px)!important;
+    left:auto!important;
+    bottom:auto!important;
+    width:min(43vw,300px)!important;
+    z-index:19!important;
+    grid-template-columns:repeat(4,1fr)!important;
+    gap:4px!important;
+  }
+
+  .play-screen .tip-button{
+    min-height:34px!important;
+    border-radius:999px!important;
+    padding:4px!important;
+    font-size:8.5px!important;
+  }
+
+  .play-screen .tip-button svg{
+    width:12px!important;
+    height:12px!important;
+  }
+
+  /* Keep player cards visible above the chip rail */
+  .play-screen .player-zone{
+    padding-bottom:24px!important;
+  }
+
+  .play-screen .dealer-zone{
+    padding-top:4px!important;
+  }
+
+  .play-screen .dealer-zone .cards,
+  .play-screen .split-hand .cards{
+    min-height:84px!important;
+  }
+
+  .play-screen .playing-card{
+    width:58px!important;
+    height:84px!important;
+  }
+
+  .play-screen .tip-panel{
+    left:80px!important;
+    right:80px!important;
+    bottom:82px!important;
+    max-width:420px!important;
+  }
+}
