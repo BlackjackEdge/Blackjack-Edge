@@ -57,6 +57,7 @@ export default function App() {
   const [countCard, setCountCard] = useState<string | null>(null);
   const [dealt, setDealt] = useState<string[]>([]);
   const [countCards, setCountCards] = useState(20);
+  const [countDecks, setCountDecks] = useState(6);
   const [guided, setGuided] = useState(true);
   const [countCorrect, setCountCorrect] = useState(0);
   const [cardStart, setCardStart] = useState(0);
@@ -161,7 +162,7 @@ export default function App() {
   }
 
   function startCounting() {
-    const fresh = buildShoe(6);
+    const fresh = buildShoe(countDecks);
     const { nextCard, nextShoe } = getNextDifferentCard(null, fresh);
     setShoe(nextShoe);
     setCountCard(nextCard);
@@ -659,6 +660,17 @@ export default function App() {
             ))}
           </div>
 
+          <div className="cc-deck-block">
+            <span className="mini-label">Decks in shoe</span>
+            <div className="selector cc-deck-selector">
+              {[1, 2, 4, 6].map((n) => (
+                <button key={n} className={countDecks === n ? "selected" : ""} onClick={() => setCountDecks(n)}>
+                  {n} Deck{n > 1 ? "s" : ""}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <label className="toggle">
             <input type="checkbox" checked={guided} onChange={(e) => setGuided(e.target.checked)} /> Guided mode: show running count
           </label>
@@ -728,7 +740,7 @@ export default function App() {
           ) : (
             <div className="panel compact final-count-panel">
               <h2>Final count quiz</h2>
-              <p>Decks remaining: {decksRemaining.toFixed(1)}</p>
+              <p>{countDecks}-deck shoe • Decks remaining: {decksRemaining.toFixed(1)}</p>
               <p className="text">Enter your running count and true count before revealing the answer.</p>
 
               <input
