@@ -1014,3 +1014,139 @@ button,input{font:inherit}button{cursor:pointer}
     grid-template-columns:1fr;
   }
 }
+
+
+/* v0.3.15 face card layout fix */
+.face-field{
+  display:none!important;
+}
+
+.royal-face-card{
+  position:absolute;
+  inset:27px 15px;
+  z-index:2;
+  display:grid;
+  grid-template-rows:auto 1fr auto;
+  gap:4px;
+  color:inherit;
+  border:1px solid rgba(244,208,111,.24);
+  border-radius:12px;
+  background:
+    radial-gradient(circle at 50% 50%,rgba(244,208,111,.14),transparent 58%),
+    linear-gradient(145deg,rgba(255,255,255,.035),rgba(0,0,0,.16));
+  overflow:hidden;
+}
+
+.royal-face-card:before{
+  content:"";
+  position:absolute;
+  inset:8px;
+  border:1px solid rgba(244,208,111,.16);
+  border-radius:9px;
+  pointer-events:none;
+}
+
+.royal-row{
+  position:relative;
+  z-index:2;
+  display:grid;
+  grid-template-columns:1fr auto 1fr;
+  align-items:center;
+  gap:4px;
+  padding:4px 6px;
+  color:inherit;
+}
+
+.royal-row span,
+.royal-row em,
+.royal-center span,
+.royal-center strong{
+  color:inherit!important;
+  text-transform:none!important;
+  letter-spacing:0!important;
+  line-height:1!important;
+}
+
+.royal-row span{
+  font-size:14px!important;
+}
+
+.royal-row span:first-child{
+  justify-self:start;
+}
+
+.royal-row span:last-child{
+  justify-self:end;
+}
+
+.royal-row em{
+  font-style:normal;
+  font-size:15px!important;
+  font-weight:950;
+}
+
+.royal-row.bottom{
+  transform:rotate(180deg);
+}
+
+.royal-center{
+  position:relative;
+  z-index:2;
+  display:grid;
+  grid-template-columns:1fr auto 1fr;
+  place-items:center;
+  gap:5px;
+  padding:0 8px;
+}
+
+.royal-center span{
+  font-size:20px!important;
+  opacity:.9;
+}
+
+.royal-center strong{
+  display:grid;
+  place-items:center;
+  width:34px;
+  height:42px;
+  border-radius:10px;
+  border:1px solid rgba(244,208,111,.34);
+  background:rgba(0,0,0,.22);
+  font-size:26px!important;
+  font-weight:950;
+  text-shadow:0 2px 10px rgba(0,0,0,.55);
+}
+
+.play-screen .dealer-zone .cards .royal-face-card,
+.play-screen .split-hand .cards .royal-face-card{
+  inset:25px 14px;
+}
+
+@media(max-width:700px){
+  .royal-face-card{
+    inset:25px 13px;
+    gap:2px;
+  }
+
+  .royal-row{
+    padding:3px 5px;
+  }
+
+  .royal-row span{
+    font-size:12px!important;
+  }
+
+  .royal-row em{
+    font-size:13px!important;
+  }
+
+  .royal-center span{
+    font-size:17px!important;
+  }
+
+  .royal-center strong{
+    width:29px;
+    height:36px;
+    font-size:22px!important;
+  }
+}

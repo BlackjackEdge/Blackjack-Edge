@@ -49,9 +49,22 @@ export function PlayingCard({
       </div>
 
       {isFace ? (
-        <div className="face-field">
-          <em>{rank}</em>
-          <span>{suit}</span>
+        <div className="royal-face-card">
+          <div className="royal-row top">
+            <span>{suit}</span>
+            <em>{rank}</em>
+            <span>{suit}</span>
+          </div>
+          <div className="royal-center">
+            <span>{suit}</span>
+            <strong>{rank}</strong>
+            <span>{suit}</span>
+          </div>
+          <div className="royal-row bottom">
+            <span>{suit}</span>
+            <em>{rank}</em>
+            <span>{suit}</span>
+          </div>
         </div>
       ) : rank === "A" ? (
         <div className="ace-field">
