@@ -77,6 +77,7 @@ export default function App() {
   const [activeHand, setActiveHand] = useState(0);
   const [playPhase, setPlayPhase] = useState<PlayPhase>("betting");
   const [playMessage, setPlayMessage] = useState("Place your chips and deal.");
+  const [bankrollAlert, setBankrollAlert] = useState<{ title: string; message: string } | null>(null);
   const [roundBanner, setRoundBanner] = useState<{ type: "win" | "lose" | "push" | "blackjack"; title: string; subtitle: string } | null>(null);
   const [hudOpen, setHudOpen] = useState(false);
   const [tipOpen, setTipOpen] = useState(false);
@@ -315,39 +316,59 @@ export default function App() {
     if (!playShoe.length) setPlayShoe(buildShoe(playDecks));
   }
 
+  function showBankrollAlert(title: string, message: string) {
+    setBankrollAlert({ title, message });
+    setPlayMessage(message);
+  }
+
   function addChip(amount: number) {
     if (playPhase !== "betting" && playPhase !== "roundOver") return;
 
     if (bankroll < 5) {
-      setPlayMessage("No bankroll available. Open the Training HUD and tap Add $500 to keep playing.");
+      showBankrollAlert(
+        "Bankroll Needed",
+        "You do not have enough bankroll to place a bet. Add bankroll to keep playing."
+      );
       return;
     }
 
     setBet((current) => {
       const requestedBet = current + amount;
+      const available = bankroll - current;
 
-      if (current >= bankroll) {
-        setPlayMessage("Your full bankroll is already on the table. Lower the bet or add bankroll from the Training HUD.");
+      if (requestedBet > 5000) {
+        showBankrollAlert(
+          "Table Limit",
+          "Maximum bet is $5,000."
+        );
         return current;
       }
 
-      if (requestedBet > bankroll) {
-        setPlayMessage(`Bet capped at your bankroll: $${bankroll}.`);
-        return bankroll;
+      if (available <= 0) {
+        showBankrollAlert(
+          "Full Bankroll Bet",
+          "Your full bankroll is already on the table. Lower the bet or add bankroll."
+        );
+        return current;
       }
 
-      if (requestedBet > 5000) {
-        setPlayMessage("Maximum bet is $5,000.");
-        return 5000;
+      if (amount > available) {
+        showBankrollAlert(
+          "Not Enough Bankroll",
+          `You only have $${available.toLocaleString()} available for this bet. Lower the bet or add bankroll.`
+        );
+        return current;
       }
 
-      setPlayMessage(`Bet set to $${requestedBet}.`);
+      setBankrollAlert(null);
+      setPlayMessage(`Bet set to $${requestedBet.toLocaleString()}.`);
       return requestedBet;
     });
   }
 
   function clearBet() {
     if (playPhase !== "betting" && playPhase !== "roundOver") return;
+    setBankrollAlert(null);
     setBet(0);
   }
 
@@ -371,6 +392,7 @@ export default function App() {
     setActiveHand(0);
     setPlayPhase("betting");
     setRoundBanner(null);
+    setBankrollAlert(null);
     setHudOpen(false);
     setTipOpen(false);
     setShowPlayTotals(false);
@@ -382,25 +404,38 @@ export default function App() {
 
   function dealBlackjack() {
     if (bankroll < 5) {
-      setPlayMessage("No bankroll available. Open the Training HUD and tap Add $500 to keep playing.");
+      showBankrollAlert(
+        "Bankroll Needed",
+        "You do not have enough bankroll to deal a hand. Add bankroll to keep playing."
+      );
       return;
     }
 
     if (bet < 5) {
-      setPlayMessage("Minimum bet is $5. Tap a chip to place your bet.");
+      showBankrollAlert(
+        "Place a Bet",
+        "Minimum bet is $5. Tap a chip before you deal."
+      );
       return;
     }
 
     if (bet > 5000) {
-      setPlayMessage("Maximum bet is $5,000.");
+      showBankrollAlert(
+        "Table Limit",
+        "Maximum bet is $5,000."
+      );
       return;
     }
 
     if (bankroll < bet) {
-      setPlayMessage("Not enough bankroll for that bet. Lower your bet or add bankroll from the Training HUD.");
+      showBankrollAlert(
+        "Not Enough Bankroll",
+        "You do not have enough bankroll for that bet. Lower your bet or add bankroll."
+      );
       return;
     }
 
+    setBankrollAlert(null);
     setRoundBanner(null);
 
     const { drawn, nextShoe } = drawFromPlayShoe(playShoe, 4);
@@ -1020,6 +1055,29 @@ export default function App() {
             </button>
             <button onClick={() => setHudOpen(true)} className="tip-button"><Settings2 size={18} /> Training HUD</button>
           </div>
+
+          {bankrollAlert && (
+            <div className="money-alert-overlay" role="dialog" aria-modal="true">
+              <div className="money-alert-card">
+                <span className="eyebrow">Blackjack Edge</span>
+                <h2>{bankrollAlert.title}</h2>
+                <p>{bankrollAlert.message}</p>
+                <div className="money-alert-actions">
+                  <button className="secondary" onClick={() => setBankrollAlert(null)}>Got it</button>
+                  <button
+                    className="primary"
+                    onClick={() => {
+                      setBankroll((value) => value + 500);
+                      setBankrollAlert(null);
+                      setPlayMessage("Added $500 bankroll. Place your bet and deal.");
+                    }}
+                  >
+                    Add $500
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {tipOpen && (
             <div className="tip-panel">
