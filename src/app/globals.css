@@ -3,15 +3,8 @@ html,body{margin:0;min-height:100%;background:#030403;color:white;font-family:In
 button,input{font:inherit}
 button{cursor:pointer}
 .app{max-width:980px;margin:0 auto;min-height:100dvh;padding:calc(16px + env(safe-area-inset-top)) 14px calc(28px + env(safe-area-inset-bottom));position:relative;overflow:hidden}
-.bg{position:fixed;inset:0;background:
-radial-gradient(circle at 50% -10%,rgba(255,220,120,.38),transparent 24%),
-radial-gradient(circle at 15% 18%,rgba(11,130,75,.42),transparent 30%),
-radial-gradient(circle at 85% 12%,rgba(70,30,120,.26),transparent 24%),
-linear-gradient(145deg,#061d14,#030403 70%);z-index:0}
-.bg:after{content:"";position:absolute;inset:0;background-image:
-linear-gradient(45deg,rgba(255,255,255,.045) 25%,transparent 25%),
-linear-gradient(-45deg,rgba(255,255,255,.035) 25%,transparent 25%);
-background-size:22px 22px;opacity:.38}
+.bg{position:fixed;inset:0;background:radial-gradient(circle at 50% -10%,rgba(255,220,120,.38),transparent 24%),radial-gradient(circle at 15% 18%,rgba(11,130,75,.42),transparent 30%),radial-gradient(circle at 85% 12%,rgba(70,30,120,.26),transparent 24%),linear-gradient(145deg,#061d14,#030403 70%);z-index:0}
+.bg:after{content:"";position:absolute;inset:0;background-image:linear-gradient(45deg,rgba(255,255,255,.045) 25%,transparent 25%),linear-gradient(-45deg,rgba(255,255,255,.035) 25%,transparent 25%);background-size:22px 22px;opacity:.38}
 .top,.home,.panel,.drill{position:relative;z-index:1}
 .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;padding:12px;border:1px solid rgba(248,216,109,.28);border-radius:24px;background:linear-gradient(180deg,rgba(15,13,8,.78),rgba(0,0,0,.34));box-shadow:0 22px 55px rgba(0,0,0,.4)}
 .brand,.small-btn{border:1px solid rgba(248,216,109,.32);background:rgba(0,0,0,.42);color:white;border-radius:999px;padding:11px 14px;font-weight:950}
@@ -46,13 +39,16 @@ background-size:22px 22px;opacity:.38}
 .table:after,.count-table:after{content:"";position:absolute;inset:18px;border-radius:50%;border:2px solid rgba(248,216,109,.22);transform:scaleX(1.45);pointer-events:none}
 .table span{color:rgba(255,255,255,.68);font-weight:850}
 .cards{display:flex;gap:10px;justify-content:center}
-.playing-card,.mini-card{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(145deg,#fff,#eee6d7);color:#111;border:2px solid rgba(248,216,109,.65);box-shadow:0 22px 36px rgba(0,0,0,.45)}
-.playing-card{width:84px;height:120px;border-radius:17px}
-.playing-card strong{font-size:38px;line-height:.9}
-.playing-card>span:not(.corner){font-size:25px}
-.corner{position:absolute;font-size:12px;font-weight:950}
-.corner.top{top:8px;left:8px}
-.corner.bottom{right:8px;bottom:8px;transform:rotate(180deg)}
+
+.playing-card,.mini-card{position:relative;display:grid;place-items:center;background:#fdfaf1;color:#111;border:2px solid rgba(248,216,109,.65);box-shadow:0 22px 36px rgba(0,0,0,.45);overflow:hidden}
+.playing-card{width:92px;height:132px;border-radius:16px}
+.playing-card::before{content:"";position:absolute;inset:8px;border:1px solid rgba(0,0,0,.12);border-radius:10px}
+.playing-card strong{font-size:42px;line-height:1;font-weight:950;z-index:2}
+.playing-card>span:not(.corner){font-size:30px;line-height:1;margin-top:48px;position:absolute;z-index:2}
+.corner{position:absolute;font-size:14px;font-weight:950;line-height:1;z-index:2}
+.corner.top{top:10px;left:10px}
+.corner.bottom{right:10px;bottom:10px;transform:rotate(180deg)}
+
 .timer,.running{border:1px solid rgba(248,216,109,.25);background:rgba(0,0,0,.36);border-radius:19px;padding:14px;text-align:center;font-size:22px;font-weight:950;color:#f8d86d}
 .moves{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
 .move{min-height:76px;border:1px solid rgba(255,255,255,.22);border-radius:19px;font-weight:950;color:#111;box-shadow:0 16px 32px rgba(0,0,0,.3)}
@@ -105,6 +101,6 @@ background-size:22px 22px;opacity:.38}
 .stats{grid-template-columns:repeat(3,1fr)}
 .overlay{align-items:stretch}
 .strategy-sheet{max-height:100dvh;border-radius:0}
-.playing-card{width:76px;height:108px}
+.playing-card{width:92px;height:132px}
 .matrix{font-size:12px;grid-template-columns:58px repeat(10,34px)}
 }
