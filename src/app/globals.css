@@ -486,3 +486,156 @@ button,input{font:inherit}button{cursor:pointer}
     grid-template-columns:1fr;
   }
 }
+
+
+/* v0.3.8 real pip cards + cleaner blackjack table */
+.casino-card{
+  isolation:isolate;
+}
+
+.pip-field{
+  display:none;
+}
+
+.pip-layout{
+  position:absolute;
+  inset:26px 16px;
+  z-index:2;
+  display:grid;
+  place-items:center;
+  color:inherit;
+}
+
+.pip-layout span,
+.ace-field span,
+.face-field span{
+  color:inherit!important;
+  text-transform:none!important;
+  letter-spacing:0!important;
+  font-size:20px!important;
+  font-weight:950;
+  line-height:1;
+}
+
+.ace-field{
+  position:absolute;
+  inset:0;
+  z-index:2;
+  display:grid;
+  place-items:center;
+}
+
+.ace-field span{
+  font-size:46px!important;
+}
+
+.face-field{
+  position:absolute;
+  inset:28px 16px;
+  z-index:2;
+  display:grid;
+  place-items:center;
+  border:1px solid rgba(244,208,111,.22);
+  border-radius:12px;
+  background:radial-gradient(circle at center,rgba(244,208,111,.14),transparent 70%);
+}
+
+.face-field em{
+  font-size:38px;
+  font-style:normal;
+  font-weight:950;
+  color:inherit;
+  line-height:.85;
+}
+
+.face-field span{
+  font-size:22px!important;
+}
+
+.pip-2{grid-template-rows:1fr 1fr}
+.pip-3{grid-template-rows:1fr 1fr 1fr}
+.pip-4{grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr}
+.pip-5{grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr 1fr}
+.pip-5 span:nth-child(5){grid-column:1 / -1;grid-row:2}
+.pip-6{grid-template-columns:1fr 1fr;grid-template-rows:repeat(3,1fr)}
+.pip-7{grid-template-columns:1fr 1fr;grid-template-rows:repeat(4,1fr)}
+.pip-7 span:nth-child(7){grid-column:1 / -1;grid-row:2}
+.pip-8{grid-template-columns:1fr 1fr;grid-template-rows:repeat(4,1fr)}
+.pip-9{grid-template-columns:1fr 1fr;grid-template-rows:repeat(5,1fr)}
+.pip-9 span:nth-child(9){grid-column:1 / -1;grid-row:3}
+.pip-10{grid-template-columns:1fr 1fr;grid-template-rows:repeat(5,1fr)}
+
+.play-screen .dealer-zone .cards .playing-card,
+.play-screen .split-hand .cards .playing-card{
+  overflow:hidden;
+  z-index:1;
+}
+
+.play-screen .dealer-zone .cards .playing-card:nth-child(1),
+.play-screen .split-hand .cards .playing-card:nth-child(1){z-index:1}
+
+.play-screen .dealer-zone .cards .playing-card:nth-child(2),
+.play-screen .split-hand .cards .playing-card:nth-child(2){z-index:2}
+
+.play-screen .dealer-zone .cards .playing-card:nth-child(3),
+.play-screen .split-hand .cards .playing-card:nth-child(3){z-index:3}
+
+.play-screen .dealer-zone .cards .playing-card:nth-child(4),
+.play-screen .split-hand .cards .playing-card:nth-child(4){z-index:4}
+
+.play-screen .dealer-zone .cards .playing-card:nth-child(5),
+.play-screen .split-hand .cards .playing-card:nth-child(5){z-index:5}
+
+.play-screen .dealer-zone .cards .playing-card:nth-child(n+6),
+.play-screen .split-hand .cards .playing-card:nth-child(n+6){z-index:6}
+
+.play-screen .dealer-zone .cards .playing-card:hover,
+.play-screen .split-hand .cards .playing-card:hover{
+  z-index:20;
+}
+
+/* Remove the boxed/oval tint around the player's blackjack hands */
+.play-screen .split-hand{
+  border:none;
+  background:transparent;
+  box-shadow:none;
+  padding:4px 8px 8px;
+  overflow:visible;
+}
+
+.play-screen .split-hand.active{
+  border:none;
+  box-shadow:none;
+}
+
+.play-screen .split-hands{
+  border:none;
+  background:transparent;
+}
+
+.play-screen .player-zone{
+  gap:6px;
+}
+
+.play-screen .split-hand small{
+  color:rgba(255,255,255,.72);
+  text-shadow:0 2px 10px rgba(0,0,0,.5);
+}
+
+@media(max-width:700px){
+  .pip-layout{
+    inset:24px 14px;
+  }
+
+  .pip-layout span{
+    font-size:17px!important;
+  }
+
+  .ace-field span{
+    font-size:40px!important;
+  }
+
+  .face-field em{
+    font-size:32px;
+  }
+}
