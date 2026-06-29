@@ -944,10 +944,9 @@ export default function App() {
 
       {screen === "play" && (
         <section className="drill play-screen">
-          <div className="play-hud">
-            <div><strong>${bankroll.toFixed(0)}</strong><span>Bankroll</span></div>
-            <div><strong>${bet}</strong><span>Bet</span></div>
-            <div><strong>{playShoe.length}</strong><span>Cards left</span></div>
+          <div className="play-hud money-hud">
+            <div className="bankroll-box"><strong>${bankroll.toLocaleString()}</strong><span>Bankroll</span></div>
+            <div className="bet-box"><strong>${bet.toLocaleString()}</strong><span>Bet</span></div>
           </div>
 
           <div className="table play-table">
