@@ -436,3 +436,53 @@ button,input{font:inherit}button{cursor:pointer}
     min-height:124px;
   }
 }
+
+
+/* v0.3.7 Play BJ card style + totals toggle */
+.casino-card{
+  background:
+    radial-gradient(circle at 30% 18%,rgba(244,208,111,.16),transparent 28%),
+    linear-gradient(145deg,#050505,#15110a 58%,#050505);
+  color:#fff7df;
+  border:2px solid #f4d06f;
+  box-shadow:0 24px 38px rgba(0,0,0,.52),inset 0 1px 0 rgba(255,255,255,.08);
+}
+
+.casino-card:before{
+  border-color:rgba(244,208,111,.48);
+}
+
+.casino-card:after{
+  background:radial-gradient(circle at 28% 16%,rgba(255,255,255,.16),transparent 25%);
+}
+
+.casino-card .pip-field em{
+  color:#fff7df;
+  text-shadow:0 1px 0 rgba(244,208,111,.35);
+}
+
+.casino-card .pip-field strong{
+  color:inherit;
+}
+
+.red-card{
+  color:#ff5b6c;
+}
+
+.play-screen .dealer-zone .cards .casino-card,
+.play-screen .split-hand .cards .casino-card{
+  background:
+    radial-gradient(circle at 30% 18%,rgba(244,208,111,.16),transparent 28%),
+    linear-gradient(145deg,#050505,#15110a 58%,#050505);
+  border-color:#f4d06f;
+}
+
+.play-bottom-bar{
+  grid-template-columns:repeat(3,1fr);
+}
+
+@media(max-width:700px){
+  .play-bottom-bar{
+    grid-template-columns:1fr;
+  }
+}

@@ -78,6 +78,7 @@ export default function App() {
   const [playMessage, setPlayMessage] = useState("Place your chips and deal.");
   const [hudOpen, setHudOpen] = useState(false);
   const [tipOpen, setTipOpen] = useState(false);
+  const [showPlayTotals, setShowPlayTotals] = useState(false);
   const [showBasicReview, setShowBasicReview] = useState(false);
   const [countSubmitted, setCountSubmitted] = useState(false);
 
@@ -806,7 +807,9 @@ export default function App() {
                   </>
                 ) : <PlayingCard value="back" faceDown />}
               </div>
-              <h2>{dealerHand.length ? (playPhase === "player" ? handValue([dealerHand[0]]).total : handValue(dealerHand).total) : ""}</h2>
+              {showPlayTotals && (
+                <h2>{dealerHand.length ? (playPhase === "player" ? handValue([dealerHand[0]]).total : handValue(dealerHand).total) : ""}</h2>
+              )}
             </div>
 
             <div className="player-zone">
@@ -818,7 +821,7 @@ export default function App() {
                     <div className="cards">
                       {hand.cards.map((card, i) => <PlayingCard key={`${card}-${i}`} value={card} />)}
                     </div>
-                    <strong>{handValue(hand.cards).total}</strong>
+                    {showPlayTotals && <strong>{handValue(hand.cards).total}</strong>}
                     {hand.result && <em>{hand.result}</em>}
                   </div>
                 )) : (
@@ -852,6 +855,9 @@ export default function App() {
 
           <div className="play-bottom-bar">
             <button onClick={() => setTipOpen((v) => !v)} className="tip-button"><Lightbulb size={18} /> Tip</button>
+            <button onClick={() => setShowPlayTotals((value) => !value)} className="tip-button">
+              {showPlayTotals ? "Hide Totals" : "Show Totals"}
+            </button>
             <button onClick={() => setHudOpen(true)} className="tip-button"><Settings2 size={18} /> Training HUD</button>
           </div>
 
