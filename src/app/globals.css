@@ -3504,3 +3504,52 @@ button,input{font:inherit}button{cursor:pointer}
     font-size:6.8px!important;
   }
 }
+
+
+/* v0.4.10 Portrait Strategy Card safe-area spacing */
+/* Only vertical/portrait view: keeps the strategy card below iPhone camera/time/battery */
+@media(max-width:700px) and (orientation:portrait){
+  .strategy-overlay,
+  .strategy-card-overlay,
+  .strategy-modal,
+  .strategy-sheet{
+    padding-top:calc(env(safe-area-inset-top,0px) + 18px)!important;
+    box-sizing:border-box!important;
+  }
+
+  .strategy-overlay .strategy-card,
+  .strategy-card-overlay .strategy-card,
+  .strategy-modal .strategy-card,
+  .strategy-sheet .strategy-card,
+  .strategy-overlay .strategy-panel,
+  .strategy-card-overlay .strategy-panel,
+  .strategy-modal .strategy-panel,
+  .strategy-sheet .strategy-panel{
+    margin-top:calc(env(safe-area-inset-top,0px) + 8px)!important;
+    max-height:calc(100dvh - env(safe-area-inset-top,0px) - 22px)!important;
+  }
+
+  /* Support current overlay naming used by the app */
+  .strategy-fullscreen{
+    padding-top:calc(env(safe-area-inset-top,0px) + 18px)!important;
+    box-sizing:border-box!important;
+  }
+
+  .strategy-fullscreen .strategy-card-wrap,
+  .strategy-fullscreen .strategy-card-panel,
+  .strategy-fullscreen .strategy-card-table{
+    margin-top:calc(env(safe-area-inset-top,0px) + 8px)!important;
+    max-height:calc(100dvh - env(safe-area-inset-top,0px) - 22px)!important;
+  }
+}
+
+/* Slightly more room on taller iPhones in portrait */
+@media(max-width:700px) and (orientation:portrait) and (min-height:780px){
+  .strategy-overlay,
+  .strategy-card-overlay,
+  .strategy-modal,
+  .strategy-sheet,
+  .strategy-fullscreen{
+    padding-top:calc(env(safe-area-inset-top,0px) + 24px)!important;
+  }
+}
