@@ -357,8 +357,68 @@ export default function App() {
 
   function showRoundBannerDelayed(banner: { type: "win" | "lose" | "push" | "blackjack"; title: string; subtitle: string }, delay = 650) {
     window.setTimeout(() => {
+      if (banner.type === "win" || banner.type === "blackjack") playCasinoSound("win");
       setRoundBanner(banner);
     }, delay);
+  }
+
+  function playCasinoSound(kind: "chip" | "deal" | "tap" | "win" | "soft") {
+    if (typeof window === "undefined") return;
+
+    try {
+      const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!AudioContextClass) return;
+
+      const ctx = new AudioContextClass();
+      const gain = ctx.createGain();
+      gain.connect(ctx.destination);
+
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+
+      if (kind === "chip") {
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(620, now);
+        osc.frequency.exponentialRampToValueAtTime(240, now + 0.08);
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.exponentialRampToValueAtTime(0.09, now + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.11);
+        osc.connect(gain);
+        osc.start(now);
+        osc.stop(now + 0.12);
+      } else if (kind === "deal") {
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(360, now);
+        osc.frequency.exponentialRampToValueAtTime(680, now + 0.055);
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.exponentialRampToValueAtTime(0.055, now + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.09);
+        osc.connect(gain);
+        osc.start(now);
+        osc.stop(now + 0.1);
+      } else if (kind === "win") {
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(520, now);
+        osc.frequency.exponentialRampToValueAtTime(820, now + 0.12);
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.exponentialRampToValueAtTime(0.075, now + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.2);
+        osc.connect(gain);
+        osc.start(now);
+        osc.stop(now + 0.22);
+      } else {
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(kind === "soft" ? 240 : 420, now);
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.exponentialRampToValueAtTime(0.04, now + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.07);
+        osc.connect(gain);
+        osc.start(now);
+        osc.stop(now + 0.08);
+      }
+    } catch {
+      // Sound is optional. Some browsers block WebAudio until a user gesture.
+    }
   }
 
   function addChip(amount: number) {
@@ -401,6 +461,7 @@ export default function App() {
       }
 
       setBankrollAlert(null);
+      playCasinoSound("chip");
       setPlayMessage(`Bet set to $${requestedBet.toLocaleString()}.`);
       return requestedBet;
     });
@@ -408,6 +469,7 @@ export default function App() {
 
   function clearBet() {
     if (playPhase !== "betting" && playPhase !== "roundOver") return;
+    playCasinoSound("soft");
     setBankrollAlert(null);
     setBet(0);
   }
@@ -477,6 +539,7 @@ export default function App() {
       return;
     }
 
+    playCasinoSound("deal");
     setBankrollAlert(null);
     setRoundBanner(null);
 
@@ -543,6 +606,7 @@ export default function App() {
 
   function hitPlayHand() {
     if (playPhase !== "player") return;
+    playCasinoSound("deal");
 
     const { drawn, nextShoe } = drawFromPlayShoe(playShoe, 1);
     const updated = playerHands.map((h, i) => i === activeHand ? { ...h, cards: [...h.cards, drawn[0]] } : h);
@@ -572,12 +636,14 @@ export default function App() {
 
   function standPlayHand() {
     if (playPhase !== "player") return;
+    playCasinoSound("tap");
     const updated = playerHands.map((h, i) => i === activeHand ? { ...h, stood: true } : h);
     finishHand(updated);
   }
 
   function doublePlayHand() {
     if (playPhase !== "player" || !activePlayHand) return;
+    playCasinoSound("chip");
 
     if (activePlayHand.cards.length !== 2) {
       setPlayMessage("Double is only available on your first two cards.");
@@ -613,6 +679,7 @@ export default function App() {
 
   function splitPlayHand() {
     if (playPhase !== "player" || !activePlayHand) return;
+    playCasinoSound("chip");
 
     if (!isPair(activePlayHand.cards)) {
       setPlayMessage("You can only split matching pairs.");
@@ -1036,15 +1103,57 @@ export default function App() {
             <button className="play-exit-button" onClick={() => setExitConfirmOpen(true)}>Exit</button>
             <div className="play-hud money-hud">
               <div className="bankroll-box"><strong>${bankroll.toLocaleString()}</strong><span>Bankroll</span></div>
-              <div className="bet-box"><strong>${bet.toLocaleString()}</strong><span>Bet</span></div>
               <div className="cards-left-box">
                 <strong>{playShoe.length.toLocaleString()}/{(playDecks * 52).toLocaleString()}</strong>
-                <span>{playDecks}D Shoe</span>
+                <span>Cards Remaining</span>
               </div>
+              <div className="bet-box"><strong>${bet.toLocaleString()}</strong><span>Total Bet</span></div>
             </div>
           </div>
 
-          <div className="table play-table">
+          <div className="table play-table luxury-casino-table">
+            <div className="luxury-table-rail top-rail" />
+            <div className="luxury-table-rail bottom-rail" />
+
+            <div className="table-brand-watermark">
+              <strong>BLACKJACK</strong>
+              <span>EDGE</span>
+            </div>
+
+            <div className="luxury-shoe">
+              <div className="shoe-lid">BLACKJACK<br />EDGE</div>
+              <div className="shoe-cards" />
+            </div>
+
+            <div className="dealer-chip-rack" aria-hidden="true">
+              {[10, 25, 50, 100, 500].map((rackChip) => (
+                <span key={rackChip} className={`rack-chip rack-${rackChip}`}></span>
+              ))}
+            </div>
+
+            <aside className="table-rules-card">
+              <strong>TABLE RULES</strong>
+              <span>MIN BET: $5</span>
+              <span>MAX BET: $5,000</span>
+              <span>BLACKJACK PAYS 3:2</span>
+              <span>DEALER HITS SOFT 17</span>
+            </aside>
+
+            <div className="felt-insurance-arc">
+              <span>BLACKJACK PAYS 3 TO 2</span>
+              <strong>INSURANCE PAYS 2 TO 1</strong>
+            </div>
+
+            <button className="side-seat side-seat-left" type="button" aria-label="Left hand placeholder">
+              <span>+</span>
+              <strong>PLACE<br />BET</strong>
+            </button>
+
+            <button className="side-seat side-seat-right" type="button" aria-label="Right hand placeholder">
+              <span>+</span>
+              <strong>PLACE<br />BET</strong>
+            </button>
+
             <div className="dealer-zone">
               <span>Dealer</span>
               <div className="cards">
@@ -1072,7 +1181,7 @@ export default function App() {
                     {hand.result && <em>{hand.result}</em>}
                   </div>
                 )) : (
-                  <div className="bet-circle">
+                  <div className="bet-circle luxury-bet-circle">
                     <span>Bet</span>
                     <strong>${bet}</strong>
                   </div>
@@ -1119,21 +1228,21 @@ export default function App() {
           </div>
 
           {canAct && (
-            <div className="play-actions">
-              <button className="move H" onClick={hitPlayHand}>Hit</button>
-              <button className="move S" onClick={standPlayHand}>Stand</button>
-              <button className="move D" disabled={!canDouble} onClick={doublePlayHand}>Double</button>
+            <div className="play-actions luxury-action-bar">
               <button className="move P" disabled={!canSplit} onClick={splitPlayHand}>Split</button>
+              <button className="move D" disabled={!canDouble} onClick={doublePlayHand}>Double</button>
+              <button className="move S" onClick={standPlayHand}>Stand</button>
+              <button className="move H" onClick={hitPlayHand}>Hit</button>
             </div>
           )}
 
-          <div className="play-bottom-bar">
+          <div className="play-bottom-bar casino-utility-bar">
             <button onClick={() => setTipOpen((v) => !v)} className="tip-button"><Lightbulb size={18} /> Tip</button>
             <button onClick={() => setShowPlayTotals((value) => !value)} className="tip-button">
-              {showPlayTotals ? "Hide Totals" : "Show Totals"}
+              {showPlayTotals ? "Hide Totals" : "Totals"}
             </button>
             <button onClick={() => setHudOpen(true)} className="tip-button"><Settings2 size={18} /> HUD</button>
-            <button onClick={() => setHelpOpen("play")} className="tip-button"><HelpCircle size={18} /> Help</button>
+            <button onClick={() => setHelpOpen("play")} className="tip-button"><HelpCircle size={18} /> Rules</button>
           </div>
 
           {bankrollAlert && (

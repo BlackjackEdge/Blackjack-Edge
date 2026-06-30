@@ -4671,3 +4671,866 @@ button,input{font:inherit}button{cursor:pointer}
 .brand-with-logo{
   gap:10px !important;
 }
+
+
+/* =========================================================
+   v0.5.0 — Caesars Palace Luxury Casino Table Redesign
+   Royal blue felt • Roman red • gold • ivory rail • casino carpet
+   ========================================================= */
+
+:root{
+  --roman-red:#8f1019;
+  --roman-red-bright:#b51825;
+  --royal-blue:#071f46;
+  --royal-blue-2:#0b326c;
+  --casino-navy:#061329;
+  --lux-gold:#f1cf6a;
+  --deep-gold:#9a6b1e;
+  --ivory:#fff4dc;
+  --black-glass:rgba(4,10,20,.86);
+}
+
+body{
+  background:
+    radial-gradient(circle at 22% 8%,rgba(29,72,136,.32),transparent 28%),
+    radial-gradient(circle at 85% 16%,rgba(143,16,25,.25),transparent 34%),
+    radial-gradient(circle at 50% 78%,rgba(241,207,106,.12),transparent 42%),
+    repeating-radial-gradient(circle at 30% 80%,rgba(241,207,106,.06) 0 2px,transparent 3px 18px),
+    linear-gradient(135deg,#04070d 0%,#061329 42%,#1b0610 100%) !important;
+}
+
+body::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  opacity:.34;
+  background:
+    repeating-linear-gradient(45deg,rgba(241,207,106,.06) 0 1px,transparent 1px 22px),
+    repeating-linear-gradient(-45deg,rgba(143,16,25,.09) 0 2px,transparent 2px 26px),
+    radial-gradient(circle at 50% 50%,transparent 0 48%,rgba(0,0,0,.42) 100%);
+  mix-blend-mode:screen;
+  z-index:0;
+}
+
+.app{
+  position:relative;
+  z-index:1;
+}
+
+.play-app{
+  background:
+    radial-gradient(circle at 12% 4%,rgba(241,207,106,.16),transparent 22%),
+    radial-gradient(circle at 80% 0%,rgba(143,16,25,.16),transparent 25%),
+    linear-gradient(180deg,#050b16 0%,#071329 48%,#1d0810 100%) !important;
+}
+
+/* Hide the old simple app frame feel while Play BJ is full casino table */
+.play-screen{
+  position:relative;
+  min-height:100dvh !important;
+  padding:
+    max(18px,env(safe-area-inset-top))
+    max(12px,env(safe-area-inset-right))
+    max(8px,env(safe-area-inset-bottom))
+    max(12px,env(safe-area-inset-left)) !important;
+  overflow:hidden !important;
+  background:
+    radial-gradient(circle at 50% 6%,rgba(241,207,106,.22),transparent 22%),
+    linear-gradient(180deg,#040b18 0%,#07152c 52%,#21070d 100%) !important;
+}
+
+/* casino carpet lower third */
+.play-screen::before{
+  content:"";
+  position:absolute;
+  inset:auto 0 0 0;
+  height:35%;
+  background:
+    radial-gradient(circle at 12% 40%,rgba(241,207,106,.18),transparent 8%),
+    radial-gradient(circle at 55% 30%,rgba(241,207,106,.13),transparent 10%),
+    radial-gradient(circle at 88% 45%,rgba(241,207,106,.14),transparent 8%),
+    repeating-radial-gradient(circle at 28% 55%,rgba(241,207,106,.1) 0 2px,transparent 3px 17px),
+    repeating-linear-gradient(45deg,rgba(241,207,106,.08) 0 1px,transparent 1px 28px),
+    linear-gradient(135deg,#3b0910,#17050a 55%,#2a070d);
+  opacity:.88;
+  pointer-events:none;
+  z-index:0;
+}
+
+.play-screen::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:radial-gradient(circle at 50% 46%,transparent 0 55%,rgba(0,0,0,.36) 100%);
+  pointer-events:none;
+  z-index:0;
+}
+
+.play-screen > *{
+  position:relative;
+  z-index:2;
+}
+
+/* Header HUD */
+.play-topbar{
+  position:absolute !important;
+  top:max(18px,env(safe-area-inset-top)) !important;
+  left:max(12px,env(safe-area-inset-left)) !important;
+  right:max(12px,env(safe-area-inset-right)) !important;
+  z-index:20 !important;
+  display:grid !important;
+  grid-template-columns:auto 1fr !important;
+  gap:10px !important;
+  align-items:start !important;
+}
+
+.play-exit-button{
+  height:42px !important;
+  min-width:70px !important;
+  border-radius:10px !important;
+  border:1px solid rgba(241,207,106,.7) !important;
+  color:var(--ivory) !important;
+  background:linear-gradient(180deg,rgba(10,20,40,.92),rgba(3,8,17,.92)) !important;
+  box-shadow:0 10px 24px rgba(0,0,0,.42), inset 0 1px 0 rgba(255,255,255,.1) !important;
+}
+
+.play-hud.money-hud{
+  display:grid !important;
+  grid-template-columns:repeat(3,minmax(92px,1fr)) !important;
+  gap:8px !important;
+  max-width:600px !important;
+  margin-left:auto !important;
+}
+
+.bankroll-box,.bet-box,.cards-left-box{
+  min-height:48px !important;
+  padding:8px 10px !important;
+  border-radius:10px !important;
+  border:1px solid rgba(241,207,106,.72) !important;
+  background:
+    linear-gradient(180deg,rgba(8,18,36,.95),rgba(3,8,17,.92)) !important;
+  color:var(--ivory) !important;
+  box-shadow:0 10px 26px rgba(0,0,0,.44), inset 0 1px 0 rgba(255,255,255,.08) !important;
+}
+
+.bankroll-box strong,.bet-box strong,.cards-left-box strong{
+  color:#fff !important;
+  font-size:17px !important;
+  line-height:1 !important;
+}
+
+.bankroll-box span,.bet-box span,.cards-left-box span{
+  color:var(--lux-gold) !important;
+  text-transform:uppercase !important;
+  letter-spacing:.08em !important;
+  font-size:9px !important;
+}
+
+/* Main casino table */
+.play-table.luxury-casino-table{
+  position:absolute !important;
+  left:0 !important;
+  right:0 !important;
+  top:88px !important;
+  bottom:182px !important;
+  min-height:0 !important;
+  border-radius:0 0 42% 42% / 0 0 15% 15% !important;
+  border:none !important;
+  overflow:hidden !important;
+  display:block !important;
+  background:
+    radial-gradient(circle at 50% 18%,rgba(42,88,158,.48),transparent 32%),
+    radial-gradient(circle at 50% 64%,rgba(0,0,0,.08),transparent 52%),
+    linear-gradient(180deg,#0d3674 0%,#071f46 58%,#06162e 100%) !important;
+  box-shadow:
+    inset 0 0 0 2px rgba(241,207,106,.28),
+    inset 0 -20px 56px rgba(0,0,0,.36),
+    0 30px 70px rgba(0,0,0,.52) !important;
+}
+
+.play-table.luxury-casino-table::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:
+    repeating-linear-gradient(45deg,rgba(255,255,255,.025) 0 1px,transparent 1px 16px),
+    radial-gradient(circle at 50% 47%,rgba(255,255,255,.07),transparent 32%),
+    radial-gradient(circle at 50% 50%,transparent 0 55%,rgba(0,0,0,.28) 100%);
+  pointer-events:none;
+}
+
+.luxury-table-rail{
+  position:absolute;
+  left:-7%;
+  right:-7%;
+  height:78px;
+  z-index:3;
+  pointer-events:none;
+  background:
+    linear-gradient(180deg,#fff8e7 0%,#d7b463 45%,#7f5417 100%);
+  box-shadow:
+    inset 0 8px 14px rgba(255,255,255,.45),
+    inset 0 -10px 18px rgba(48,27,5,.5),
+    0 0 20px rgba(241,207,106,.28);
+}
+
+.top-rail{
+  top:-52px;
+  transform:rotate(2deg);
+  border-radius:0 0 45% 45% / 0 0 70% 70%;
+}
+
+.bottom-rail{
+  bottom:-26px;
+  height:96px;
+  border-radius:50% 50% 0 0 / 80% 80% 0 0;
+}
+
+.table-brand-watermark{
+  position:absolute;
+  left:50%;
+  top:45%;
+  transform:translate(-50%,-50%);
+  color:rgba(255,255,255,.12);
+  font-family:Georgia,"Times New Roman",serif;
+  text-align:center;
+  letter-spacing:.16em;
+  z-index:1;
+  user-select:none;
+}
+
+.table-brand-watermark strong{
+  display:block;
+  font-size:clamp(28px,8vw,74px);
+  line-height:.8;
+}
+
+.table-brand-watermark span{
+  font-size:clamp(18px,5vw,42px);
+}
+
+.dealer-chip-rack{
+  position:absolute;
+  top:24px;
+  left:50%;
+  transform:translateX(-50%);
+  width:min(52vw,380px);
+  height:58px;
+  border:1px solid rgba(241,207,106,.75);
+  border-radius:0 0 26px 26px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  z-index:6;
+  background:linear-gradient(180deg,#4a2f0b,#171006 72%);
+  box-shadow:0 14px 28px rgba(0,0,0,.48), inset 0 1px 0 rgba(255,255,255,.16);
+}
+
+.rack-chip{
+  width:28px;
+  height:40px;
+  border-radius:50%;
+  border:2px solid rgba(255,255,255,.42);
+  box-shadow:0 4px 8px rgba(0,0,0,.4), inset 0 0 0 4px rgba(0,0,0,.18);
+}
+
+.rack-10{background:#6b1017}
+.rack-25{background:#111}
+.rack-50{background:#522a80}
+.rack-100{background:#caa741}
+.rack-500{background:#0c4c2e}
+
+.luxury-shoe{
+  position:absolute;
+  right:8%;
+  top:66px;
+  width:116px;
+  height:82px;
+  z-index:5;
+  transform:rotate(10deg);
+  border:1px solid rgba(241,207,106,.7);
+  border-radius:10px;
+  background:linear-gradient(145deg,#141414,#030303);
+  box-shadow:0 18px 26px rgba(0,0,0,.5);
+}
+
+.shoe-lid{
+  position:absolute;
+  inset:8px 8px auto 8px;
+  height:34px;
+  display:grid;
+  place-items:center;
+  border:1px solid rgba(241,207,106,.35);
+  color:var(--lux-gold);
+  font-weight:950;
+  font-size:10px;
+  line-height:1.05;
+  text-align:center;
+}
+
+.shoe-cards{
+  position:absolute;
+  left:14px;
+  right:14px;
+  bottom:8px;
+  height:28px;
+  border-radius:4px;
+  background:
+    repeating-linear-gradient(90deg,#fff 0 5px,#cfc6b2 5px 7px),
+    linear-gradient(180deg,#fff,#cfc6b2);
+  border:1px solid rgba(143,16,25,.5);
+}
+
+.table-rules-card{
+  position:absolute;
+  left:16px;
+  top:104px;
+  z-index:5;
+  display:grid;
+  gap:6px;
+  min-width:150px;
+  padding:13px 14px;
+  border:1px solid rgba(241,207,106,.65);
+  border-radius:8px;
+  color:var(--ivory);
+  background:linear-gradient(180deg,rgba(4,10,20,.82),rgba(1,4,10,.7));
+  box-shadow:0 16px 30px rgba(0,0,0,.4);
+  text-transform:uppercase;
+}
+
+.table-rules-card strong{
+  color:var(--lux-gold);
+  font-size:13px;
+  letter-spacing:.08em;
+}
+
+.table-rules-card span{
+  font-size:10px;
+  letter-spacing:.04em;
+  opacity:.9;
+}
+
+.felt-insurance-arc{
+  position:absolute;
+  left:50%;
+  top:54%;
+  transform:translate(-50%,-50%);
+  width:min(68vw,520px);
+  height:118px;
+  z-index:2;
+  border-bottom:2px solid rgba(241,207,106,.5);
+  border-radius:0 0 50% 50%;
+  display:grid;
+  place-items:end center;
+  padding-bottom:22px;
+  color:rgba(255,244,220,.9);
+  text-align:center;
+  letter-spacing:.24em;
+  text-transform:uppercase;
+}
+
+.felt-insurance-arc span{
+  font-size:12px;
+}
+
+.felt-insurance-arc strong{
+  color:var(--lux-gold);
+  font-size:14px;
+  font-weight:900;
+}
+
+.side-seat{
+  position:absolute;
+  bottom:68px;
+  width:112px;
+  height:112px;
+  border-radius:999px;
+  border:2px solid rgba(241,207,106,.72);
+  color:var(--lux-gold);
+  background:radial-gradient(circle at 50% 35%,rgba(255,255,255,.08),rgba(4,10,20,.22) 62%,rgba(0,0,0,.28));
+  display:grid;
+  place-items:center;
+  align-content:center;
+  gap:4px;
+  z-index:5;
+  box-shadow:inset 0 0 0 4px rgba(0,0,0,.16), 0 16px 26px rgba(0,0,0,.3);
+}
+
+.side-seat span{
+  width:28px;
+  height:28px;
+  display:grid;
+  place-items:center;
+  border-radius:50%;
+  border:1px solid rgba(241,207,106,.7);
+  background:rgba(0,0,0,.38);
+  font-size:22px;
+  font-weight:900;
+}
+
+.side-seat strong{
+  font-size:12px;
+  letter-spacing:.12em;
+  line-height:1.2;
+}
+
+.side-seat-left{left:7%}
+.side-seat-right{right:7%}
+
+/* Dealer and player placement */
+.play-table .dealer-zone{
+  position:absolute !important;
+  top:132px !important;
+  left:50% !important;
+  transform:translateX(-50%) !important;
+  z-index:8 !important;
+  display:grid !important;
+  justify-items:center !important;
+  gap:6px !important;
+}
+
+.play-table .dealer-zone > span{
+  color:rgba(255,244,220,.86) !important;
+  font-size:10px !important;
+  letter-spacing:.16em !important;
+}
+
+.play-player-zone{
+  position:absolute !important;
+  left:50% !important;
+  bottom:64px !important;
+  transform:translateX(-50%) !important;
+  z-index:8 !important;
+  width:min(62vw,340px) !important;
+}
+
+.play-player-zone .split-hands{
+  display:flex !important;
+  justify-content:center !important;
+  align-items:flex-end !important;
+}
+
+.luxury-bet-circle{
+  width:118px !important;
+  height:118px !important;
+  border:2px solid rgba(241,207,106,.55) !important;
+  border-radius:50% !important;
+  color:var(--lux-gold) !important;
+  background:radial-gradient(circle,rgba(241,207,106,.09),rgba(0,0,0,.12) 70%) !important;
+}
+
+/* Cards slightly smaller for table redesign */
+.play-screen .playing-card.luxury-white-card{
+  width:92px !important;
+  height:132px !important;
+}
+
+.play-screen .dealer-zone .cards .playing-card:not(:first-child),
+.play-screen .split-hand .cards .playing-card:not(:first-child){
+  margin-left:-42px !important;
+}
+
+.hand-bet-pill{
+  background:linear-gradient(180deg,#151515,#050505) !important;
+  border:1px solid rgba(241,207,106,.75) !important;
+  color:var(--lux-gold) !important;
+  box-shadow:0 8px 14px rgba(0,0,0,.36);
+}
+
+.split-hand.active{
+  filter:drop-shadow(0 0 20px rgba(241,207,106,.22));
+}
+
+/* Betting chips row */
+.chip-tray{
+  position:absolute !important;
+  top:164px !important;
+  left:50% !important;
+  transform:translateX(-50%) !important;
+  z-index:16 !important;
+  width:min(72vw,640px) !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  gap:8px !important;
+  padding:8px 14px !important;
+  border-radius:0 0 28px 28px !important;
+  border:1px solid rgba(241,207,106,.55) !important;
+  background:linear-gradient(180deg,rgba(62,39,9,.95),rgba(14,9,4,.92)) !important;
+  box-shadow:0 16px 30px rgba(0,0,0,.42), inset 0 1px 0 rgba(255,255,255,.1) !important;
+}
+
+.chip-tray .premium-chip{
+  width:46px !important;
+  height:46px !important;
+  min-width:46px !important;
+}
+
+.chip-tray .premium-chip span{
+  font-size:8px !important;
+}
+
+.clear-bet-button,
+.deal-button{
+  height:42px !important;
+  min-width:78px !important;
+  border-radius:999px !important;
+  font-size:10px !important;
+  letter-spacing:.08em !important;
+}
+
+/* utility + action bars */
+.casino-utility-bar{
+  position:absolute !important;
+  bottom:132px !important;
+  left:50% !important;
+  transform:translateX(-50%) !important;
+  z-index:18 !important;
+  display:flex !important;
+  gap:18px !important;
+  justify-content:center !important;
+}
+
+.casino-utility-bar .tip-button{
+  width:60px !important;
+  height:60px !important;
+  border-radius:999px !important;
+  padding:0 !important;
+  display:grid !important;
+  place-items:center !important;
+  gap:0 !important;
+  font-size:9px !important;
+  border:1px solid rgba(241,207,106,.65) !important;
+  background:linear-gradient(180deg,rgba(14,24,43,.98),rgba(3,8,17,.96)) !important;
+  color:var(--ivory) !important;
+  box-shadow:0 14px 22px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.08) !important;
+}
+
+.luxury-action-bar{
+  position:absolute !important;
+  left:50% !important;
+  bottom:44px !important;
+  transform:translateX(-50%) !important;
+  z-index:19 !important;
+  width:min(88vw,640px) !important;
+  display:grid !important;
+  grid-template-columns:repeat(4,1fr) !important;
+  gap:10px !important;
+  padding:12px !important;
+  border:1px solid rgba(241,207,106,.55) !important;
+  border-radius:14px !important;
+  background:linear-gradient(180deg,rgba(4,10,20,.92),rgba(2,4,10,.92)) !important;
+  box-shadow:0 18px 34px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.08) !important;
+}
+
+.luxury-action-bar .move{
+  min-height:62px !important;
+  border-radius:999px !important;
+  border:2px solid rgba(241,207,106,.55) !important;
+  color:#fff !important;
+  font-size:13px !important;
+  letter-spacing:.08em !important;
+  text-transform:uppercase !important;
+  box-shadow:0 14px 24px rgba(0,0,0,.42), inset 0 1px 0 rgba(255,255,255,.16) !important;
+}
+
+.luxury-action-bar .move.P{background:radial-gradient(circle at 50% 18%,#d74a4d,#7d0d15 70%) !important}
+.luxury-action-bar .move.D{background:radial-gradient(circle at 50% 18%,#263d67,#071329 70%) !important}
+.luxury-action-bar .move.S{background:radial-gradient(circle at 50% 18%,#e0b84f,#9a6b1e 70%) !important}
+.luxury-action-bar .move.H{background:radial-gradient(circle at 50% 18%,#208b45,#0c3d22 70%) !important}
+
+/* Keep tip panel as a floating black/gold casino panel */
+.tip-panel{
+  position:absolute !important;
+  right:16px !important;
+  bottom:206px !important;
+  z-index:25 !important;
+  max-width:270px !important;
+  border:1px solid rgba(241,207,106,.65) !important;
+  background:linear-gradient(180deg,rgba(4,10,20,.96),rgba(1,4,10,.95)) !important;
+  color:var(--ivory) !important;
+  box-shadow:0 18px 34px rgba(0,0,0,.48) !important;
+}
+
+/* Modals/popups match the new theme */
+.money-alert-card,
+.hud-sheet,
+.strategy-sheet,
+.help-card{
+  border-color:rgba(241,207,106,.62) !important;
+  background:linear-gradient(180deg,rgba(6,16,34,.97),rgba(2,6,14,.97)) !important;
+}
+
+/* Portrait fit */
+@media(max-width:700px){
+  .play-screen{
+    padding-top:max(16px,env(safe-area-inset-top)) !important;
+  }
+
+  .play-topbar{
+    grid-template-columns:1fr !important;
+    gap:8px !important;
+  }
+
+  .play-exit-button{
+    position:absolute !important;
+    left:0 !important;
+    top:0 !important;
+    width:58px !important;
+    min-width:58px !important;
+    height:36px !important;
+    font-size:11px !important;
+  }
+
+  .play-hud.money-hud{
+    grid-template-columns:repeat(3,1fr) !important;
+    margin-left:66px !important;
+    max-width:none !important;
+  }
+
+  .bankroll-box,.bet-box,.cards-left-box{
+    min-height:40px !important;
+    padding:6px 5px !important;
+  }
+
+  .bankroll-box strong,.bet-box strong,.cards-left-box strong{
+    font-size:13px !important;
+  }
+
+  .bankroll-box span,.bet-box span,.cards-left-box span{
+    font-size:7px !important;
+  }
+
+  .play-table.luxury-casino-table{
+    top:76px !important;
+    bottom:178px !important;
+  }
+
+  .dealer-chip-rack{
+    top:18px !important;
+    width:68vw !important;
+    height:42px !important;
+    gap:4px !important;
+  }
+
+  .rack-chip{
+    width:20px !important;
+    height:28px !important;
+  }
+
+  .luxury-shoe{
+    right:3% !important;
+    top:58px !important;
+    width:78px !important;
+    height:58px !important;
+  }
+
+  .shoe-lid{
+    font-size:7px !important;
+    height:24px !important;
+  }
+
+  .shoe-cards{
+    height:20px !important;
+  }
+
+  .table-rules-card{
+    left:8px !important;
+    top:70px !important;
+    min-width:104px !important;
+    padding:8px !important;
+    gap:4px !important;
+  }
+
+  .table-rules-card strong{font-size:10px !important}
+  .table-rules-card span{font-size:7px !important}
+
+  .play-table .dealer-zone{
+    top:104px !important;
+  }
+
+  .play-player-zone{
+    bottom:60px !important;
+  }
+
+  .side-seat{
+    width:80px !important;
+    height:80px !important;
+    bottom:82px !important;
+  }
+
+  .side-seat-left{left:4% !important}
+  .side-seat-right{right:4% !important}
+
+  .side-seat strong{
+    font-size:9px !important;
+  }
+
+  .side-seat span{
+    width:22px !important;
+    height:22px !important;
+    font-size:17px !important;
+  }
+
+  .felt-insurance-arc{
+    top:55% !important;
+    width:82vw !important;
+    height:84px !important;
+    padding-bottom:14px !important;
+    letter-spacing:.12em !important;
+  }
+
+  .felt-insurance-arc span{font-size:8px !important}
+  .felt-insurance-arc strong{font-size:9px !important}
+
+  .play-screen .playing-card.luxury-white-card{
+    width:76px !important;
+    height:110px !important;
+  }
+
+  .play-screen .dealer-zone .cards .playing-card:not(:first-child),
+  .play-screen .split-hand .cards .playing-card:not(:first-child){
+    margin-left:-38px !important;
+  }
+
+  .chip-tray{
+    top:126px !important;
+    width:92vw !important;
+    gap:4px !important;
+    padding:6px 8px !important;
+  }
+
+  .chip-tray .premium-chip{
+    width:35px !important;
+    height:35px !important;
+    min-width:35px !important;
+  }
+
+  .chip-tray .premium-chip span{
+    display:none !important;
+  }
+
+  .clear-bet-button,
+  .deal-button{
+    min-width:62px !important;
+    height:34px !important;
+    font-size:8px !important;
+  }
+
+  .casino-utility-bar{
+    bottom:122px !important;
+    gap:9px !important;
+  }
+
+  .casino-utility-bar .tip-button{
+    width:50px !important;
+    height:50px !important;
+    font-size:8px !important;
+  }
+
+  .luxury-action-bar{
+    bottom:36px !important;
+    width:94vw !important;
+    gap:7px !important;
+    padding:8px !important;
+  }
+
+  .luxury-action-bar .move{
+    min-height:54px !important;
+    font-size:10px !important;
+  }
+
+  .tip-panel{
+    right:10px !important;
+    left:10px !important;
+    bottom:184px !important;
+    max-width:none !important;
+  }
+}
+
+/* Landscape keeps the casino table wide and close to the mockup */
+@media (orientation: landscape) and (max-height:540px){
+  .play-topbar{
+    grid-template-columns:auto 1fr !important;
+  }
+
+  .play-hud.money-hud{
+    max-width:520px !important;
+  }
+
+  .play-table.luxury-casino-table{
+    top:54px !important;
+    bottom:112px !important;
+  }
+
+  .dealer-chip-rack{
+    top:8px !important;
+    height:42px !important;
+  }
+
+  .luxury-shoe{
+    top:45px !important;
+    right:7% !important;
+    width:90px !important;
+    height:64px !important;
+  }
+
+  .table-rules-card{
+    top:54px !important;
+    left:12px !important;
+  }
+
+  .play-table .dealer-zone{
+    top:76px !important;
+  }
+
+  .play-player-zone{
+    bottom:44px !important;
+  }
+
+  .play-screen .playing-card.luxury-white-card{
+    width:76px !important;
+    height:108px !important;
+  }
+
+  .chip-tray{
+    top:54px !important;
+    width:min(58vw,500px) !important;
+  }
+
+  .casino-utility-bar{
+    right:16px !important;
+    left:auto !important;
+    bottom:118px !important;
+    transform:none !important;
+    flex-direction:column !important;
+    gap:8px !important;
+  }
+
+  .casino-utility-bar .tip-button{
+    width:48px !important;
+    height:48px !important;
+  }
+
+  .luxury-action-bar{
+    bottom:16px !important;
+    width:min(72vw,560px) !important;
+  }
+
+  .luxury-action-bar .move{
+    min-height:50px !important;
+  }
+
+  .side-seat{
+    width:74px !important;
+    height:74px !important;
+    bottom:52px !important;
+  }
+
+  .felt-insurance-arc{
+    top:54% !important;
+    height:70px !important;
+  }
+}
