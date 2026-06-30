@@ -5997,3 +5997,576 @@ body::before{
     top:42px !important;
   }
 }
+
+
+/* =========================================================
+   v0.5.2 — Play BJ table/control zone rework
+   Table is intentionally smaller. Controls live below the table.
+   ========================================================= */
+
+/* Give the screen a clear top table zone + bottom casino-floor control zone */
+.play-screen{
+  min-height:100dvh !important;
+  overflow:hidden !important;
+  display:block !important;
+}
+
+/* Make the actual table smaller so it does not own the whole screen */
+.play-table.luxury-casino-table{
+  top:92px !important;
+  bottom:318px !important;
+  left:6px !important;
+  right:6px !important;
+  border-radius:0 0 44% 44% / 0 0 15% 15% !important;
+  box-shadow:
+    inset 0 0 0 2px rgba(241,207,106,.26),
+    inset 0 -18px 48px rgba(0,0,0,.38),
+    0 22px 52px rgba(0,0,0,.52) !important;
+}
+
+/* The rail is the visual divider between table and control area */
+.bottom-rail{
+  bottom:-14px !important;
+  height:92px !important;
+  z-index:7 !important;
+}
+
+.top-rail{
+  top:-46px !important;
+  height:70px !important;
+}
+
+/* Keep table props smaller and tucked away */
+.dealer-chip-rack{
+  top:16px !important;
+  width:min(48vw,360px) !important;
+  height:46px !important;
+  gap:6px !important;
+}
+
+.rack-chip{
+  width:23px !important;
+  height:32px !important;
+}
+
+.luxury-shoe{
+  top:54px !important;
+  right:6% !important;
+  width:88px !important;
+  height:62px !important;
+}
+
+.table-rules-card{
+  top:82px !important;
+  left:12px !important;
+  min-width:126px !important;
+  padding:9px 10px !important;
+  gap:4px !important;
+}
+
+.table-rules-card strong{
+  font-size:11px !important;
+}
+
+.table-rules-card span{
+  font-size:8px !important;
+}
+
+/* Dealer hand higher, player hand clearly inside lower table area */
+.play-table .dealer-zone{
+  top:112px !important;
+}
+
+.play-player-zone{
+  bottom:34px !important;
+  width:min(54vw,300px) !important;
+}
+
+/* Make player cards remain readable but not collide with controls */
+.play-screen .playing-card.luxury-white-card{
+  width:78px !important;
+  height:112px !important;
+}
+
+.play-screen .dealer-zone .cards .playing-card:not(:first-child),
+.play-screen .split-hand .cards .playing-card:not(:first-child){
+  margin-left:-38px !important;
+}
+
+/* Seat circles should be part of table visual, not button area */
+.side-seat{
+  bottom:46px !important;
+  width:82px !important;
+  height:82px !important;
+  z-index:5 !important;
+}
+
+.side-seat-left{
+  left:7% !important;
+}
+
+.side-seat-right{
+  right:7% !important;
+}
+
+/* Keep insurance text centered in table, smaller */
+.felt-insurance-arc{
+  top:56% !important;
+  width:min(68vw,450px) !important;
+  height:80px !important;
+  padding-bottom:15px !important;
+}
+
+.felt-insurance-arc span{
+  font-size:9px !important;
+  letter-spacing:.16em !important;
+}
+
+.felt-insurance-arc strong{
+  font-size:10px !important;
+  letter-spacing:.18em !important;
+}
+
+/* Bottom casino floor becomes the control zone */
+.play-screen::before{
+  height:46% !important;
+  background:
+    radial-gradient(circle at 18% 20%,rgba(241,207,106,.18),transparent 9%),
+    radial-gradient(circle at 50% 2%,rgba(255,244,220,.14),transparent 16%),
+    radial-gradient(circle at 83% 20%,rgba(241,207,106,.14),transparent 9%),
+    repeating-radial-gradient(circle at 28% 55%,rgba(241,207,106,.1) 0 2px,transparent 3px 17px),
+    repeating-linear-gradient(45deg,rgba(241,207,106,.08) 0 1px,transparent 1px 28px),
+    linear-gradient(135deg,#3b0910,#17050a 55%,#2a070d) !important;
+}
+
+/* Utility buttons live below the rail, far left, and no longer on the table */
+.casino-utility-bar{
+  position:absolute !important;
+  left:max(10px,env(safe-area-inset-left)) !important;
+  bottom:92px !important;
+  right:auto !important;
+  transform:none !important;
+  z-index:28 !important;
+  display:grid !important;
+  grid-template-columns:1fr !important;
+  gap:6px !important;
+}
+
+.casino-utility-bar .tip-button{
+  width:54px !important;
+  height:38px !important;
+  border-radius:12px !important;
+  font-size:7px !important;
+  padding:0 !important;
+}
+
+/* Chips below player hand / rail, centered in the control area */
+.chip-tray{
+  position:absolute !important;
+  top:auto !important;
+  bottom:146px !important;
+  left:50% !important;
+  transform:translateX(-50%) !important;
+  width:min(76vw,600px) !important;
+  margin-left:0 !important;
+  z-index:27 !important;
+  display:flex !important;
+  justify-content:center !important;
+  align-items:center !important;
+  gap:6px !important;
+  padding:7px 10px !important;
+  border-radius:999px !important;
+  background:linear-gradient(180deg,rgba(5,12,24,.95),rgba(1,4,10,.96)) !important;
+  border:1px solid rgba(241,207,106,.6) !important;
+  box-shadow:
+    0 16px 30px rgba(0,0,0,.42),
+    inset 0 1px 0 rgba(255,255,255,.08) !important;
+}
+
+.chip-tray .premium-chip{
+  width:40px !important;
+  height:40px !important;
+  min-width:40px !important;
+}
+
+.chip-tray .premium-chip span{
+  display:none !important;
+}
+
+.clear-bet-button,
+.deal-button{
+  min-width:66px !important;
+  height:38px !important;
+  border-radius:999px !important;
+  font-size:8px !important;
+  letter-spacing:.07em !important;
+}
+
+/* Action buttons under the chips, fully in the floor/seat area */
+.luxury-action-bar{
+  position:absolute !important;
+  left:50% !important;
+  right:auto !important;
+  bottom:76px !important;
+  transform:translateX(-50%) !important;
+  width:min(78vw,600px) !important;
+  margin-left:0 !important;
+  z-index:27 !important;
+  display:grid !important;
+  grid-template-columns:repeat(4,1fr) !important;
+  gap:8px !important;
+  padding:9px !important;
+  border-radius:18px !important;
+  background:linear-gradient(180deg,rgba(5,12,24,.95),rgba(1,4,10,.96)) !important;
+}
+
+.luxury-action-bar .move{
+  min-height:54px !important;
+  font-size:11px !important;
+}
+
+/* HUD boxes: vertically center content and allow bankroll to grow */
+.play-hud.money-hud{
+  grid-template-columns:minmax(150px,1.35fr) minmax(120px,1fr) minmax(130px,1.05fr) !important;
+  max-width:min(820px,calc(100vw - 98px)) !important;
+}
+
+.bankroll-box,
+.cards-left-box,
+.bet-box{
+  align-items:center !important;
+  justify-content:center !important;
+  text-align:center !important;
+  min-height:48px !important;
+  overflow:visible !important;
+  white-space:nowrap !important;
+}
+
+.bankroll-box{
+  min-width:150px !important;
+}
+
+.bankroll-box strong{
+  font-size:clamp(16px,2.3vw,24px) !important;
+  line-height:1 !important;
+}
+
+.cards-left-box strong,
+.bet-box strong{
+  line-height:1 !important;
+  transform:none !important;
+}
+
+.cards-left-box span,
+.bet-box span,
+.bankroll-box span{
+  line-height:1 !important;
+  margin-top:5px !important;
+}
+
+/* Hide overly large parts from v0.5.0 that are causing collisions on phones */
+.table-brand-watermark{
+  opacity:.72 !important;
+}
+
+.luxury-bet-circle{
+  width:92px !important;
+  height:92px !important;
+}
+
+/* Portrait-first optimization */
+@media(max-width:700px){
+  .play-topbar{
+    top:max(14px,env(safe-area-inset-top)) !important;
+    left:max(6px,env(safe-area-inset-left)) !important;
+    right:max(6px,env(safe-area-inset-right)) !important;
+  }
+
+  .play-exit-button{
+    width:56px !important;
+    min-width:56px !important;
+    height:36px !important;
+    font-size:10px !important;
+  }
+
+  .play-hud.money-hud{
+    grid-template-columns:minmax(88px,1.25fr) minmax(80px,1fr) minmax(82px,1fr) !important;
+    max-width:none !important;
+    margin-left:60px !important;
+    gap:5px !important;
+  }
+
+  .bankroll-box{
+    min-width:88px !important;
+  }
+
+  .bankroll-box,
+  .cards-left-box,
+  .bet-box{
+    min-height:40px !important;
+    padding:5px 4px !important;
+  }
+
+  .bankroll-box strong,
+  .cards-left-box strong,
+  .bet-box strong{
+    font-size:12px !important;
+  }
+
+  .bankroll-box span,
+  .cards-left-box span,
+  .bet-box span{
+    font-size:6.5px !important;
+    margin-top:4px !important;
+    letter-spacing:.04em !important;
+  }
+
+  .play-table.luxury-casino-table{
+    top:76px !important;
+    bottom:304px !important;
+    left:3px !important;
+    right:3px !important;
+    border-radius:0 0 46% 46% / 0 0 14% 14% !important;
+  }
+
+  .bottom-rail{
+    height:86px !important;
+    bottom:-12px !important;
+  }
+
+  .dealer-chip-rack{
+    top:12px !important;
+    width:64vw !important;
+    height:34px !important;
+    gap:3px !important;
+  }
+
+  .rack-chip{
+    width:17px !important;
+    height:24px !important;
+    border-width:1px !important;
+  }
+
+  .luxury-shoe{
+    top:48px !important;
+    right:3% !important;
+    width:66px !important;
+    height:48px !important;
+  }
+
+  .shoe-lid{
+    height:20px !important;
+    font-size:6px !important;
+  }
+
+  .shoe-cards{
+    height:17px !important;
+  }
+
+  .table-rules-card{
+    top:52px !important;
+    left:7px !important;
+    min-width:92px !important;
+    padding:6px 6px !important;
+    gap:3px !important;
+  }
+
+  .table-rules-card strong{
+    font-size:8px !important;
+  }
+
+  .table-rules-card span{
+    font-size:6px !important;
+  }
+
+  .play-table .dealer-zone{
+    top:98px !important;
+  }
+
+  .play-player-zone{
+    bottom:28px !important;
+    width:170px !important;
+  }
+
+  .play-screen .playing-card.luxury-white-card{
+    width:70px !important;
+    height:100px !important;
+  }
+
+  .play-screen .dealer-zone .cards .playing-card:not(:first-child),
+  .play-screen .split-hand .cards .playing-card:not(:first-child){
+    margin-left:-35px !important;
+  }
+
+  .side-seat{
+    width:66px !important;
+    height:66px !important;
+    bottom:44px !important;
+  }
+
+  .side-seat-left{
+    left:4% !important;
+  }
+
+  .side-seat-right{
+    right:4% !important;
+  }
+
+  .side-seat span{
+    width:20px !important;
+    height:20px !important;
+    font-size:15px !important;
+  }
+
+  .side-seat strong{
+    font-size:7.5px !important;
+  }
+
+  .felt-insurance-arc{
+    top:56% !important;
+    width:78vw !important;
+    height:62px !important;
+    padding-bottom:10px !important;
+  }
+
+  .felt-insurance-arc span{
+    font-size:7px !important;
+    letter-spacing:.1em !important;
+  }
+
+  .felt-insurance-arc strong{
+    font-size:8px !important;
+    letter-spacing:.12em !important;
+  }
+
+  .casino-utility-bar{
+    left:max(6px,env(safe-area-inset-left)) !important;
+    bottom:82px !important;
+    gap:5px !important;
+  }
+
+  .casino-utility-bar .tip-button{
+    width:45px !important;
+    height:34px !important;
+    font-size:6.5px !important;
+  }
+
+  .chip-tray{
+    bottom:132px !important;
+    width:calc(100vw - 68px) !important;
+    left:auto !important;
+    right:max(7px,env(safe-area-inset-right)) !important;
+    transform:none !important;
+    padding:6px !important;
+    gap:3px !important;
+  }
+
+  .chip-tray .premium-chip{
+    width:31px !important;
+    height:31px !important;
+    min-width:31px !important;
+  }
+
+  .clear-bet-button,
+  .deal-button{
+    min-width:50px !important;
+    height:31px !important;
+    font-size:7px !important;
+  }
+
+  .luxury-action-bar{
+    bottom:74px !important;
+    width:calc(100vw - 68px) !important;
+    left:auto !important;
+    right:max(7px,env(safe-area-inset-right)) !important;
+    transform:none !important;
+    grid-template-columns:repeat(4,1fr) !important;
+    gap:5px !important;
+    padding:6px !important;
+  }
+
+  .luxury-action-bar .move{
+    min-height:45px !important;
+    font-size:8px !important;
+    padding:0 !important;
+  }
+
+  .table-brand-watermark strong{
+    font-size:32px !important;
+  }
+
+  .table-brand-watermark span{
+    font-size:22px !important;
+  }
+}
+
+/* Landscape layout: table left/top, controls below but not on cards */
+@media (orientation: landscape) and (max-height:540px){
+  .play-table.luxury-casino-table{
+    top:54px !important;
+    bottom:126px !important;
+    left:8px !important;
+    right:8px !important;
+  }
+
+  .dealer-chip-rack{
+    top:7px !important;
+    height:34px !important;
+    width:min(42vw,320px) !important;
+  }
+
+  .play-table .dealer-zone{
+    top:66px !important;
+  }
+
+  .play-player-zone{
+    bottom:24px !important;
+  }
+
+  .play-screen .playing-card.luxury-white-card{
+    width:68px !important;
+    height:98px !important;
+  }
+
+  .luxury-shoe{
+    top:38px !important;
+    width:70px !important;
+    height:50px !important;
+  }
+
+  .table-rules-card{
+    top:42px !important;
+  }
+
+  .chip-tray{
+    bottom:64px !important;
+    width:min(50vw,470px) !important;
+    right:12px !important;
+    left:auto !important;
+    transform:none !important;
+  }
+
+  .luxury-action-bar{
+    bottom:8px !important;
+    right:12px !important;
+    left:auto !important;
+    transform:none !important;
+    width:min(50vw,470px) !important;
+  }
+
+  .luxury-action-bar .move{
+    min-height:43px !important;
+  }
+
+  .casino-utility-bar{
+    left:12px !important;
+    bottom:8px !important;
+    display:flex !important;
+    flex-direction:row !important;
+  }
+
+  .casino-utility-bar .tip-button{
+    width:48px !important;
+    height:38px !important;
+  }
+}
