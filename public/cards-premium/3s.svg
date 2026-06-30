@@ -1,0 +1,36 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='360' height='540' viewBox='0 0 360 540'>
+  <defs>
+    <linearGradient id='bg' x1='0' y1='0' x2='1' y2='1'>
+      <stop offset='0%' stop-color='#171717'/>
+      <stop offset='55%' stop-color='#0c0c0f'/>
+      <stop offset='100%' stop-color='#090909'/>
+    </linearGradient>
+    <radialGradient id='glow' cx='28%' cy='14%' r='72%'>
+      <stop offset='0%' stop-color='rgba(255,255,255,0.18)'/>
+      <stop offset='38%' stop-color='rgba(255,255,255,0.06)'/>
+      <stop offset='100%' stop-color='rgba(255,255,255,0)'/>
+    </radialGradient>
+    <filter id='shadow' x='-20%' y='-20%' width='140%' height='140%'>
+      <feDropShadow dx='0' dy='14' stdDeviation='12' flood-color='rgba(0,0,0,0.4)'/>
+    </filter>
+  </defs>
+  <rect width='360' height='540' rx='34' fill='none'/>
+  <g filter='url(#shadow)'>
+    <rect x='10' y='10' width='340' height='520' rx='30' fill='url(#bg)' stroke='#f4d06f' stroke-width='8'/>
+    <rect x='26' y='26' width='308' height='488' rx='22' fill='none' stroke='rgba(244,208,111,0.45)' stroke-width='2.4'/>
+    <rect x='36' y='36' width='288' height='468' rx='18' fill='rgba(255,255,255,0.02)' stroke='rgba(231,226,212,0.18)' stroke-width='1.6'/>
+    <rect x='10' y='10' width='340' height='520' rx='30' fill='url(#glow)' opacity='0.45'/>
+
+    <g transform='translate(48,54)'>
+      <text x='0' y='0' font-size='44' font-weight='800' fill='#f5f0de' font-family='Georgia, Times New Roman, serif'>3</text>
+      <text x='0' y='42' font-size='34' fill='#f5f0de' font-family='Georgia, Times New Roman, serif'>♠</text>
+    </g>
+
+    <g transform='translate(312,486) rotate(180)'>
+      <text x='0' y='0' text-anchor='end' font-size='44' font-weight='800' fill='#f5f0de' font-family='Georgia, Times New Roman, serif'>3</text>
+      <text x='0' y='42' text-anchor='end' font-size='34' fill='#f5f0de' font-family='Georgia, Times New Roman, serif'>♠</text>
+    </g>
+
+    <g transform='translate(180,122)'><text x='0' y='0' text-anchor='middle' dominant-baseline='central' font-size='60' font-weight='700' fill='#f5f0de' font-family='Georgia, Times New Roman, serif'>♠</text></g><g transform='translate(180,270)'><text x='0' y='0' text-anchor='middle' dominant-baseline='central' font-size='60' font-weight='700' fill='#f5f0de' font-family='Georgia, Times New Roman, serif'>♠</text></g><g transform='translate(180,418)'><text x='0' y='0' text-anchor='middle' dominant-baseline='central' font-size='60' font-weight='700' fill='#f5f0de' font-family='Georgia, Times New Roman, serif'>♠</text></g>
+  </g>
+</svg>

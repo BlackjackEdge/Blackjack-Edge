@@ -3553,3 +3553,252 @@ button,input{font:inherit}button{cursor:pointer}
     padding-top:calc(env(safe-area-inset-top,0px) + 24px)!important;
   }
 }
+
+
+/* v0.4.11 Money bar smoothing + portrait button order + landscape action curve */
+
+/* Make the 3 Play BJ top boxes smoother so Cards Left/Decks does not overlap */
+.play-topbar .money-hud,
+.play-screen .money-hud{
+  min-width:0!important;
+  overflow:hidden!important;
+}
+
+.play-topbar .money-hud > div{
+  min-width:0!important;
+  overflow:hidden!important;
+  box-sizing:border-box!important;
+}
+
+.play-topbar .money-hud strong,
+.play-topbar .money-hud span{
+  max-width:100%!important;
+  overflow:hidden!important;
+  text-overflow:clip!important;
+}
+
+.play-topbar .cards-left-box{
+  min-width:0!important;
+  padding-left:4px!important;
+  padding-right:4px!important;
+}
+
+.play-topbar .cards-left-box strong{
+  letter-spacing:-.06em!important;
+  font-variant-numeric:tabular-nums!important;
+}
+
+.play-topbar .cards-left-box span{
+  display:block!important;
+  font-size:7px!important;
+  letter-spacing:.08em!important;
+  text-transform:uppercase!important;
+}
+
+/* Portrait: smaller, cleaner Bankroll / Bet / Cards Left layout */
+@media(max-width:700px) and (orientation:portrait){
+  .play-topbar{
+    grid-template-columns:50px minmax(0,1fr)!important;
+    gap:5px!important;
+  }
+
+  .play-exit-button{
+    padding:0 7px!important;
+    font-size:10px!important;
+  }
+
+  .play-topbar .money-hud{
+    width:100%!important;
+    grid-template-columns:minmax(0,1fr) 58px 72px!important;
+    gap:3px!important;
+  }
+
+  .play-topbar .money-hud > div{
+    min-height:39px!important;
+    border-radius:12px!important;
+    padding:2px 4px!important;
+  }
+
+  .play-topbar .bankroll-box{
+    padding-left:6px!important;
+  }
+
+  .play-topbar .bankroll-box strong{
+    font-size:clamp(15px,4.9vw,22px)!important;
+    letter-spacing:-.05em!important;
+  }
+
+  .play-topbar .bet-box strong{
+    font-size:clamp(14px,4.4vw,19px)!important;
+    letter-spacing:-.05em!important;
+  }
+
+  .play-topbar .cards-left-box strong{
+    font-size:clamp(10.5px,3.35vw,14px)!important;
+    line-height:1!important;
+    letter-spacing:-.07em!important;
+  }
+
+  .play-topbar .money-hud span{
+    font-size:6.6px!important;
+    line-height:1.05!important;
+  }
+
+  /* Portrait requested order: Split, Double, Hit, Stand */
+  .play-screen .play-actions .move.P{order:1!important;}
+  .play-screen .play-actions .move.D{order:2!important;}
+  .play-screen .play-actions .move.H{order:3!important;}
+  .play-screen .play-actions .move.S{order:4!important;}
+}
+
+/* Very narrow portrait phones: compress one more step */
+@media(max-width:380px) and (orientation:portrait){
+  .play-topbar{
+    grid-template-columns:46px minmax(0,1fr)!important;
+  }
+
+  .play-topbar .money-hud{
+    grid-template-columns:minmax(0,1fr) 52px 66px!important;
+  }
+
+  .play-topbar .bankroll-box strong{
+    font-size:14px!important;
+  }
+
+  .play-topbar .bet-box strong{
+    font-size:13px!important;
+  }
+
+  .play-topbar .cards-left-box strong{
+    font-size:10px!important;
+  }
+
+  .play-topbar .money-hud span{
+    font-size:6px!important;
+  }
+}
+
+/* Landscape: shrink and smooth 3-box money bar so cards-left does not collide with utilities */
+@media (orientation: landscape) and (max-height:540px){
+  .play-topbar .money-hud{
+    left:31%!important;
+    width:min(43vw,330px)!important;
+    grid-template-columns:minmax(0,1fr) 58px 78px!important;
+    gap:3px!important;
+  }
+
+  .play-topbar .money-hud > div{
+    min-height:31px!important;
+    border-radius:12px!important;
+    padding:2px 4px!important;
+  }
+
+  .play-topbar .bankroll-box strong,
+  .play-topbar .bet-box strong{
+    font-size:13px!important;
+    letter-spacing:-.05em!important;
+  }
+
+  .play-topbar .cards-left-box strong{
+    font-size:10.5px!important;
+    line-height:1!important;
+    letter-spacing:-.08em!important;
+  }
+
+  .play-topbar .money-hud span,
+  .play-topbar .cards-left-box span{
+    font-size:6.2px!important;
+    line-height:1.05!important;
+  }
+
+  /* Curved/stepped action buttons from the right side down toward the Deal button */
+  .play-screen .play-actions{
+    position:absolute!important;
+    right:8px!important;
+    top:82px!important;
+    bottom:auto!important;
+    width:174px!important;
+    height:176px!important;
+    display:block!important;
+    z-index:22!important;
+    pointer-events:none!important;
+  }
+
+  .play-screen .play-actions .move{
+    position:absolute!important;
+    width:64px!important;
+    min-height:39px!important;
+    height:39px!important;
+    border-radius:999px!important;
+    font-size:9.5px!important;
+    padding:4px!important;
+    pointer-events:auto!important;
+    box-shadow:0 12px 26px rgba(0,0,0,.42), inset 0 1px 0 rgba(255,255,255,.28)!important;
+  }
+
+  .play-screen .play-actions .move.H{
+    right:0!important;
+    top:0!important;
+  }
+
+  .play-screen .play-actions .move.S{
+    right:16px!important;
+    top:43px!important;
+  }
+
+  .play-screen .play-actions .move.D{
+    right:36px!important;
+    top:86px!important;
+  }
+
+  .play-screen .play-actions .move.P{
+    right:58px!important;
+    top:129px!important;
+  }
+
+  .play-screen .play-bottom-bar{
+    width:min(34vw,235px)!important;
+  }
+}
+
+/* Very short landscape phones: tighter curve and smaller money bar */
+@media (orientation: landscape) and (max-height:430px){
+  .play-topbar .money-hud{
+    left:30%!important;
+    width:min(42vw,300px)!important;
+    grid-template-columns:minmax(0,1fr) 52px 70px!important;
+  }
+
+  .play-topbar .bankroll-box strong,
+  .play-topbar .bet-box strong{
+    font-size:12px!important;
+  }
+
+  .play-topbar .cards-left-box strong{
+    font-size:9.5px!important;
+  }
+
+  .play-topbar .money-hud span,
+  .play-topbar .cards-left-box span{
+    font-size:5.8px!important;
+  }
+
+  .play-screen .play-actions{
+    right:6px!important;
+    top:72px!important;
+    width:150px!important;
+    height:156px!important;
+  }
+
+  .play-screen .play-actions .move{
+    width:58px!important;
+    height:35px!important;
+    min-height:35px!important;
+    font-size:8.5px!important;
+  }
+
+  .play-screen .play-actions .move.H{right:0!important;top:0!important;}
+  .play-screen .play-actions .move.S{right:12px!important;top:38px!important;}
+  .play-screen .play-actions .move.D{right:28px!important;top:76px!important;}
+  .play-screen .play-actions .move.P{right:46px!important;top:114px!important;}
+}

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { HelpCircle, X } from "lucide-react";
+import { X } from "lucide-react";
 import {
   cardRank,
   cardSuit,
@@ -15,6 +15,16 @@ import {
 } from "@/lib/blackjack";
 
 type StrategyTab = "hard" | "soft" | "pairs";
+
+function getPremiumCardAsset(value: string) {
+  const rank = cardRank(value);
+  const suit = cardSuit(value);
+
+  const rankCode = rank === "10" ? "10" : rank.toLowerCase();
+  const suitCode = suit === "♠" ? "s" : suit === "♥" ? "h" : suit === "♦" ? "d" : "c";
+
+  return `/cards-premium/${rankCode}${suitCode}.svg`;
+}
 
 export function PlayingCard({
   value,
@@ -35,61 +45,16 @@ export function PlayingCard({
     );
   }
 
-  const rank = cardRank(value);
-  const suit = cardSuit(value);
-  const red = suit === "♥" || suit === "♦";
-  const pipCount = getPipCount(rank);
-  const isFace = ["J", "Q", "K"].includes(rank);
-
   return (
-    <div className={`${mini ? "mini-card" : "playing-card"} casino-card ${red ? "red-card" : ""}`}>
-      <div className="card-corner top-left">
-        <strong>{rank}</strong>
-        <span>{suit}</span>
-      </div>
-
-      {isFace ? (
-        <div className="royal-face-card">
-          <div className="royal-row top">
-            <span>{suit}</span>
-            <em>{rank}</em>
-            <span>{suit}</span>
-          </div>
-          <div className="royal-center">
-            <span>{suit}</span>
-            <strong>{rank}</strong>
-            <span>{suit}</span>
-          </div>
-          <div className="royal-row bottom">
-            <span>{suit}</span>
-            <em>{rank}</em>
-            <span>{suit}</span>
-          </div>
-        </div>
-      ) : rank === "A" ? (
-        <div className="ace-field">
-          <span>{suit}</span>
-        </div>
-      ) : (
-        <div className={`pip-layout pip-${pipCount}`}>
-          {Array.from({ length: pipCount }).map((_, index) => (
-            <span key={index}>{suit}</span>
-          ))}
-        </div>
-      )}
-
-      <div className="card-corner bottom-right">
-        <strong>{rank}</strong>
-        <span>{suit}</span>
-      </div>
+    <div className={`${mini ? "mini-card" : "playing-card"} premium-svg-card`}>
+      <img
+        src={getPremiumCardAsset(value)}
+        alt={value}
+        className="card-face-art"
+        draggable={false}
+      />
     </div>
   );
-}
-
-function getPipCount(rank: string) {
-  if (rank === "A") return 1;
-  if (["J", "Q", "K"].includes(rank)) return 0;
-  return Number(rank) || 0;
 }
 
 export function Logo({ compact = false }: { compact?: boolean }) {

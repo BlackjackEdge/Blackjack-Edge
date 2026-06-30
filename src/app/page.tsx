@@ -1039,7 +1039,7 @@ export default function App() {
               <div className="bet-box"><strong>${bet.toLocaleString()}</strong><span>Bet</span></div>
               <div className="cards-left-box">
                 <strong>{playShoe.length.toLocaleString()}/{(playDecks * 52).toLocaleString()}</strong>
-                <span>{playDecks} Deck{playDecks > 1 ? "s" : ""}</span>
+                <span>{playDecks}D Shoe</span>
               </div>
             </div>
           </div>
