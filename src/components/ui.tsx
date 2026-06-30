@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { X } from "lucide-react";
+import { HelpCircle, X } from "lucide-react";
 import {
   cardRank,
   cardSuit,
@@ -16,14 +16,89 @@ import {
 
 type StrategyTab = "hard" | "soft" | "pairs";
 
-function getPremiumCardAsset(value: string) {
-  const rank = cardRank(value);
-  const suit = cardSuit(value);
+function premiumSuitMeta(suit: string) {
+  if (suit === "♥") return { symbol: "♥", red: true };
+  if (suit === "♦") return { symbol: "♦", red: true };
+  if (suit === "♣") return { symbol: "♣", red: false };
+  return { symbol: "♠", red: false };
+}
 
-  const rankCode = rank === "10" ? "10" : rank.toLowerCase();
-  const suitCode = suit === "♠" ? "s" : suit === "♥" ? "h" : suit === "♦" ? "d" : "c";
+const premiumPipRows: Record<string, number[]> = {
+  A: [1],
+  "2": [1, 1],
+  "3": [1, 1, 1],
+  "4": [2, 2],
+  "5": [2, 1, 2],
+  "6": [2, 2, 2],
+  "7": [2, 1, 2, 2],
+  "8": [2, 2, 2, 2],
+  "9": [2, 2, 1, 2, 2],
+  "10": [2, 2, 2, 2, 2],
+};
 
-  return `/cards-premium/${rankCode}${suitCode}.svg`;
+function PremiumCorner({
+  rank,
+  suit,
+  red,
+  flipped = false,
+}: {
+  rank: string;
+  suit: string;
+  red: boolean;
+  flipped?: boolean;
+}) {
+  return (
+    <div className={`premium-corner-mark ${flipped ? "flipped" : ""}`}>
+      <strong>{rank}</strong>
+      <span className={red ? "red" : "black"}>{suit}</span>
+    </div>
+  );
+}
+
+function PremiumCardCenter({
+  rank,
+  suit,
+  red,
+}: {
+  rank: string;
+  suit: string;
+  red: boolean;
+}) {
+  if (rank === "A") {
+    return (
+      <div className="premium-card-center ace-center">
+        <span className={red ? "red" : "black"}>{suit}</span>
+      </div>
+    );
+  }
+
+  if (["J", "Q", "K"].includes(rank)) {
+    return (
+      <div className="premium-card-center face-center">
+        <div className={`premium-face-badge ${red ? "red" : "black"}`}>
+          <em>BLACKJACK EDGE</em>
+          <strong>{rank}</strong>
+          <span>{suit}</span>
+        </div>
+      </div>
+    );
+  }
+
+  const rows = premiumPipRows[rank] ?? [1];
+
+  return (
+    <div className="premium-pip-grid">
+      {rows.map((count, rowIndex) => (
+        <div key={`${rank}-${rowIndex}`} className={`premium-pip-row count-${count}`}>
+          {Array.from({ length: count }).map((_, pipIndex) => (
+            <span key={`${rank}-${rowIndex}-${pipIndex}`} className={red ? "red" : "black"}>
+              {suit}
+            </span>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export function PlayingCard({
@@ -37,22 +112,27 @@ export function PlayingCard({
 }) {
   if (faceDown) {
     return (
-      <div className={mini ? "mini-card card-back" : "playing-card card-back"}>
-        <div className="card-back-inner">
-          <img src="/blackjack-edge-logo.jpg" alt="" />
+      <div className={`${mini ? "mini-card" : "playing-card"} premium-live-card premium-card-back`}>
+        <div className="premium-card-shell">
+          <div className="premium-card-back-inner">
+            <img src="/blackjack-edge-logo.jpg" alt="" />
+          </div>
         </div>
       </div>
     );
   }
 
+  const rank = cardRank(value);
+  const suit = cardSuit(value);
+  const meta = premiumSuitMeta(suit);
+
   return (
-    <div className={`${mini ? "mini-card" : "playing-card"} premium-svg-card`}>
-      <img
-        src={getPremiumCardAsset(value)}
-        alt={value}
-        className="card-face-art"
-        draggable={false}
-      />
+    <div className={`${mini ? "mini-card" : "playing-card"} premium-live-card ${meta.red ? "premium-red-card" : "premium-black-card"}`}>
+      <div className="premium-card-shell">
+        <PremiumCorner rank={rank} suit={meta.symbol} red={meta.red} />
+        <PremiumCardCenter rank={rank} suit={meta.symbol} red={meta.red} />
+        <PremiumCorner rank={rank} suit={meta.symbol} red={meta.red} flipped />
+      </div>
     </div>
   );
 }
