@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { HelpCircle, X } from "lucide-react";
+import { X } from "lucide-react";
 import {
   cardRank,
   cardSuit,
@@ -16,17 +16,71 @@ import {
 
 type StrategyTab = "hard" | "soft" | "pairs";
 
-function premiumCardImagePath(card: string) {
-  const rank = cardRank(card).toLowerCase();
-  const suit = cardSuit(card);
+type PipPosition =
+  | "top-left"
+  | "top-center"
+  | "top-right"
+  | "upper-left"
+  | "upper-center"
+  | "upper-right"
+  | "center-left"
+  | "center"
+  | "center-right"
+  | "lower-left"
+  | "lower-center"
+  | "lower-right"
+  | "bottom-left"
+  | "bottom-center"
+  | "bottom-right";
 
-  const suitCode =
-    suit === "♠" ? "s" :
-    suit === "♥" ? "h" :
-    suit === "♦" ? "d" :
-    "c";
+const PIP_LAYOUTS: Record<string, PipPosition[]> = {
+  A: ["center"],
+  "2": ["top-center", "bottom-center"],
+  "3": ["top-center", "center", "bottom-center"],
+  "4": ["top-left", "top-right", "bottom-left", "bottom-right"],
+  "5": ["top-left", "top-right", "center", "bottom-left", "bottom-right"],
+  "6": ["top-left", "top-right", "center-left", "center-right", "bottom-left", "bottom-right"],
+  "7": ["top-left", "top-right", "upper-center", "center-left", "center-right", "bottom-left", "bottom-right"],
+  "8": ["top-left", "top-right", "upper-center", "center-left", "center-right", "lower-center", "bottom-left", "bottom-right"],
+  "9": ["top-left", "top-right", "upper-center", "center-left", "center", "center-right", "lower-center", "bottom-left", "bottom-right"],
+  "10": ["top-left", "top-right", "upper-left", "upper-right", "center-left", "center-right", "lower-left", "lower-right", "bottom-left", "bottom-right"],
+};
 
-  return `/cards-premium/${rank}${suitCode}.png`;
+const MIRRORED_POSITIONS = new Set<PipPosition>([
+  "lower-left",
+  "lower-center",
+  "lower-right",
+  "bottom-left",
+  "bottom-center",
+  "bottom-right",
+]);
+
+function suitClass(suit: string) {
+  return suit === "♥" || suit === "♦" ? "suit-red" : "suit-black";
+}
+
+function isFaceRank(rank: string) {
+  return rank === "J" || rank === "Q" || rank === "K";
+}
+
+function faceLabel(rank: string) {
+  if (rank === "J") return "Jack";
+  if (rank === "Q") return "Queen";
+  if (rank === "K") return "King";
+  return rank;
+}
+
+function renderPips(rank: string, suit: string) {
+  const positions = PIP_LAYOUTS[rank] || [];
+  return positions.map((position, index) => (
+    <span
+      key={`${rank}-${position}-${index}`}
+      className={`luxury-pip ${position} ${MIRRORED_POSITIONS.has(position) ? "mirrored" : ""}`}
+      aria-hidden="true"
+    >
+      {suit}
+    </span>
+  ));
 }
 
 export function PlayingCard({
@@ -40,10 +94,12 @@ export function PlayingCard({
 }) {
   if (faceDown) {
     return (
-      <div className={`${mini ? "mini-card" : "playing-card"} premium-png-card premium-card-back`}>
-        <div className="premium-card-shell">
-          <div className="premium-card-back-inner">
-            <img src="/blackjack-edge-logo.jpg" alt="" />
+      <div className={`${mini ? "mini-card" : "playing-card"} luxury-white-card luxury-card-back`}>
+        <div className="luxury-card-inner">
+          <div className="luxury-card-back-border" />
+          <div className="luxury-card-back-core">
+            <div className="luxury-card-back-ring" />
+            <img src="/blackjack-edge-logo.jpg" alt="" draggable={false} />
           </div>
         </div>
       </div>
@@ -52,15 +108,43 @@ export function PlayingCard({
 
   const rank = cardRank(value);
   const suit = cardSuit(value);
+  const theme = suitClass(suit);
+  const face = isFaceRank(rank);
 
   return (
-    <div className={`${mini ? "mini-card" : "playing-card"} premium-png-card`}>
-      <img
-        src={premiumCardImagePath(value)}
-        alt={`${rank}${suit}`}
-        className="premium-card-png-image"
-        draggable={false}
-      />
+    <div className={`${mini ? "mini-card" : "playing-card"} luxury-white-card ${theme}`}>
+      <div className="luxury-card-inner">
+        <div className="luxury-card-border" />
+        <div className="luxury-card-corner top-left">
+          <strong>{rank}</strong>
+          <span>{suit}</span>
+        </div>
+
+        <div className="luxury-card-corner bottom-right">
+          <strong>{rank}</strong>
+          <span>{suit}</span>
+        </div>
+
+        <div className={`luxury-card-center-field rank-${rank.toLowerCase()}`}>
+          {rank === "A" ? (
+            <div className="luxury-ace-field" aria-hidden="true">
+              <span className="ace-suit">{suit}</span>
+            </div>
+          ) : face ? (
+            <div className="luxury-face-field" aria-hidden="true">
+              <div className="luxury-face-crown">✦</div>
+              <div className="luxury-face-rank">{rank}</div>
+              <div className="luxury-face-suit">{suit}</div>
+              <div className="luxury-face-name">{faceLabel(rank)}</div>
+              <div className="luxury-face-crown mirrored">✦</div>
+            </div>
+          ) : (
+            <div className={`luxury-pip-layout rank-${rank.toLowerCase()}`}>
+              {renderPips(rank, suit)}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
