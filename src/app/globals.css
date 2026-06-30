@@ -4076,3 +4076,106 @@ button,input{font:inherit}button{cursor:pointer}
     height:62px;
   }
 }
+
+
+/* v0.4.15 Load premium PNG card deck */
+.premium-png-card{
+  position:relative!important;
+  display:block!important;
+  padding:0!important;
+  overflow:visible!important;
+  border:none!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+
+.premium-png-card::before,
+.premium-png-card::after{
+  content:none!important;
+}
+
+.premium-card-png-image{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  display:block;
+  border-radius:inherit;
+  user-select:none;
+  -webkit-user-drag:none;
+  pointer-events:none;
+  filter:drop-shadow(0 16px 22px rgba(0,0,0,.48));
+}
+
+/* Keep the hidden card using the app's branded card-back */
+.premium-png-card.premium-card-back{
+  overflow:hidden!important;
+  border-radius:inherit;
+  box-shadow:0 20px 34px rgba(0,0,0,.46)!important;
+}
+
+.premium-png-card.premium-card-back .premium-card-shell{
+  position:absolute;
+  inset:0;
+  border-radius:inherit;
+  overflow:hidden;
+  background:
+    radial-gradient(circle at 50% 30%,rgba(244,208,111,.16),transparent 36%),
+    linear-gradient(145deg,#131313,#040404 72%);
+  border:2px solid rgba(244,208,111,.96);
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.08),
+    inset 0 0 0 7px rgba(0,0,0,.2);
+}
+
+.premium-png-card.premium-card-back .premium-card-shell::before{
+  content:"";
+  position:absolute;
+  inset:8px;
+  border:1px solid rgba(244,208,111,.42);
+  border-radius:14px;
+  pointer-events:none;
+}
+
+.premium-png-card.premium-card-back .premium-card-shell::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:
+    linear-gradient(120deg,rgba(255,255,255,.13),transparent 30%,transparent 68%,rgba(244,208,111,.09)),
+    radial-gradient(circle at 50% 50%,transparent 48%,rgba(0,0,0,.18));
+  pointer-events:none;
+}
+
+.premium-png-card.premium-card-back .premium-card-back-inner{
+  position:absolute;
+  inset:14px;
+  z-index:2;
+  display:grid;
+  place-items:center;
+  border:1px solid rgba(244,208,111,.38);
+  border-radius:12px;
+  background:radial-gradient(circle at 50% 50%,rgba(244,208,111,.1),rgba(0,0,0,.08) 62%);
+}
+
+.premium-png-card.premium-card-back .premium-card-back-inner img{
+  width:58%;
+  height:58%;
+  object-fit:contain;
+  border-radius:10px;
+  opacity:.9;
+  filter:drop-shadow(0 5px 8px rgba(0,0,0,.55));
+}
+
+@media(max-width:700px){
+  .premium-card-png-image{
+    filter:drop-shadow(0 10px 14px rgba(0,0,0,.48));
+  }
+}
+
+@media (orientation: landscape) and (max-height:540px){
+  .premium-card-png-image{
+    filter:drop-shadow(0 8px 10px rgba(0,0,0,.46));
+  }
+}
