@@ -6570,3 +6570,576 @@ body::before{
     height:38px !important;
   }
 }
+
+
+/* =========================================================
+   v0.5.3 — HARD RESET: Play BJ table + bottom control zone
+   Forces a smaller table with visible edge and moves all controls below.
+   ========================================================= */
+
+.play-screen{
+  --bj-top-safe: max(14px, env(safe-area-inset-top));
+  --bj-hud-height: 58px;
+  --bj-control-height: 245px;
+  --bj-floor-start: calc(100dvh - var(--bj-control-height));
+  position:relative !important;
+  min-height:100dvh !important;
+  max-height:100dvh !important;
+  overflow:hidden !important;
+  padding:0 !important;
+  background:
+    radial-gradient(circle at 50% 8%,rgba(241,207,106,.16),transparent 26%),
+    linear-gradient(180deg,#030914 0%,#071329 52%,#25070d 100%) !important;
+}
+
+/* Create a real, visible casino floor/control zone */
+.play-screen::before{
+  content:"" !important;
+  position:absolute !important;
+  left:0 !important;
+  right:0 !important;
+  top:var(--bj-floor-start) !important;
+  bottom:0 !important;
+  height:auto !important;
+  z-index:1 !important;
+  opacity:1 !important;
+  background:
+    radial-gradient(circle at 18% 28%,rgba(241,207,106,.20),transparent 10%),
+    radial-gradient(circle at 50% 0%,rgba(255,244,220,.18),transparent 20%),
+    radial-gradient(circle at 84% 28%,rgba(241,207,106,.18),transparent 10%),
+    repeating-radial-gradient(circle at 22% 62%,rgba(241,207,106,.10) 0 2px,transparent 3px 17px),
+    repeating-linear-gradient(45deg,rgba(241,207,106,.09) 0 1px,transparent 1px 28px),
+    linear-gradient(135deg,#430910,#190509 58%,#2b070d) !important;
+  pointer-events:none !important;
+}
+
+.play-screen::after{
+  content:"" !important;
+  position:absolute !important;
+  inset:0 !important;
+  z-index:0 !important;
+  pointer-events:none !important;
+  background:radial-gradient(circle at 50% 42%,transparent 0 58%,rgba(0,0,0,.38) 100%) !important;
+}
+
+.play-screen > *{
+  position:absolute !important;
+  z-index:5 !important;
+}
+
+/* Top HUD is a compact fixed strip */
+.play-topbar{
+  top:var(--bj-top-safe) !important;
+  left:max(7px,env(safe-area-inset-left)) !important;
+  right:max(7px,env(safe-area-inset-right)) !important;
+  height:var(--bj-hud-height) !important;
+  display:grid !important;
+  grid-template-columns:56px 1fr !important;
+  gap:6px !important;
+  align-items:stretch !important;
+  z-index:50 !important;
+}
+
+.play-exit-button{
+  position:static !important;
+  width:56px !important;
+  min-width:56px !important;
+  height:40px !important;
+  align-self:center !important;
+  font-size:10px !important;
+  border-radius:12px !important;
+}
+
+.play-hud.money-hud{
+  position:static !important;
+  display:grid !important;
+  grid-template-columns:minmax(96px,1.25fr) minmax(88px,1fr) minmax(96px,1fr) !important;
+  gap:6px !important;
+  margin:0 !important;
+  max-width:none !important;
+  width:100% !important;
+  height:48px !important;
+  align-self:center !important;
+}
+
+.bankroll-box,
+.cards-left-box,
+.bet-box{
+  min-width:0 !important;
+  min-height:48px !important;
+  height:48px !important;
+  padding:5px 6px !important;
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:center !important;
+  justify-content:center !important;
+  text-align:center !important;
+  overflow:visible !important;
+  white-space:nowrap !important;
+}
+
+.bankroll-box strong,
+.cards-left-box strong,
+.bet-box strong{
+  display:block !important;
+  width:100% !important;
+  text-align:center !important;
+  transform:none !important;
+  line-height:1 !important;
+  font-size:clamp(13px,3.1vw,20px) !important;
+}
+
+.bankroll-box span,
+.cards-left-box span,
+.bet-box span{
+  display:block !important;
+  margin-top:4px !important;
+  line-height:1 !important;
+  text-align:center !important;
+  font-size:clamp(6px,1.55vw,8px) !important;
+  letter-spacing:.04em !important;
+}
+
+/* THE IMPORTANT PART:
+   Table is now a bounded object ending above the red-scribble control zone. */
+.play-table.luxury-casino-table{
+  position:absolute !important;
+  top:78px !important;
+  left:6px !important;
+  right:6px !important;
+  bottom:auto !important;
+  height:calc(var(--bj-floor-start) - 78px + 28px) !important;
+  min-height:0 !important;
+  max-height:none !important;
+  z-index:10 !important;
+  display:block !important;
+  overflow:hidden !important;
+  border-radius:0 0 50% 50% / 0 0 18% 18% !important;
+  background:
+    radial-gradient(circle at 50% 16%,rgba(42,88,158,.48),transparent 32%),
+    linear-gradient(180deg,#0b377a 0%,#082755 52%,#061b3c 100%) !important;
+  box-shadow:
+    inset 0 0 0 2px rgba(241,207,106,.25),
+    inset 0 -18px 48px rgba(0,0,0,.42),
+    0 18px 48px rgba(0,0,0,.48) !important;
+}
+
+/* A visible gold/ivory edge EXACTLY at bottom of table */
+.play-table.luxury-casino-table .bottom-rail{
+  display:block !important;
+  position:absolute !important;
+  left:-8% !important;
+  right:-8% !important;
+  bottom:0 !important;
+  height:64px !important;
+  z-index:35 !important;
+  border-radius:50% 50% 0 0 / 100% 100% 0 0 !important;
+  background:
+    linear-gradient(180deg,#fff9e9 0%,#e0bd69 42%,#815511 100%) !important;
+  box-shadow:
+    inset 0 8px 16px rgba(255,255,255,.48),
+    inset 0 -12px 16px rgba(62,35,5,.54),
+    0 -6px 20px rgba(241,207,106,.18),
+    0 8px 24px rgba(0,0,0,.38) !important;
+}
+
+.play-table.luxury-casino-table .top-rail{
+  display:block !important;
+  top:-48px !important;
+  height:66px !important;
+  z-index:35 !important;
+}
+
+/* Table props shrink so they stop eating space */
+.dealer-chip-rack{
+  top:10px !important;
+  width:min(58vw,310px) !important;
+  height:34px !important;
+  gap:4px !important;
+  z-index:28 !important;
+}
+
+.rack-chip{
+  width:17px !important;
+  height:24px !important;
+  border-width:1px !important;
+}
+
+.table-rules-card{
+  top:54px !important;
+  left:8px !important;
+  min-width:92px !important;
+  padding:6px 7px !important;
+  gap:3px !important;
+  z-index:26 !important;
+}
+
+.table-rules-card strong{font-size:8px !important}
+.table-rules-card span{font-size:6px !important}
+
+.luxury-shoe{
+  top:46px !important;
+  right:4% !important;
+  width:62px !important;
+  height:46px !important;
+  z-index:26 !important;
+}
+
+.shoe-lid{
+  height:18px !important;
+  font-size:5.5px !important;
+}
+
+.shoe-cards{
+  height:16px !important;
+}
+
+/* Dealer and player positions inside the smaller table */
+.play-table .dealer-zone{
+  top:92px !important;
+  left:50% !important;
+  transform:translateX(-50%) !important;
+  z-index:30 !important;
+}
+
+.play-player-zone{
+  left:50% !important;
+  bottom:54px !important;
+  transform:translateX(-50%) !important;
+  width:172px !important;
+  z-index:31 !important;
+}
+
+.play-player-zone .split-hands{
+  justify-content:center !important;
+}
+
+/* Cards are playable but don't dominate the table */
+.play-screen .playing-card.luxury-white-card{
+  width:68px !important;
+  height:98px !important;
+  border-radius:13px !important;
+}
+
+.play-screen .dealer-zone .cards .playing-card:not(:first-child),
+.play-screen .split-hand .cards .playing-card:not(:first-child){
+  margin-left:-34px !important;
+}
+
+/* Other bet circles are visible but inside the table near the rail */
+.side-seat{
+  bottom:50px !important;
+  width:68px !important;
+  height:68px !important;
+  z-index:24 !important;
+}
+
+.side-seat-left{left:4% !important}
+.side-seat-right{right:4% !important}
+
+.side-seat span{
+  width:20px !important;
+  height:20px !important;
+  font-size:15px !important;
+}
+
+.side-seat strong{
+  font-size:7px !important;
+  letter-spacing:.08em !important;
+}
+
+/* Move table text/arc up so it does not collide with the rail/player cards */
+.felt-insurance-arc{
+  top:59% !important;
+  width:82vw !important;
+  height:56px !important;
+  padding-bottom:8px !important;
+  z-index:12 !important;
+}
+
+.felt-insurance-arc span{
+  font-size:6.5px !important;
+  letter-spacing:.08em !important;
+}
+
+.felt-insurance-arc strong{
+  font-size:7.5px !important;
+  letter-spacing:.1em !important;
+}
+
+.table-brand-watermark{
+  top:47% !important;
+  opacity:.48 !important;
+}
+
+.table-brand-watermark strong{
+  font-size:30px !important;
+}
+
+.table-brand-watermark span{
+  font-size:20px !important;
+}
+
+/* CONTROL ZONE:
+   Everything below table edge. Nothing allowed to overlap cards/table. */
+.casino-utility-bar{
+  position:absolute !important;
+  top:calc(var(--bj-floor-start) + 14px) !important;
+  bottom:auto !important;
+  left:max(6px,env(safe-area-inset-left)) !important;
+  right:auto !important;
+  transform:none !important;
+  z-index:60 !important;
+  display:grid !important;
+  grid-template-columns:1fr !important;
+  gap:5px !important;
+}
+
+.casino-utility-bar .tip-button{
+  width:44px !important;
+  height:33px !important;
+  border-radius:11px !important;
+  font-size:6.3px !important;
+  padding:0 !important;
+}
+
+.chip-tray{
+  position:absolute !important;
+  top:calc(var(--bj-floor-start) + 8px) !important;
+  bottom:auto !important;
+  left:auto !important;
+  right:max(7px,env(safe-area-inset-right)) !important;
+  transform:none !important;
+  width:calc(100vw - 64px) !important;
+  max-width:none !important;
+  height:48px !important;
+  z-index:58 !important;
+  display:flex !important;
+  justify-content:center !important;
+  align-items:center !important;
+  gap:3px !important;
+  padding:5px !important;
+  border-radius:14px !important;
+  background:linear-gradient(180deg,rgba(6,13,26,.96),rgba(1,4,10,.96)) !important;
+  border:1px solid rgba(241,207,106,.58) !important;
+  box-shadow:0 12px 24px rgba(0,0,0,.42), inset 0 1px 0 rgba(255,255,255,.08) !important;
+}
+
+.chip-tray .premium-chip{
+  width:31px !important;
+  height:31px !important;
+  min-width:31px !important;
+}
+
+.chip-tray .premium-chip span{
+  display:none !important;
+}
+
+.clear-bet-button,
+.deal-button{
+  min-width:50px !important;
+  height:32px !important;
+  border-radius:10px !important;
+  font-size:7px !important;
+  letter-spacing:.04em !important;
+  padding:0 6px !important;
+}
+
+.luxury-action-bar{
+  position:absolute !important;
+  top:calc(var(--bj-floor-start) + 66px) !important;
+  bottom:auto !important;
+  left:auto !important;
+  right:max(7px,env(safe-area-inset-right)) !important;
+  transform:none !important;
+  width:calc(100vw - 64px) !important;
+  max-width:none !important;
+  z-index:58 !important;
+  display:grid !important;
+  grid-template-columns:repeat(4,1fr) !important;
+  gap:5px !important;
+  padding:6px !important;
+  border-radius:14px !important;
+  background:linear-gradient(180deg,rgba(6,13,26,.96),rgba(1,4,10,.96)) !important;
+  border:1px solid rgba(241,207,106,.58) !important;
+}
+
+.luxury-action-bar .move{
+  min-height:44px !important;
+  border-radius:999px !important;
+  font-size:8px !important;
+  padding:0 !important;
+  letter-spacing:.03em !important;
+}
+
+/* When no action buttons show, chips still stay in correct area */
+.play-actions:not(.luxury-action-bar){
+  display:none !important;
+}
+
+/* Popups should float above the whole layout */
+.money-alert-overlay,
+.overlay{
+  z-index:200 !important;
+}
+
+.tip-panel{
+  z-index:120 !important;
+  top:auto !important;
+  bottom:calc(100dvh - var(--bj-floor-start) + 18px) !important;
+  left:8px !important;
+  right:8px !important;
+  max-width:none !important;
+}
+
+/* Larger phones / tablets */
+@media(min-width:701px){
+  .play-screen{
+    --bj-control-height: 270px;
+  }
+
+  .play-table.luxury-casino-table{
+    top:86px !important;
+    left:18px !important;
+    right:18px !important;
+    height:calc(var(--bj-floor-start) - 86px + 34px) !important;
+  }
+
+  .play-screen .playing-card.luxury-white-card{
+    width:82px !important;
+    height:118px !important;
+  }
+
+  .play-screen .dealer-zone .cards .playing-card:not(:first-child),
+  .play-screen .split-hand .cards .playing-card:not(:first-child){
+    margin-left:-40px !important;
+  }
+
+  .play-player-zone{
+    bottom:62px !important;
+    width:220px !important;
+  }
+
+  .dealer-chip-rack{
+    width:min(46vw,380px) !important;
+    height:42px !important;
+  }
+
+  .rack-chip{
+    width:22px !important;
+    height:30px !important;
+  }
+
+  .side-seat{
+    width:88px !important;
+    height:88px !important;
+  }
+
+  .chip-tray{
+    width:min(72vw,640px) !important;
+    right:50% !important;
+    transform:translateX(50%) !important;
+  }
+
+  .luxury-action-bar{
+    width:min(72vw,640px) !important;
+    right:50% !important;
+    transform:translateX(50%) !important;
+  }
+
+  .casino-utility-bar{
+    left:calc(50% - min(72vw,640px) / 2 - 62px) !important;
+  }
+}
+
+/* Short landscape gets a dedicated smaller version */
+@media (orientation: landscape) and (max-height:540px){
+  .play-screen{
+    --bj-control-height: 108px;
+  }
+
+  .play-topbar{
+    height:48px !important;
+  }
+
+  .play-hud.money-hud{
+    height:40px !important;
+  }
+
+  .bankroll-box,
+  .cards-left-box,
+  .bet-box{
+    height:40px !important;
+    min-height:40px !important;
+  }
+
+  .play-table.luxury-casino-table{
+    top:50px !important;
+    left:8px !important;
+    right:8px !important;
+    height:calc(var(--bj-floor-start) - 50px + 16px) !important;
+  }
+
+  .dealer-chip-rack{
+    top:6px !important;
+    height:28px !important;
+    width:min(40vw,300px) !important;
+  }
+
+  .play-table .dealer-zone{
+    top:56px !important;
+  }
+
+  .play-player-zone{
+    bottom:36px !important;
+  }
+
+  .play-screen .playing-card.luxury-white-card{
+    width:58px !important;
+    height:84px !important;
+  }
+
+  .luxury-shoe,
+  .table-rules-card{
+    display:none !important;
+  }
+
+  .side-seat{
+    width:58px !important;
+    height:58px !important;
+    bottom:40px !important;
+  }
+
+  .felt-insurance-arc{
+    top:58% !important;
+    height:44px !important;
+  }
+
+  .casino-utility-bar{
+    top:calc(var(--bj-floor-start) + 8px) !important;
+    left:10px !important;
+    display:flex !important;
+    flex-direction:row !important;
+  }
+
+  .chip-tray{
+    top:calc(var(--bj-floor-start) + 8px) !important;
+    left:150px !important;
+    right:auto !important;
+    transform:none !important;
+    width:calc(50vw - 20px) !important;
+    height:42px !important;
+  }
+
+  .luxury-action-bar{
+    top:calc(var(--bj-floor-start) + 8px) !important;
+    right:10px !important;
+    left:auto !important;
+    transform:none !important;
+    width:calc(50vw - 30px) !important;
+  }
+
+  .luxury-action-bar .move{
+    min-height:36px !important;
+  }
+}
