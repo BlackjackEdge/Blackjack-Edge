@@ -7143,3 +7143,418 @@ body::before{
     min-height:36px !important;
   }
 }
+
+
+/* =========================================================
+   v0.5.4 — Multi-hand betting + rail/control placement
+   Chips ride the gold table edge. Seats are real betting spots.
+   ========================================================= */
+
+.play-screen{
+  --bj-control-height: 214px !important;
+  --bj-floor-start: calc(100dvh - var(--bj-control-height)) !important;
+}
+
+/* Bring table down a little and let the rail act as the true divider */
+.play-table.luxury-casino-table{
+  top:82px !important;
+  height:calc(var(--bj-floor-start) - 82px + 48px) !important;
+  left:5px !important;
+  right:5px !important;
+  border-radius:0 0 52% 52% / 0 0 20% 20% !important;
+}
+
+/* Full, curved gold edge across the table */
+.play-table.luxury-casino-table .bottom-rail{
+  left:-12% !important;
+  right:-12% !important;
+  bottom:-2px !important;
+  height:78px !important;
+  z-index:42 !important;
+  border-radius:50% 50% 0 0 / 100% 100% 0 0 !important;
+  background:
+    radial-gradient(circle at 50% 0%,rgba(255,255,255,.72),transparent 24%),
+    linear-gradient(180deg,#fff7e3 0%,#edca70 36%,#b47d24 67%,#5d3908 100%) !important;
+  box-shadow:
+    inset 0 10px 18px rgba(255,255,255,.48),
+    inset 0 -12px 18px rgba(51,28,4,.58),
+    0 -10px 26px rgba(241,207,106,.24),
+    0 12px 26px rgba(0,0,0,.5) !important;
+}
+
+/* Move chip tray onto the gold table edge, not up under the HUD */
+.chip-tray{
+  position:absolute !important;
+  top:calc(var(--bj-floor-start) - 25px) !important;
+  bottom:auto !important;
+  left:50% !important;
+  right:auto !important;
+  transform:translateX(-50%) !important;
+  width:min(92vw,720px) !important;
+  height:52px !important;
+  z-index:75 !important;
+  display:flex !important;
+  justify-content:center !important;
+  align-items:center !important;
+  gap:5px !important;
+  padding:6px 9px !important;
+  border-radius:999px !important;
+  border:1px solid rgba(255,244,220,.5) !important;
+  background:
+    radial-gradient(circle at 50% 0%,rgba(255,255,255,.14),transparent 32%),
+    linear-gradient(180deg,rgba(29,19,7,.78),rgba(4,7,14,.92)) !important;
+  box-shadow:
+    0 12px 26px rgba(0,0,0,.48),
+    inset 0 1px 0 rgba(255,255,255,.16) !important;
+}
+
+.selected-chip-label{
+  color:#fff4dc;
+  background:linear-gradient(180deg,rgba(7,18,38,.92),rgba(1,4,10,.92));
+  border:1px solid rgba(241,207,106,.45);
+  border-radius:999px;
+  padding:6px 8px;
+  font-size:9px;
+  font-weight:900;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  white-space:nowrap;
+}
+
+.chip-tray .premium-chip{
+  width:36px !important;
+  height:36px !important;
+  min-width:36px !important;
+  border-radius:999px !important;
+  transition:transform .12s ease, filter .12s ease, box-shadow .12s ease !important;
+}
+
+.chip-tray .premium-chip.selected-chip{
+  transform:translateY(-5px) scale(1.12) !important;
+  filter:drop-shadow(0 0 10px rgba(241,207,106,.68)) !important;
+  box-shadow:0 0 0 2px rgba(255,244,220,.85),0 12px 18px rgba(0,0,0,.46) !important;
+}
+
+.clear-bet-button,
+.deal-button{
+  min-width:62px !important;
+  height:36px !important;
+  border-radius:999px !important;
+  font-size:8px !important;
+}
+
+/* Utility buttons moved down into floor, under/left of rail */
+.casino-utility-bar{
+  top:calc(var(--bj-floor-start) + 42px) !important;
+  left:max(8px,env(safe-area-inset-left)) !important;
+  bottom:auto !important;
+  z-index:74 !important;
+  display:grid !important;
+  grid-template-columns:repeat(2,46px) !important;
+  gap:6px !important;
+}
+
+.casino-utility-bar .tip-button{
+  width:46px !important;
+  height:36px !important;
+  border-radius:12px !important;
+  font-size:6.5px !important;
+}
+
+/* Main action buttons below chips, in casino floor */
+.luxury-action-bar{
+  top:calc(var(--bj-floor-start) + 54px) !important;
+  bottom:auto !important;
+  left:auto !important;
+  right:max(8px,env(safe-area-inset-right)) !important;
+  transform:none !important;
+  width:calc(100vw - 116px) !important;
+  max-width:640px !important;
+  z-index:74 !important;
+  gap:6px !important;
+  padding:7px !important;
+  border-radius:16px !important;
+}
+
+.luxury-action-bar .move{
+  min-height:48px !important;
+  font-size:9px !important;
+}
+
+/* Seat/bet spots live on the table, close to the rail */
+.side-seat,
+.center-seat{
+  cursor:pointer !important;
+}
+
+.side-seat{
+  bottom:52px !important;
+  width:76px !important;
+  height:76px !important;
+  z-index:45 !important;
+  background:radial-gradient(circle at 50% 36%,rgba(255,244,220,.08),rgba(6,20,44,.22) 62%,rgba(0,0,0,.2)) !important;
+}
+
+.side-seat-left{left:5% !important}
+.side-seat-right{right:5% !important}
+
+.side-seat.has-bet,
+.center-seat.has-bet{
+  border-color:rgba(241,207,106,.95) !important;
+  box-shadow:
+    inset 0 0 0 3px rgba(0,0,0,.18),
+    0 0 18px rgba(241,207,106,.22),
+    0 14px 22px rgba(0,0,0,.32) !important;
+}
+
+.side-seat strong{
+  white-space:pre-line !important;
+  font-size:8px !important;
+  line-height:1.12 !important;
+}
+
+.side-seat.has-bet strong{
+  font-size:12px !important;
+  color:#fff4dc !important;
+}
+
+.luxury-bet-circle.center-seat{
+  width:90px !important;
+  height:90px !important;
+  z-index:46 !important;
+  border-color:rgba(241,207,106,.82) !important;
+}
+
+.center-seat span{
+  font-size:9px !important;
+  color:rgba(255,244,220,.78) !important;
+  text-transform:uppercase !important;
+  letter-spacing:.08em !important;
+}
+
+.center-seat strong{
+  color:#fff4dc !important;
+  font-size:20px !important;
+}
+
+/* Player hand and side hands sit on the table, not buried by the rail */
+.play-player-zone{
+  bottom:86px !important;
+  width:min(70vw,330px) !important;
+  z-index:50 !important;
+}
+
+.play-player-zone .split-hands{
+  display:flex !important;
+  justify-content:center !important;
+  align-items:flex-end !important;
+  gap:8px !important;
+}
+
+.play-screen .split-hand{
+  background:transparent !important;
+  border-color:transparent !important;
+  padding:0 !important;
+  min-width:86px !important;
+}
+
+.play-screen .split-hand.active{
+  filter:drop-shadow(0 0 16px rgba(241,207,106,.32)) !important;
+}
+
+.hand-bet-pill{
+  transform:translateY(-4px) !important;
+}
+
+/* Show actual hands slightly offset when 2-3 hands are dealt */
+.play-player-zone .split-hand:nth-child(1){
+  transform:translateY(8px);
+}
+
+.play-player-zone .split-hand:nth-child(2){
+  transform:translateY(-4px);
+}
+
+.play-player-zone .split-hand:nth-child(3){
+  transform:translateY(8px);
+}
+
+/* Dealer and table text adjusted now that table comes down */
+.play-table .dealer-zone{
+  top:104px !important;
+}
+
+.felt-insurance-arc{
+  top:62% !important;
+  width:86vw !important;
+}
+
+.table-brand-watermark{
+  top:48% !important;
+}
+
+.table-rules-card{
+  top:58px !important;
+}
+
+.luxury-shoe{
+  top:50px !important;
+}
+
+/* Bet box text stays centered */
+.bet-box strong,
+.bankroll-box strong,
+.cards-left-box strong{
+  text-align:center !important;
+  line-height:1 !important;
+}
+
+/* Portrait fine tuning */
+@media(max-width:700px){
+  .play-screen{
+    --bj-control-height: 204px !important;
+  }
+
+  .play-table.luxury-casino-table{
+    top:78px !important;
+    height:calc(var(--bj-floor-start) - 78px + 54px) !important;
+  }
+
+  .play-table.luxury-casino-table .bottom-rail{
+    height:72px !important;
+  }
+
+  .chip-tray{
+    top:calc(var(--bj-floor-start) - 24px) !important;
+    width:96vw !important;
+    height:50px !important;
+    gap:3px !important;
+    padding:5px !important;
+  }
+
+  .selected-chip-label{
+    display:none !important;
+  }
+
+  .chip-tray .premium-chip{
+    width:30px !important;
+    height:30px !important;
+    min-width:30px !important;
+  }
+
+  .clear-bet-button,
+  .deal-button{
+    min-width:48px !important;
+    height:31px !important;
+    font-size:7px !important;
+  }
+
+  .casino-utility-bar{
+    top:calc(var(--bj-floor-start) + 38px) !important;
+    left:max(6px,env(safe-area-inset-left)) !important;
+    grid-template-columns:repeat(2,42px) !important;
+    gap:5px !important;
+  }
+
+  .casino-utility-bar .tip-button{
+    width:42px !important;
+    height:33px !important;
+    font-size:6px !important;
+  }
+
+  .luxury-action-bar{
+    top:calc(var(--bj-floor-start) + 82px) !important;
+    right:max(6px,env(safe-area-inset-right)) !important;
+    width:calc(100vw - 12px) !important;
+    max-width:none !important;
+    grid-template-columns:repeat(4,1fr) !important;
+  }
+
+  .luxury-action-bar .move{
+    min-height:44px !important;
+    font-size:8px !important;
+  }
+
+  .play-player-zone{
+    bottom:84px !important;
+    width:230px !important;
+  }
+
+  .play-screen .playing-card.luxury-white-card{
+    width:64px !important;
+    height:92px !important;
+  }
+
+  .play-screen .dealer-zone .cards .playing-card:not(:first-child),
+  .play-screen .split-hand .cards .playing-card:not(:first-child){
+    margin-left:-32px !important;
+  }
+
+  .play-screen .split-hand{
+    min-width:62px !important;
+  }
+
+  .side-seat{
+    width:66px !important;
+    height:66px !important;
+    bottom:54px !important;
+  }
+
+  .side-seat-left{left:4% !important}
+  .side-seat-right{right:4% !important}
+
+  .luxury-bet-circle.center-seat{
+    width:78px !important;
+    height:78px !important;
+  }
+
+  .center-seat strong{
+    font-size:16px !important;
+  }
+
+  .play-table .dealer-zone{
+    top:100px !important;
+  }
+
+  .felt-insurance-arc{
+    top:61% !important;
+  }
+}
+
+/* Landscape: chips still ride the rail, actions below */
+@media (orientation: landscape) and (max-height:540px){
+  .play-screen{
+    --bj-control-height: 114px !important;
+  }
+
+  .play-table.luxury-casino-table{
+    top:50px !important;
+    height:calc(var(--bj-floor-start) - 50px + 34px) !important;
+  }
+
+  .chip-tray{
+    top:calc(var(--bj-floor-start) - 22px) !important;
+    width:min(58vw,520px) !important;
+    height:46px !important;
+  }
+
+  .casino-utility-bar{
+    top:calc(var(--bj-floor-start) + 30px) !important;
+    display:flex !important;
+    flex-direction:row !important;
+  }
+
+  .luxury-action-bar{
+    top:calc(var(--bj-floor-start) + 28px) !important;
+    width:min(58vw,520px) !important;
+    right:10px !important;
+  }
+
+  .play-player-zone{
+    bottom:58px !important;
+  }
+
+  .side-seat{
+    bottom:42px !important;
+  }
+}
