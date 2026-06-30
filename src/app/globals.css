@@ -7960,3 +7960,108 @@ body::before{
     bottom:60px !important;
   }
 }
+
+/* =========================================================
+   v0.5.5a — FINAL chip rail lock fix
+   Force chips to stay on the lower gold rail, never under the HUD.
+   ========================================================= */
+.play-screen .chip-tray,
+.play-screen .chip-tray.chip-tray-locked{
+  position: fixed !important;
+  top: auto !important;
+  bottom: 168px !important;
+  left: 50% !important;
+  right: auto !important;
+  transform: translateX(-50%) !important;
+  width: min(94vw, 720px) !important;
+  max-width: min(94vw, 720px) !important;
+  height: 56px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  padding: 6px 10px !important;
+  z-index: 120 !important;
+}
+
+.play-screen .chip-tray .selected-chip-label{
+  position: absolute !important;
+  left: 14px !important;
+  top: -22px !important;
+  font-size: 10px !important;
+  line-height: 1 !important;
+}
+
+.play-screen .chip-tray .premium-chip{
+  width: 34px !important;
+  height: 34px !important;
+  min-width: 34px !important;
+}
+
+.play-screen .chip-tray .clear-bet-button,
+.play-screen .chip-tray .deal-button{
+  height: 40px !important;
+  min-height: 40px !important;
+}
+
+@media (max-width: 700px){
+  .play-screen .chip-tray,
+  .play-screen .chip-tray.chip-tray-locked{
+    bottom: 166px !important;
+    width: min(96vw, 420px) !important;
+    max-width: min(96vw, 420px) !important;
+    height: 52px !important;
+    gap: 4px !important;
+    padding: 5px 7px !important;
+  }
+
+  .play-screen .chip-tray .premium-chip{
+    width: 29px !important;
+    height: 29px !important;
+    min-width: 29px !important;
+  }
+
+  .play-screen .chip-tray .clear-bet-button,
+  .play-screen .chip-tray .deal-button{
+    height: 34px !important;
+    min-height: 34px !important;
+    font-size: 10px !important;
+    padding: 0 10px !important;
+  }
+
+  .play-screen .chip-tray .selected-chip-label{
+    left: 10px !important;
+    top: -18px !important;
+    font-size: 9px !important;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 540px){
+  .play-screen .chip-tray,
+  .play-screen .chip-tray.chip-tray-locked{
+    bottom: 84px !important;
+    width: min(58vw, 540px) !important;
+    max-width: min(58vw, 540px) !important;
+    height: 44px !important;
+    gap: 4px !important;
+    padding: 4px 8px !important;
+  }
+
+  .play-screen .chip-tray .premium-chip{
+    width: 26px !important;
+    height: 26px !important;
+    min-width: 26px !important;
+  }
+
+  .play-screen .chip-tray .clear-bet-button,
+  .play-screen .chip-tray .deal-button{
+    height: 30px !important;
+    min-height: 30px !important;
+    font-size: 9px !important;
+  }
+
+  .play-screen .chip-tray .selected-chip-label{
+    top: -16px !important;
+    font-size: 8px !important;
+  }
+}
