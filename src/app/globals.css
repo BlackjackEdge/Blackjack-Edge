@@ -4628,3 +4628,46 @@ button,input{font:inherit}button{cursor:pointer}
     font-size:21px !important;
   }
 }
+
+
+/* v0.4.18 — Clean standalone logo in home/header */
+.brand-logo,
+.brand-logo.compact-logo,
+.compact-logo{
+  border:none !important;
+  outline:none !important;
+  background:transparent !important;
+  box-shadow:none !important;
+  padding:0 !important;
+}
+
+.brand-logo::before,
+.brand-logo::after,
+.compact-logo::before,
+.compact-logo::after{
+  content:none !important;
+  display:none !important;
+}
+
+.brand-logo img,
+.brand-logo.compact-logo img,
+.compact-logo img{
+  border:none !important;
+  outline:none !important;
+  box-shadow:none !important;
+  background:transparent !important;
+}
+
+/* Keep the logo clean but still premium with only a soft glow */
+.top .brand-logo img,
+.home .brand-logo img,
+.v04-home .brand-logo img,
+.v04-home .compact-logo img{
+  filter:drop-shadow(0 8px 18px rgba(0,0,0,.38)) drop-shadow(0 0 14px rgba(244,208,111,.12)) !important;
+}
+
+/* Slightly tighten header spacing now that the logo border is gone */
+.top .brand,
+.brand-with-logo{
+  gap:10px !important;
+}
