@@ -27,7 +27,6 @@ type SwipeValue = -1 | 0 | 1;
 type PlayerHand = {
   cards: string[];
   bet: number;
-  seatIndex?: number;
   doubled?: boolean;
   stood?: boolean;
   busted?: boolean;
@@ -85,8 +84,6 @@ export default function App() {
   const [seenCards, setSeenCards] = useState<string[]>([]);
   const [bankroll, setBankroll] = useState(1000);
   const [bet, setBet] = useState(0);
-  const [selectedChip, setSelectedChip] = useState(5);
-  const [seatBets, setSeatBets] = useState<number[]>([0, 0, 0]);
   const [dealerHand, setDealerHand] = useState<string[]>([]);
   const [playerHands, setPlayerHands] = useState<PlayerHand[]>([]);
   const [activeHand, setActiveHand] = useState(0);
@@ -119,8 +116,6 @@ export default function App() {
 
       if (typeof saved.bankroll === "number") setBankroll(saved.bankroll);
       if (typeof saved.bet === "number") setBet(saved.bet);
-      if (typeof saved.selectedChip === "number") setSelectedChip(saved.selectedChip);
-      if (Array.isArray(saved.seatBets) && saved.seatBets.length === 3) setSeatBets(saved.seatBets);
       if (typeof saved.playDecks === "number") setPlayDecks(saved.playDecks);
       if (Array.isArray(saved.playShoe)) setPlayShoe(saved.playShoe);
       if (Array.isArray(saved.seenCards)) setSeenCards(saved.seenCards);
@@ -150,8 +145,6 @@ export default function App() {
     const saved = {
       bankroll,
       bet,
-      selectedChip,
-      seatBets,
       playDecks,
       playShoe,
       seenCards,
@@ -177,8 +170,6 @@ export default function App() {
     hasLoadedSession,
     bankroll,
     bet,
-    selectedChip,
-    seatBets,
     playDecks,
     playShoe,
     seenCards,
@@ -209,11 +200,6 @@ export default function App() {
   const playDecksRemaining = Math.max(playShoe.length / 52, 0.1);
   const playTrue = playRunning / playDecksRemaining;
   const penetration = Math.round(((playDecks * 52 - playShoe.length) / (playDecks * 52)) * 100);
-  const totalSeatBet = seatBets.reduce((sum, value) => sum + value, 0);
-  const tableSeatOrder = [2, 1, 0]; // blackjack table flow: right hand, center hand, left hand
-  const bettingSeats = tableSeatOrder
-    .map((seatIndex) => ({ seatBet: seatBets[seatIndex], seatIndex }))
-    .filter((seat) => seat.seatBet > 0);
 
   const activePlayHand = playerHands[activeHand];
   const dealerUpcard = dealerHand[0];
@@ -371,131 +357,59 @@ export default function App() {
 
   function showRoundBannerDelayed(banner: { type: "win" | "lose" | "push" | "blackjack"; title: string; subtitle: string }, delay = 650) {
     window.setTimeout(() => {
-      if (banner.type === "win" || banner.type === "blackjack") playCasinoSound("win");
       setRoundBanner(banner);
     }, delay);
   }
 
-  function playCasinoSound(kind: "chip" | "deal" | "tap" | "win" | "soft") {
-    if (typeof window === "undefined") return;
-
-    try {
-      const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-      if (!AudioContextClass) return;
-
-      const ctx = new AudioContextClass();
-      const gain = ctx.createGain();
-      gain.connect(ctx.destination);
-
-      const now = ctx.currentTime;
-      const osc = ctx.createOscillator();
-
-      if (kind === "chip") {
-        osc.type = "triangle";
-        osc.frequency.setValueAtTime(620, now);
-        osc.frequency.exponentialRampToValueAtTime(240, now + 0.08);
-        gain.gain.setValueAtTime(0.0001, now);
-        gain.gain.exponentialRampToValueAtTime(0.09, now + 0.01);
-        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.11);
-        osc.connect(gain);
-        osc.start(now);
-        osc.stop(now + 0.12);
-      } else if (kind === "deal") {
-        osc.type = "sine";
-        osc.frequency.setValueAtTime(360, now);
-        osc.frequency.exponentialRampToValueAtTime(680, now + 0.055);
-        gain.gain.setValueAtTime(0.0001, now);
-        gain.gain.exponentialRampToValueAtTime(0.055, now + 0.01);
-        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.09);
-        osc.connect(gain);
-        osc.start(now);
-        osc.stop(now + 0.1);
-      } else if (kind === "win") {
-        osc.type = "triangle";
-        osc.frequency.setValueAtTime(520, now);
-        osc.frequency.exponentialRampToValueAtTime(820, now + 0.12);
-        gain.gain.setValueAtTime(0.0001, now);
-        gain.gain.exponentialRampToValueAtTime(0.075, now + 0.02);
-        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.2);
-        osc.connect(gain);
-        osc.start(now);
-        osc.stop(now + 0.22);
-      } else {
-        osc.type = "sine";
-        osc.frequency.setValueAtTime(kind === "soft" ? 240 : 420, now);
-        gain.gain.setValueAtTime(0.0001, now);
-        gain.gain.exponentialRampToValueAtTime(0.04, now + 0.01);
-        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.07);
-        osc.connect(gain);
-        osc.start(now);
-        osc.stop(now + 0.08);
-      }
-    } catch {
-      // Sound is optional. Some browsers block WebAudio until a user gesture.
-    }
-  }
-
   function addChip(amount: number) {
     if (playPhase !== "betting" && playPhase !== "roundOver") return;
-    playCasinoSound("chip");
-    setSelectedChip(amount);
-    setPlayMessage(`${premiumChips[amount].label} chip selected. Tap a betting spot.`);
-  }
 
-  function placeSeatBet(seatIndex: number) {
-    if (playPhase !== "betting" && playPhase !== "roundOver") return;
-
-    const currentTotal = seatBets.reduce((sum, value) => sum + value, 0);
-    const requestedSeatTotal = seatBets[seatIndex] + selectedChip;
-    const requestedTotal = currentTotal + selectedChip;
-
-    if (selectedChip < 5) return;
-
-    if (requestedSeatTotal > 5000) {
-      showBankrollAlert("Table Limit", "Maximum bet per hand is $5,000.");
-      return;
-    }
-
-    if (requestedTotal > 5000) {
-      showBankrollAlert("Table Limit", "Maximum total table bet is $5,000.");
-      return;
-    }
-
-    if (requestedTotal > bankroll) {
+    if (bankroll < 5) {
       showBankrollAlert(
-        "Not Enough Bankroll",
-        `You only have $${bankroll.toLocaleString()} available. Lower the bet or add bankroll.`
+        "Bankroll Needed",
+        "You do not have enough bankroll to place a bet. Add bankroll to keep playing."
       );
       return;
     }
 
-    setBankrollAlert(null);
-    playCasinoSound("chip");
+    setBet((current) => {
+      const requestedBet = current + amount;
+      const available = bankroll - current;
 
-    setSeatBets((current) => {
-      const updated = [...current];
-      updated[seatIndex] += selectedChip;
-      const total = updated.reduce((sum, value) => sum + value, 0);
-      setBet(total);
-      return updated;
+      if (requestedBet > 5000) {
+        showBankrollAlert(
+          "Table Limit",
+          "Maximum bet is $5,000."
+        );
+        return current;
+      }
+
+      if (available <= 0) {
+        showBankrollAlert(
+          "Full Bankroll Bet",
+          "Your full bankroll is already on the table. Lower the bet or add bankroll."
+        );
+        return current;
+      }
+
+      if (amount > available) {
+        showBankrollAlert(
+          "Not Enough Bankroll",
+          `You only have $${available.toLocaleString()} available for this bet. Lower the bet or add bankroll.`
+        );
+        return current;
+      }
+
+      setBankrollAlert(null);
+      setPlayMessage(`Bet set to $${requestedBet.toLocaleString()}.`);
+      return requestedBet;
     });
-
-    setDealerHand([]);
-    setPlayerHands([]);
-    setRoundBanner(null);
-    setPlayMessage(`Seat ${seatIndex + 1} bet: $${requestedSeatTotal.toLocaleString()}. Total bet: $${requestedTotal.toLocaleString()}.`);
   }
 
   function clearBet() {
     if (playPhase !== "betting" && playPhase !== "roundOver") return;
-    playCasinoSound("soft");
     setBankrollAlert(null);
-    setSeatBets([0, 0, 0]);
     setBet(0);
-    setDealerHand([]);
-    setPlayerHands([]);
-    setRoundBanner(null);
-    setPlayMessage("Bets cleared. Select a chip and tap a betting spot.");
   }
 
   function resetShoe(decks = playDecks) {
@@ -513,8 +427,6 @@ export default function App() {
     setSeenCards([]);
     setBankroll(1000);
     setBet(0);
-    setSelectedChip(5);
-    setSeatBets([0, 0, 0]);
     setDealerHand([]);
     setPlayerHands([]);
     setActiveHand(0);
@@ -533,12 +445,6 @@ export default function App() {
   function dealBlackjack() {
     if (playPhase !== "betting" && playPhase !== "roundOver") return;
 
-    const seatsToDeal = tableSeatOrder
-      .map((seatIndex) => ({ seatBet: seatBets[seatIndex], seatIndex }))
-      .filter((seat) => seat.seatBet > 0);
-
-    const tableBet = seatsToDeal.reduce((sum, seat) => sum + seat.seatBet, 0);
-
     if (bankroll < 5) {
       showBankrollAlert(
         "Bankroll Needed",
@@ -547,125 +453,88 @@ export default function App() {
       return;
     }
 
-    if (tableBet < 5 || seatsToDeal.length === 0) {
+    if (bet < 5) {
       showBankrollAlert(
         "Place a Bet",
-        "Select a chip, then tap one of the three betting spots before you deal."
+        "Minimum bet is $5. Tap a chip before you deal."
       );
       return;
     }
 
-    if (tableBet > 5000) {
+    if (bet > 5000) {
       showBankrollAlert(
         "Table Limit",
-        "Maximum total table bet is $5,000."
+        "Maximum bet is $5,000."
       );
       return;
     }
 
-    if (bankroll < tableBet) {
+    if (bankroll < bet) {
       showBankrollAlert(
         "Not Enough Bankroll",
-        "You do not have enough bankroll for those bets. Lower your bets or add bankroll."
+        "You do not have enough bankroll for that bet. Lower your bet or add bankroll."
       );
       return;
     }
 
-    playCasinoSound("deal");
     setBankrollAlert(null);
     setRoundBanner(null);
+
+    const { drawn, nextShoe } = drawFromPlayShoe(playShoe, 4);
+    const player = [drawn[0], drawn[2]];
+    const dealer = [drawn[1], drawn[3]];
+    const visibleNow = [drawn[0], drawn[2], drawn[1]];
+
     setTipOpen(false);
     setHudOpen(false);
-    setShowPlayTotals(false);
-
-    const cardsNeeded = seatsToDeal.length * 2 + 2;
-    const { drawn, nextShoe } = drawFromPlayShoe(playShoe, cardsNeeded);
-
-    let cursor = 0;
-    const initialHands: PlayerHand[] = seatsToDeal.map((seat) => {
-      const cards = [drawn[cursor], drawn[cursor + seatsToDeal.length]];
-      cursor += 1;
-      return { cards, bet: seat.seatBet, seatIndex: seat.seatIndex };
-    });
-
-    const dealer = [drawn[seatsToDeal.length * 2], drawn[seatsToDeal.length * 2 + 1]];
-    const visibleNow = [...initialHands.flatMap((hand) => hand.cards), dealer[0]];
-
     setActiveHand(0);
     setPlayShoe(nextShoe);
     setSeenCards((prev) => [...prev, ...visibleNow]);
-    setBankroll((b) => b - tableBet);
+    setBankroll((b) => b - bet);
     setDealerHand(dealer);
-    setBet(tableBet);
+    setPlayerHands([{ cards: player, bet }]);
+    setActiveHand(0);
 
+    const playerBJ = isBlackjack(player);
     const dealerBJ = isBlackjack(dealer);
-    const anyPlayerBJ = initialHands.some((hand) => isBlackjack(hand.cards));
 
-    if (dealerBJ || anyPlayerBJ) {
+    if (playerBJ || dealerBJ) {
       const reveal = dealer[1];
       setSeenCards((prev) => [...prev, reveal]);
 
-      let totalReturn = 0;
+      let payout = 0;
+      let result = "";
 
-      const settledHands = initialHands.map((hand) => {
-        const playerBJ = isBlackjack(hand.cards);
-        let payout = 0;
-        let result = "";
-
-        if (playerBJ && dealerBJ) {
-          payout = hand.bet;
-          result = "Push";
-        } else if (playerBJ) {
-          payout = hand.bet + hand.bet * 1.5;
-          result = "Blackjack";
-        } else if (dealerBJ) {
-          payout = 0;
-          result = "Dealer BJ";
-        } else {
-          result = "";
-        }
-
-        totalReturn += payout;
-        return { ...hand, result, payout };
-      });
-
-      setBankroll((b) => b + totalReturn);
-      setPlayerHands(settledHands);
-      setPlayPhase(dealerBJ || settledHands.every((hand) => hand.result) ? "roundOver" : "player");
-
-      if (dealerBJ || settledHands.every((hand) => hand.result)) {
-        const net = totalReturn - tableBet;
-        if (net > 0) {
-          showRoundBannerDelayed({ type: "blackjack", title: "BLACKJACK!", subtitle: `+$${net.toFixed(0)}` }, 800);
-          setPlayMessage(`Blackjack payout. Net +$${net.toFixed(0)}.`);
-        } else if (net < 0) {
-          showRoundBannerDelayed({ type: "lose", title: "DEALER BLACKJACK", subtitle: `-$${Math.abs(net).toFixed(0)}` });
-          setPlayMessage(`Dealer blackjack. Net -$${Math.abs(net).toFixed(0)}.`);
-        } else {
-          showRoundBannerDelayed({ type: "push", title: "PUSH", subtitle: "Bet returned." });
-          setPlayMessage("Push round.");
-        }
-        return;
+      if (playerBJ && dealerBJ) {
+        payout = bet;
+        result = "Push. Both you and the dealer have blackjack.";
+        showRoundBannerDelayed({ type: "push", title: "PUSH", subtitle: "Both you and the dealer have blackjack." });
+      } else if (playerBJ) {
+        payout = bet + bet * 1.5;
+        result = "Blackjack. Paid 3:2.";
+        showRoundBannerDelayed({ type: "blackjack", title: "BLACKJACK!", subtitle: `Paid 3:2 • +$${(bet * 1.5).toFixed(0)}` }, 800);
+      } else {
+        payout = 0;
+        result = "Dealer blackjack. Hand over.";
+        showRoundBannerDelayed({ type: "lose", title: "DEALER BLACKJACK", subtitle: `Lost $${bet}` });
       }
 
-      const firstPlayable = settledHands.findIndex((hand) => !hand.result);
-      setActiveHand(firstPlayable >= 0 ? firstPlayable : 0);
-      setPlayMessage(`Playing hand ${(firstPlayable >= 0 ? firstPlayable : 0) + 1} of ${settledHands.length}.`);
+      setBankroll((b) => b + payout);
+      setPlayerHands([{ cards: player, bet, result, payout }]);
+      setPlayPhase("roundOver");
+      setPlayMessage(result);
       return;
     }
 
-    setPlayerHands(initialHands);
     setPlayPhase("player");
-    setPlayMessage(`Dealer shows ${dealer[0]}. Playing right-to-left like a real blackjack table.`);
+    setPlayMessage("Dealer has a hole card. Your move.");
   }
 
   function finishHand(updatedHands: PlayerHand[], nextIndex = activeHand + 1) {
     if (nextIndex < updatedHands.length) {
       setPlayerHands(updatedHands);
       setActiveHand(nextIndex);
-      const nextSeat = updatedHands[nextIndex]?.seatIndex;
-      const seatName = nextSeat === 2 ? "right" : nextSeat === 1 ? "center" : nextSeat === 0 ? "left" : `${nextIndex + 1}`;
-      setPlayMessage(`Playing ${seatName} hand (${nextIndex + 1} of ${updatedHands.length}).`);
+      setPlayMessage(`Playing hand ${nextIndex + 1} of ${updatedHands.length}.`);
       return;
     }
 
@@ -674,7 +543,6 @@ export default function App() {
 
   function hitPlayHand() {
     if (playPhase !== "player") return;
-    playCasinoSound("deal");
 
     const { drawn, nextShoe } = drawFromPlayShoe(playShoe, 1);
     const updated = playerHands.map((h, i) => i === activeHand ? { ...h, cards: [...h.cards, drawn[0]] } : h);
@@ -704,14 +572,12 @@ export default function App() {
 
   function standPlayHand() {
     if (playPhase !== "player") return;
-    playCasinoSound("tap");
     const updated = playerHands.map((h, i) => i === activeHand ? { ...h, stood: true } : h);
     finishHand(updated);
   }
 
   function doublePlayHand() {
     if (playPhase !== "player" || !activePlayHand) return;
-    playCasinoSound("chip");
 
     if (activePlayHand.cards.length !== 2) {
       setPlayMessage("Double is only available on your first two cards.");
@@ -747,7 +613,6 @@ export default function App() {
 
   function splitPlayHand() {
     if (playPhase !== "player" || !activePlayHand) return;
-    playCasinoSound("chip");
 
     if (!isPair(activePlayHand.cards)) {
       setPlayMessage("You can only split matching pairs.");
@@ -760,8 +625,8 @@ export default function App() {
     }
 
     const { drawn, nextShoe } = drawFromPlayShoe(playShoe, 2);
-    const first: PlayerHand = { cards: [activePlayHand.cards[0], drawn[0]], bet: activePlayHand.bet, seatIndex: activePlayHand.seatIndex };
-    const second: PlayerHand = { cards: [activePlayHand.cards[1], drawn[1]], bet: activePlayHand.bet, seatIndex: activePlayHand.seatIndex };
+    const first: PlayerHand = { cards: [activePlayHand.cards[0], drawn[0]], bet: activePlayHand.bet };
+    const second: PlayerHand = { cards: [activePlayHand.cards[1], drawn[1]], bet: activePlayHand.bet };
     const updated = [...playerHands];
     updated.splice(activeHand, 1, first, second);
 
@@ -1171,69 +1036,15 @@ export default function App() {
             <button className="play-exit-button" onClick={() => setExitConfirmOpen(true)}>Exit</button>
             <div className="play-hud money-hud">
               <div className="bankroll-box"><strong>${bankroll.toLocaleString()}</strong><span>Bankroll</span></div>
+              <div className="bet-box"><strong>${bet.toLocaleString()}</strong><span>Bet</span></div>
               <div className="cards-left-box">
                 <strong>{playShoe.length.toLocaleString()}/{(playDecks * 52).toLocaleString()}</strong>
-                <span>Cards Remaining</span>
+                <span>{playDecks}D Shoe</span>
               </div>
-              <div className="bet-box"><strong>${(totalSeatBet || bet).toLocaleString()}</strong><span>Total Bet</span></div>
             </div>
           </div>
 
-          <div className="table play-table luxury-casino-table">
-            <div className="luxury-table-rail top-rail" />
-            <div className="luxury-table-rail bottom-rail" />
-
-            <div className="table-brand-watermark">
-              <strong>BLACKJACK</strong>
-              <span>EDGE</span>
-            </div>
-
-            <div className="luxury-shoe">
-              <div className="shoe-lid">BLACKJACK<br />EDGE</div>
-              <div className="shoe-cards" />
-            </div>
-
-            <div className="dealer-chip-rack" aria-hidden="true">
-              {[10, 25, 50, 100, 500].map((rackChip) => (
-                <span key={rackChip} className={`rack-chip rack-${rackChip}`}></span>
-              ))}
-            </div>
-
-            <aside className="table-rules-card">
-              <strong>TABLE RULES</strong>
-              <span>MIN BET: $5</span>
-              <span>MAX BET: $5,000</span>
-              <span>BLACKJACK PAYS 3:2</span>
-              <span>DEALER HITS SOFT 17</span>
-            </aside>
-
-            <div className="felt-insurance-arc">
-              <span>BLACKJACK PAYS 3 TO 2</span>
-              <strong>INSURANCE PAYS 2 TO 1</strong>
-            </div>
-
-            <button
-              className={`side-seat side-seat-left ${seatBets[0] > 0 ? "has-bet" : ""}`}
-              type="button"
-              onClick={() => placeSeatBet(0)}
-              disabled={playPhase !== "betting" && playPhase !== "roundOver"}
-              aria-label="Place bet on left hand"
-            >
-              <span>+</span>
-              <strong>{seatBets[0] > 0 ? `$${seatBets[0].toLocaleString()}` : "PLACE\nBET"}</strong>
-            </button>
-
-            <button
-              className={`side-seat side-seat-right ${seatBets[2] > 0 ? "has-bet" : ""}`}
-              type="button"
-              onClick={() => placeSeatBet(2)}
-              disabled={playPhase !== "betting" && playPhase !== "roundOver"}
-              aria-label="Place bet on right hand"
-            >
-              <span>+</span>
-              <strong>{seatBets[2] > 0 ? `$${seatBets[2].toLocaleString()}` : "PLACE\nBET"}</strong>
-            </button>
-
+          <div className="table play-table">
             <div className="dealer-zone">
               <span>Dealer</span>
               <div className="cards">
@@ -1251,35 +1062,20 @@ export default function App() {
 
             <div className="player-zone play-player-zone">
               <div className="split-hands">
-                {playerHands.length ? playerHands.map((hand, index) => {
-                  const seatIndex = hand.seatIndex ?? index;
-                  const isActive = index === activeHand && playPhase === "player";
-                  const seatName = seatIndex === 2 ? "Right" : seatIndex === 1 ? "Center" : "Left";
-
-                  return (
-                    <div
-                      key={`${seatIndex}-${index}`}
-                      className={`split-hand seat-hand seat-hand-${seatIndex} ${isActive ? "active" : ""}`}
-                    >
-                      <small className="hand-bet-pill">{isActive ? "ACTIVE" : seatName}</small>
-                      <div className="cards">
-                        {hand.cards.map((card, i) => <PlayingCard key={`${card}-${i}`} value={card} />)}
-                      </div>
-                      {showPlayTotals && <strong>{handValue(hand.cards).total}</strong>}
-                      {hand.result && <em>{hand.result}</em>}
+                {playerHands.length ? playerHands.map((hand, index) => (
+                  <div key={index} className={index === activeHand && playPhase === "player" ? "split-hand active" : "split-hand"}>
+                    <small className="hand-bet-pill">${hand.bet}</small>
+                    <div className="cards">
+                      {hand.cards.map((card, i) => <PlayingCard key={`${card}-${i}`} value={card} />)}
                     </div>
-                  );
-                }) : (
-                  <button
-                    className={`bet-circle luxury-bet-circle center-seat ${seatBets[1] > 0 ? "has-bet" : ""}`}
-                    type="button"
-                    onClick={() => placeSeatBet(1)}
-                    disabled={playPhase !== "betting" && playPhase !== "roundOver"}
-                    aria-label="Place bet on center hand"
-                  >
-                    <span>{seatBets[1] > 0 ? "Center Bet" : "Tap To Bet"}</span>
-                    <strong>{seatBets[1] > 0 ? `$${seatBets[1].toLocaleString()}` : premiumChips[selectedChip].label}</strong>
-                  </button>
+                    {showPlayTotals && <strong>{handValue(hand.cards).total}</strong>}
+                    {hand.result && <em>{hand.result}</em>}
+                  </div>
+                )) : (
+                  <div className="bet-circle">
+                    <span>Bet</span>
+                    <strong>${bet}</strong>
+                  </div>
                 )}
               </div>
             </div>
@@ -1294,11 +1090,10 @@ export default function App() {
           </div>
 
           <div className={`chip-tray ${playPhase !== "betting" && playPhase !== "roundOver" ? "chip-tray-locked" : ""}`}>
-            <div className="selected-chip-label">Selected {premiumChips[selectedChip].label}</div>
             {chipValues.map((chip) => (
               <button
                 key={chip}
-                className={`chip premium-chip chip-${chip} ${selectedChip === chip ? "selected-chip" : ""}`}
+                className={`chip premium-chip chip-${chip}`}
                 onClick={() => addChip(chip)}
                 disabled={playPhase !== "betting" && playPhase !== "roundOver"}
                 aria-label={`Add ${premiumChips[chip].label} chip`}
@@ -1324,21 +1119,21 @@ export default function App() {
           </div>
 
           {canAct && (
-            <div className="play-actions luxury-action-bar">
-              <button className="move P" disabled={!canSplit} onClick={splitPlayHand}>Split</button>
-              <button className="move D" disabled={!canDouble} onClick={doublePlayHand}>Double</button>
-              <button className="move S" onClick={standPlayHand}>Stand</button>
+            <div className="play-actions">
               <button className="move H" onClick={hitPlayHand}>Hit</button>
+              <button className="move S" onClick={standPlayHand}>Stand</button>
+              <button className="move D" disabled={!canDouble} onClick={doublePlayHand}>Double</button>
+              <button className="move P" disabled={!canSplit} onClick={splitPlayHand}>Split</button>
             </div>
           )}
 
-          <div className="play-bottom-bar casino-utility-bar">
+          <div className="play-bottom-bar">
             <button onClick={() => setTipOpen((v) => !v)} className="tip-button"><Lightbulb size={18} /> Tip</button>
             <button onClick={() => setShowPlayTotals((value) => !value)} className="tip-button">
-              {showPlayTotals ? "Hide Totals" : "Totals"}
+              {showPlayTotals ? "Hide Totals" : "Show Totals"}
             </button>
             <button onClick={() => setHudOpen(true)} className="tip-button"><Settings2 size={18} /> HUD</button>
-            <button onClick={() => setHelpOpen("play")} className="tip-button"><HelpCircle size={18} /> Rules</button>
+            <button onClick={() => setHelpOpen("play")} className="tip-button"><HelpCircle size={18} /> Help</button>
           </div>
 
           {bankrollAlert && (
