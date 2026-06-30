@@ -27,6 +27,7 @@ type SwipeValue = -1 | 0 | 1;
 type PlayerHand = {
   cards: string[];
   bet: number;
+  seatIndex?: number;
   doubled?: boolean;
   stood?: boolean;
   busted?: boolean;
@@ -209,7 +210,10 @@ export default function App() {
   const playTrue = playRunning / playDecksRemaining;
   const penetration = Math.round(((playDecks * 52 - playShoe.length) / (playDecks * 52)) * 100);
   const totalSeatBet = seatBets.reduce((sum, value) => sum + value, 0);
-  const bettingSeats = seatBets.map((seatBet, seatIndex) => ({ seatBet, seatIndex })).filter((seat) => seat.seatBet > 0);
+  const tableSeatOrder = [2, 1, 0]; // blackjack table flow: right hand, center hand, left hand
+  const bettingSeats = tableSeatOrder
+    .map((seatIndex) => ({ seatBet: seatBets[seatIndex], seatIndex }))
+    .filter((seat) => seat.seatBet > 0);
 
   const activePlayHand = playerHands[activeHand];
   const dealerUpcard = dealerHand[0];
@@ -529,8 +533,8 @@ export default function App() {
   function dealBlackjack() {
     if (playPhase !== "betting" && playPhase !== "roundOver") return;
 
-    const seatsToDeal = seatBets
-      .map((seatBet, seatIndex) => ({ seatBet, seatIndex }))
+    const seatsToDeal = tableSeatOrder
+      .map((seatIndex) => ({ seatBet: seatBets[seatIndex], seatIndex }))
       .filter((seat) => seat.seatBet > 0);
 
     const tableBet = seatsToDeal.reduce((sum, seat) => sum + seat.seatBet, 0);
@@ -581,7 +585,7 @@ export default function App() {
     const initialHands: PlayerHand[] = seatsToDeal.map((seat) => {
       const cards = [drawn[cursor], drawn[cursor + seatsToDeal.length]];
       cursor += 1;
-      return { cards, bet: seat.seatBet };
+      return { cards, bet: seat.seatBet, seatIndex: seat.seatIndex };
     });
 
     const dealer = [drawn[seatsToDeal.length * 2], drawn[seatsToDeal.length * 2 + 1]];
@@ -652,14 +656,16 @@ export default function App() {
 
     setPlayerHands(initialHands);
     setPlayPhase("player");
-    setPlayMessage(`Dealer shows ${dealer[0]}. Playing hand 1 of ${initialHands.length}.`);
+    setPlayMessage(`Dealer shows ${dealer[0]}. Playing right-to-left like a real blackjack table.`);
   }
 
   function finishHand(updatedHands: PlayerHand[], nextIndex = activeHand + 1) {
     if (nextIndex < updatedHands.length) {
       setPlayerHands(updatedHands);
       setActiveHand(nextIndex);
-      setPlayMessage(`Playing hand ${nextIndex + 1} of ${updatedHands.length}.`);
+      const nextSeat = updatedHands[nextIndex]?.seatIndex;
+      const seatName = nextSeat === 2 ? "right" : nextSeat === 1 ? "center" : nextSeat === 0 ? "left" : `${nextIndex + 1}`;
+      setPlayMessage(`Playing ${seatName} hand (${nextIndex + 1} of ${updatedHands.length}).`);
       return;
     }
 
@@ -754,8 +760,8 @@ export default function App() {
     }
 
     const { drawn, nextShoe } = drawFromPlayShoe(playShoe, 2);
-    const first: PlayerHand = { cards: [activePlayHand.cards[0], drawn[0]], bet: activePlayHand.bet };
-    const second: PlayerHand = { cards: [activePlayHand.cards[1], drawn[1]], bet: activePlayHand.bet };
+    const first: PlayerHand = { cards: [activePlayHand.cards[0], drawn[0]], bet: activePlayHand.bet, seatIndex: activePlayHand.seatIndex };
+    const second: PlayerHand = { cards: [activePlayHand.cards[1], drawn[1]], bet: activePlayHand.bet, seatIndex: activePlayHand.seatIndex };
     const updated = [...playerHands];
     updated.splice(activeHand, 1, first, second);
 
@@ -1245,16 +1251,25 @@ export default function App() {
 
             <div className="player-zone play-player-zone">
               <div className="split-hands">
-                {playerHands.length ? playerHands.map((hand, index) => (
-                  <div key={index} className={index === activeHand && playPhase === "player" ? "split-hand active" : "split-hand"}>
-                    <small className="hand-bet-pill">${hand.bet}</small>
-                    <div className="cards">
-                      {hand.cards.map((card, i) => <PlayingCard key={`${card}-${i}`} value={card} />)}
+                {playerHands.length ? playerHands.map((hand, index) => {
+                  const seatIndex = hand.seatIndex ?? index;
+                  const isActive = index === activeHand && playPhase === "player";
+                  const seatName = seatIndex === 2 ? "Right" : seatIndex === 1 ? "Center" : "Left";
+
+                  return (
+                    <div
+                      key={`${seatIndex}-${index}`}
+                      className={`split-hand seat-hand seat-hand-${seatIndex} ${isActive ? "active" : ""}`}
+                    >
+                      <small className="hand-bet-pill">{isActive ? "ACTIVE" : seatName}</small>
+                      <div className="cards">
+                        {hand.cards.map((card, i) => <PlayingCard key={`${card}-${i}`} value={card} />)}
+                      </div>
+                      {showPlayTotals && <strong>{handValue(hand.cards).total}</strong>}
+                      {hand.result && <em>{hand.result}</em>}
                     </div>
-                    {showPlayTotals && <strong>{handValue(hand.cards).total}</strong>}
-                    {hand.result && <em>{hand.result}</em>}
-                  </div>
-                )) : (
+                  );
+                }) : (
                   <button
                     className={`bet-circle luxury-bet-circle center-seat ${seatBets[1] > 0 ? "has-bet" : ""}`}
                     type="button"
