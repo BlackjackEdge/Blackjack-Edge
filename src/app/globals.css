@@ -4173,283 +4173,638 @@ button,input{font:inherit}button{cursor:pointer}
   }
 }
 
-/* =========================================================
-   FINAL v4 play layout correction
-   Fixes:
-   - Centers Cards Left / cards remaining HUD box
-   - Shrinks landscape cards
-   - Reduces card overlap in landscape
-   - Moves landscape action buttons closer to bottom
-   - Slightly tightens mobile action buttons
-   ========================================================= */
-
-/* Cards Left box must be centered in every layout */
-.play-screen .cards-left-box,
-.play-screen .money-hud .cards-left-box,
-.play-screen .play-hud .cards-left-box{
+/* FINAL v4 play layout correction */
+.play-screen .play-top-hud .money-hud .cards-left-box{
   display:flex !important;
   flex-direction:column !important;
-  align-items:center !important;
   justify-content:center !important;
+  align-items:center !important;
+  align-content:center !important;
   text-align:center !important;
   padding:4px 6px !important;
-  min-width:0 !important;
-  overflow:hidden !important;
+  padding-left:6px !important;
+  padding-right:6px !important;
+  transform:none !important;
 }
 
-.play-screen .cards-left-box strong,
-.play-screen .money-hud .cards-left-box strong,
-.play-screen .play-hud .cards-left-box strong{
+.play-screen .play-top-hud .money-hud .cards-left-box strong,
+.play-screen .play-top-hud .money-hud .cards-left-box span{
   display:block !important;
   width:100% !important;
+  text-align:center !important;
+  line-height:1 !important;
   margin:0 !important;
   padding:0 !important;
-  line-height:1 !important;
-  text-align:center !important;
   transform:none !important;
-  white-space:nowrap !important;
 }
 
-.play-screen .cards-left-box span,
-.play-screen .money-hud .cards-left-box span,
-.play-screen .play-hud .cards-left-box span{
-  display:block !important;
-  width:100% !important;
-  margin:4px 0 0 !important;
-  padding:0 !important;
-  line-height:1 !important;
-  text-align:center !important;
-  transform:none !important;
-  white-space:nowrap !important;
-  letter-spacing:.07em !important;
-}
-
-/* Mobile portrait polish */
-@media(max-width:700px) and (orientation: portrait){
-  .play-screen .money-hud,
-  .play-screen .play-hud.money-hud{
-    align-items:stretch !important;
-    gap:5px !important;
-  }
-
-  .play-screen .money-hud > div,
-  .play-screen .play-hud.money-hud > div,
-  .play-screen .bankroll-box,
-  .play-screen .cards-left-box,
-  .play-screen .bet-box{
-    min-height:42px !important;
-    height:42px !important;
-    padding:4px 6px !important;
-    border-radius:14px !important;
-  }
-
-  .play-screen .bankroll-box strong{
-    font-size:clamp(18px,5.4vw,24px) !important;
-    line-height:1 !important;
-  }
-
-  .play-screen .cards-left-box strong,
-  .play-screen .bet-box strong{
-    font-size:clamp(15px,4.6vw,20px) !important;
-    line-height:1 !important;
-  }
-
-  .play-screen .bankroll-box span,
-  .play-screen .cards-left-box span,
-  .play-screen .bet-box span{
-    font-size:7px !important;
-    line-height:1 !important;
-    margin-top:3px !important;
-  }
-
-  .play-screen .play-actions,
-  .play-screen .luxury-action-bar{
-    gap:4px !important;
-  }
-
-  .play-screen .play-actions .move,
-  .play-screen .luxury-action-bar .move{
-    min-height:42px !important;
-    height:42px !important;
-    padding:6px 4px !important;
-    font-size:11px !important;
-    border-radius:15px !important;
-    line-height:1.05 !important;
-  }
-
-  .play-screen .play-actions .move span,
-  .play-screen .luxury-action-bar .move span{
-    font-size:8px !important;
-    line-height:1 !important;
-  }
-}
-
-/* Landscape polish: smaller cards, less overlap, lower buttons */
-@media (orientation: landscape) and (max-height: 540px){
+@media (orientation:portrait){
   .play-screen{
-    overflow:hidden !important;
+    --play-action-h:52px !important;
   }
 
-  .play-screen .cards-left-box,
-  .play-screen .money-hud .cards-left-box,
-  .play-screen .play-hud .cards-left-box{
-    height:38px !important;
-    min-height:38px !important;
-    padding:3px 6px !important;
+  .play-screen .play-action-zone .move{
+    min-height:46px !important;
+    max-height:50px !important;
+    padding:5px 3px !important;
   }
+}
 
-  .play-screen .cards-left-box strong,
-  .play-screen .money-hud .cards-left-box strong,
-  .play-screen .play-hud .cards-left-box strong{
-    font-size:15px !important;
-    line-height:1 !important;
-  }
-
-  .play-screen .cards-left-box span,
-  .play-screen .money-hud .cards-left-box span,
-  .play-screen .play-hud .cards-left-box span{
-    font-size:6.5px !important;
-    margin-top:3px !important;
-    line-height:1 !important;
-  }
-
-  .play-screen .dealer-zone .cards,
-  .play-screen .split-hand .cards{
-    flex-wrap:nowrap !important;
-    gap:0 !important;
-    justify-content:center !important;
-    align-items:center !important;
-    min-height:72px !important;
-    max-height:82px !important;
-    overflow:visible !important;
-    padding:1px 0 !important;
-  }
-
-  .play-screen .dealer-zone .cards .playing-card,
-  .play-screen .split-hand .cards .playing-card,
-  .play-screen .dealer-zone .cards .playing-card.luxury-white-card,
-  .play-screen .split-hand .cards .playing-card.luxury-white-card{
+@media (orientation:landscape){
+  .play-screen .play-table-zone .dealer-area.dealer-zone .cards .playing-card.luxury-white-card,
+  .play-screen .play-table-zone .player-area .split-hand .cards .playing-card.luxury-white-card{
     width:48px !important;
-    height:70px !important;
-    min-width:48px !important;
-    max-width:48px !important;
-    flex:0 0 48px !important;
-    border-radius:10px !important;
+    height:68px !important;
+    border-radius:9px !important;
+    flex:0 0 auto !important;
   }
 
-  .play-screen .dealer-zone .cards .playing-card:not(:first-child),
-  .play-screen .split-hand .cards .playing-card:not(:first-child){
+  .play-screen .play-table-zone .dealer-area.dealer-zone .cards .playing-card.luxury-white-card:not(:first-child),
+  .play-screen .play-table-zone .player-area .split-hand .cards .playing-card.luxury-white-card:not(:first-child){
     margin-left:-20px !important;
   }
 
-  .play-screen .dealer-zone .cards .card-corner strong,
-  .play-screen .split-hand .cards .card-corner strong,
-  .play-screen .dealer-zone .cards .luxury-card-corner strong,
-  .play-screen .split-hand .cards .luxury-card-corner strong{
+  .play-screen .play-table-zone .dealer-area.dealer-zone .cards,
+  .play-screen .play-table-zone .player-area .split-hand .cards{
+    min-height:68px !important;
+    max-height:72px !important;
+    padding:2px 0 !important;
+  }
+
+  .play-screen .play-table-zone .dealer-area.dealer-zone .cards .playing-card.luxury-white-card:nth-child(2),
+  .play-screen .play-table-zone .player-area .split-hand .cards .playing-card.luxury-white-card:nth-child(2){
+    transform:translateY(1px) rotate(.8deg) !important;
+  }
+
+  .play-screen .play-table-zone .dealer-area.dealer-zone .cards .playing-card.luxury-white-card:nth-child(3),
+  .play-screen .play-table-zone .player-area .split-hand .cards .playing-card.luxury-white-card:nth-child(3){
+    transform:translateY(2px) rotate(1.2deg) !important;
+  }
+
+  .play-screen .play-table-zone .dealer-area.dealer-zone .cards .playing-card.luxury-white-card:nth-child(4),
+  .play-screen .play-table-zone .player-area .split-hand .cards .playing-card.luxury-white-card:nth-child(4){
+    transform:translateY(3px) rotate(1.6deg) !important;
+  }
+
+  .play-screen .play-table-zone .dealer-area.dealer-zone .cards .playing-card.luxury-white-card:nth-child(5),
+  .play-screen .play-table-zone .player-area .split-hand .cards .playing-card.luxury-white-card:nth-child(5){
+    transform:translateY(4px) rotate(2deg) !important;
+  }
+
+  .play-screen .play-table-zone .dealer-area.dealer-zone .cards .playing-card.luxury-white-card:nth-child(n+6),
+  .play-screen .play-table-zone .player-area .split-hand .cards .playing-card.luxury-white-card:nth-child(n+6){
+    transform:translateY(5px) rotate(2.4deg) !important;
+  }
+
+  .play-screen .play-table-zone .dealer-area.dealer-zone .cards .luxury-card-corner strong,
+  .play-screen .play-table-zone .player-area .split-hand .cards .luxury-card-corner strong{
     font-size:10px !important;
-    line-height:1 !important;
   }
 
-  .play-screen .dealer-zone .cards .card-corner span,
-  .play-screen .split-hand .cards .card-corner span,
-  .play-screen .dealer-zone .cards .luxury-card-corner span,
-  .play-screen .split-hand .cards .luxury-card-corner span{
+  .play-screen .play-table-zone .dealer-area.dealer-zone .cards .luxury-card-corner span,
+  .play-screen .play-table-zone .player-area .split-hand .cards .luxury-card-corner span{
+    font-size:8px !important;
+  }
+
+  .play-screen .play-table-zone .dealer-area.dealer-zone .cards .luxury-card-corner.top-left,
+  .play-screen .play-table-zone .player-area .split-hand .cards .luxury-card-corner.top-left{
+    top:3px !important;
+    left:3px !important;
+  }
+
+  .play-screen .play-table-zone .dealer-area.dealer-zone .cards .luxury-card-corner.bottom-right,
+  .play-screen .play-table-zone .player-area .split-hand .cards .luxury-card-corner.bottom-right{
+    right:3px !important;
+    bottom:3px !important;
+  }
+
+  .play-screen .play-table-zone .dealer-area.dealer-zone .cards .luxury-card-center-field,
+  .play-screen .play-table-zone .player-area .split-hand .cards .luxury-card-center-field{
+    inset:12px 5px 12px 5px !important;
+  }
+
+  .play-screen .play-table-zone .dealer-area.dealer-zone .cards .luxury-pip,
+  .play-screen .play-table-zone .player-area .split-hand .cards .luxury-pip{
+    font-size:10px !important;
+  }
+
+  .play-screen .play-table-zone .dealer-area.dealer-zone .cards .rank-10 .luxury-pip,
+  .play-screen .play-table-zone .player-area .split-hand .cards .rank-10 .luxury-pip{
+    font-size:8px !important;
+  }
+
+  .play-screen .play-table-zone .dealer-area.dealer-zone .cards .luxury-ace-field .ace-suit,
+  .play-screen .play-table-zone .player-area .split-hand .cards .luxury-ace-field .ace-suit{
+    font-size:22px !important;
+  }
+
+  .play-screen .play-table-zone .dealer-area.dealer-zone .cards .luxury-face-rank,
+  .play-screen .play-table-zone .player-area .split-hand .cards .luxury-face-rank{
+    font-size:14px !important;
+  }
+
+  .play-screen .play-table-zone .dealer-area.dealer-zone .cards .luxury-face-name,
+  .play-screen .play-table-zone .player-area .split-hand .cards .luxury-face-name{
+    font-size:6px !important;
+  }
+
+  .play-screen{
+    --play-action-h:40px !important;
+    --play-gap:2px !important;
+    padding-bottom:max(8px,env(safe-area-inset-bottom)) !important;
+  }
+
+  .play-screen .play-action-zone{
+    align-self:end !important;
+    min-height:var(--play-action-h) !important;
+    max-height:none !important;
+    transform:none !important;
+    margin-top:0 !important;
+    z-index:6 !important;
+  }
+
+  .play-screen .play-action-zone .move{
+    min-height:36px !important;
+    max-height:42px !important;
+    padding:5px 4px !important;
+    font-size:10.5px !important;
+    border-radius:999px !important;
+  }
+}
+
+/* v4.19 REAL current Play screen selector fix
+   This targets the actual current page.tsx classes:
+   play-top-hud, play-table-zone, play-chip-zone, play-action-zone, play-utility-zone.
+   CSS-only. No game logic changes.
+*/
+
+/* Make the current Play screen use stable full-screen zones */
+.play-screen{
+  height:calc(100dvh - 72px) !important;
+  max-height:calc(100dvh - 72px) !important;
+  min-height:0 !important;
+  overflow:hidden !important;
+  display:grid !important;
+  grid-template-columns:1fr !important;
+  grid-template-areas:
+    "hud"
+    "table"
+    "chips"
+    "actions"
+    "utility"
+    "message" !important;
+  gap:5px !important;
+  padding:6px 9px calc(6px + env(safe-area-inset-bottom,0px)) !important;
+}
+
+/* Current top HUD wrapper from page.tsx */
+.play-screen .play-top-hud{
+  grid-area:hud !important;
+  display:grid !important;
+  grid-template-columns:50px minmax(0,1fr) !important;
+  align-items:stretch !important;
+  gap:5px !important;
+  min-height:44px !important;
+  max-height:48px !important;
+  height:46px !important;
+  position:relative !important;
+  z-index:30 !important;
+}
+
+/* Exit button is currently .play-exit-button */
+.play-screen .play-exit-button{
+  width:50px !important;
+  min-width:50px !important;
+  height:42px !important;
+  min-height:42px !important;
+  padding:0 !important;
+  border-radius:14px !important;
+  font-size:10px !important;
+  line-height:1 !important;
+}
+
+/* Current HUD boxes are inside .play-hud.money-hud */
+.play-screen .play-top-hud .play-hud.money-hud{
+  display:grid !important;
+  grid-template-columns:minmax(84px,1.15fr) minmax(72px,.85fr) minmax(76px,.9fr) !important;
+  gap:5px !important;
+  width:100% !important;
+  min-width:0 !important;
+  height:42px !important;
+  max-height:42px !important;
+  align-items:stretch !important;
+}
+
+/* Center all three HUD boxes, especially Cards Left */
+.play-screen .play-top-hud .bankroll-box,
+.play-screen .play-top-hud .bet-box,
+.play-screen .play-top-hud .cards-left-box{
+  min-width:0 !important;
+  width:100% !important;
+  height:42px !important;
+  min-height:42px !important;
+  max-height:42px !important;
+  padding:3px 5px !important;
+  border-radius:13px !important;
+  display:grid !important;
+  grid-template-rows:auto auto !important;
+  align-content:center !important;
+  align-items:center !important;
+  justify-content:center !important;
+  justify-items:center !important;
+  text-align:center !important;
+  overflow:hidden !important;
+  transform:none !important;
+}
+
+/* This is the current Cards Left value/label in page.tsx */
+.play-screen .play-top-hud .cards-left-box strong,
+.play-screen .play-top-hud .cards-left-box span,
+.play-screen .play-top-hud .bankroll-box strong,
+.play-screen .play-top-hud .bankroll-box span,
+.play-screen .play-top-hud .bet-box strong,
+.play-screen .play-top-hud .bet-box span{
+  width:100% !important;
+  max-width:100% !important;
+  display:block !important;
+  text-align:center !important;
+  justify-self:center !important;
+  align-self:center !important;
+  margin:0 !important;
+  padding:0 !important;
+  line-height:1 !important;
+  transform:none !important;
+  white-space:nowrap !important;
+}
+
+.play-screen .play-top-hud .bankroll-box strong{
+  font-size:clamp(16px,4.6vw,22px) !important;
+  letter-spacing:-.04em !important;
+}
+
+.play-screen .play-top-hud .bet-box strong,
+.play-screen .play-top-hud .cards-left-box strong{
+  font-size:clamp(14px,4.1vw,18px) !important;
+  letter-spacing:-.03em !important;
+}
+
+.play-screen .play-top-hud .bankroll-box span,
+.play-screen .play-top-hud .bet-box span,
+.play-screen .play-top-hud .cards-left-box span{
+  font-size:6.5px !important;
+  letter-spacing:.07em !important;
+  margin-top:3px !important;
+}
+
+/* Current table zone from page.tsx */
+.play-screen .play-table-zone{
+  grid-area:table !important;
+  min-height:0 !important;
+  overflow:hidden !important;
+}
+
+/* Current chip zone from page.tsx */
+.play-screen .play-chip-zone{
+  grid-area:chips !important;
+  min-height:44px !important;
+  max-height:48px !important;
+  height:46px !important;
+  display:grid !important;
+  align-items:center !important;
+  gap:4px !important;
+}
+
+/* Current action button zone from page.tsx */
+.play-screen .play-action-zone{
+  grid-area:actions !important;
+  min-height:44px !important;
+  max-height:48px !important;
+  height:46px !important;
+  display:grid !important;
+  grid-template-columns:repeat(4,minmax(0,1fr)) !important;
+  align-items:stretch !important;
+  gap:4px !important;
+  z-index:35 !important;
+}
+
+.play-screen .play-action-zone .move{
+  min-height:42px !important;
+  height:42px !important;
+  max-height:42px !important;
+  padding:4px 3px !important;
+  border-radius:15px !important;
+  font-size:10.5px !important;
+  line-height:1 !important;
+}
+
+/* Current utility zone from page.tsx */
+.play-screen .play-utility-zone{
+  grid-area:utility !important;
+  min-height:36px !important;
+  max-height:40px !important;
+  height:38px !important;
+  display:grid !important;
+  grid-template-columns:repeat(4,minmax(0,1fr)) !important;
+  gap:4px !important;
+  align-items:stretch !important;
+}
+
+.play-screen .play-utility-zone .tip-button{
+  min-height:34px !important;
+  height:34px !important;
+  max-height:36px !important;
+  padding:3px 2px !important;
+  border-radius:12px !important;
+  font-size:8px !important;
+  line-height:1 !important;
+}
+
+.play-screen .play-utility-zone .tip-button svg{
+  width:12px !important;
+  height:12px !important;
+}
+
+.play-screen .play-message-pill{
+  grid-area:message !important;
+  min-height:12px !important;
+  font-size:9px !important;
+  line-height:1.05 !important;
+}
+
+/* Portrait card safety */
+@media(max-width:700px) and (orientation:portrait){
+  .play-screen{
+    grid-template-rows:46px minmax(0,1fr) 46px 46px 38px 14px !important;
+  }
+
+  .play-screen .play-table-zone .dealer-area .cards,
+  .play-screen .play-table-zone .player-area .cards{
+    min-height:94px !important;
+    max-height:104px !important;
+  }
+
+  .play-screen .play-table-zone .dealer-area .cards > .playing-card,
+  .play-screen .play-table-zone .player-area .cards > .playing-card{
+    width:64px !important;
+    height:92px !important;
+    min-width:64px !important;
+    flex:0 0 64px !important;
+  }
+
+  .play-screen .play-table-zone .dealer-area .cards > .playing-card:not(:first-child),
+  .play-screen .play-table-zone .player-area .cards > .playing-card:not(:first-child){
+    margin-left:-28px !important;
+  }
+}
+
+/* Landscape: make cards smaller and put action buttons at the bottom */
+@media(orientation:landscape) and (max-height:540px){
+  .play-screen{
+    height:calc(100dvh - 50px) !important;
+    max-height:calc(100dvh - 50px) !important;
+    grid-template-rows:38px minmax(0,1fr) 42px 40px 32px 0px !important;
+    gap:3px !important;
+    padding:
+      4px
+      max(8px,env(safe-area-inset-right))
+      calc(4px + env(safe-area-inset-bottom,0px))
+      max(8px,env(safe-area-inset-left)) !important;
+  }
+
+  .play-screen .play-top-hud{
+    height:38px !important;
+    max-height:38px !important;
+    min-height:38px !important;
+    grid-template-columns:48px minmax(0,1fr) !important;
+    gap:5px !important;
+  }
+
+  .play-screen .play-exit-button{
+    width:48px !important;
+    min-width:48px !important;
+    height:34px !important;
+    min-height:34px !important;
     font-size:9px !important;
-    line-height:1 !important;
+    border-radius:999px !important;
   }
 
-  .play-screen .pip-layout{
-    inset:18px 9px !important;
+  .play-screen .play-top-hud .play-hud.money-hud{
+    height:34px !important;
+    max-height:34px !important;
+    grid-template-columns:minmax(95px,1.15fr) minmax(68px,.75fr) minmax(74px,.8fr) !important;
+    gap:5px !important;
   }
 
-  .play-screen .pip-layout span,
-  .play-screen .luxury-pip{
+  .play-screen .play-top-hud .bankroll-box,
+  .play-screen .play-top-hud .bet-box,
+  .play-screen .play-top-hud .cards-left-box{
+    height:34px !important;
+    min-height:34px !important;
+    max-height:34px !important;
+    padding:2px 5px !important;
+    border-radius:11px !important;
+  }
+
+  .play-screen .play-top-hud .bankroll-box strong{
+    font-size:14px !important;
+  }
+
+  .play-screen .play-top-hud .bet-box strong,
+  .play-screen .play-top-hud .cards-left-box strong{
     font-size:13px !important;
   }
 
-  .play-screen .ace-field span{
-    font-size:28px !important;
+  .play-screen .play-top-hud .bankroll-box span,
+  .play-screen .play-top-hud .bet-box span,
+  .play-screen .play-top-hud .cards-left-box span{
+    font-size:5.8px !important;
+    margin-top:2px !important;
   }
 
-  .play-screen .royal-face-card{
-    inset:18px 8px !important;
+  .play-screen .play-table-zone{
+    padding:5px 9px 0 !important;
+    border-radius:18px !important;
   }
 
-  .play-screen .royal-center strong{
-    width:22px !important;
-    height:27px !important;
-    font-size:17px !important;
+  .play-screen .play-table-zone .dealer-area,
+  .play-screen .play-table-zone .player-area{
+    gap:2px !important;
   }
 
-  .play-screen .royal-center span{
-    font-size:12px !important;
+  .play-screen .play-table-zone .dealer-area > span,
+  .play-screen .play-table-zone .player-area > span{
+    font-size:8px !important;
   }
 
-  .play-screen .royal-row span,
-  .play-screen .royal-row em{
+  .play-screen .play-table-zone .dealer-area .cards,
+  .play-screen .play-table-zone .player-area .cards,
+  .play-screen .play-table-zone .split-hand .cards{
+    min-height:58px !important;
+    max-height:62px !important;
+    height:60px !important;
+    padding:0 !important;
+    gap:0 !important;
+    flex-wrap:nowrap !important;
+    overflow:visible !important;
+  }
+
+  .play-screen .play-table-zone .dealer-area .cards > .playing-card,
+  .play-screen .play-table-zone .player-area .cards > .playing-card,
+  .play-screen .play-table-zone .split-hand .cards > .playing-card,
+  .play-screen .play-table-zone .cards > .playing-card.luxury-white-card{
+    width:42px !important;
+    height:60px !important;
+    min-width:42px !important;
+    max-width:42px !important;
+    flex:0 0 42px !important;
+    border-radius:8px !important;
+  }
+
+  .play-screen .play-table-zone .dealer-area .cards > .playing-card:not(:first-child),
+  .play-screen .play-table-zone .player-area .cards > .playing-card:not(:first-child),
+  .play-screen .play-table-zone .split-hand .cards > .playing-card:not(:first-child){
+    margin-left:-16px !important;
+  }
+
+  .play-screen .play-table-zone .cards > .playing-card:nth-child(2),
+  .play-screen .play-table-zone .cards > .playing-card:nth-child(3),
+  .play-screen .play-table-zone .cards > .playing-card:nth-child(4),
+  .play-screen .play-table-zone .cards > .playing-card:nth-child(5),
+  .play-screen .play-table-zone .cards > .playing-card:nth-child(n+6){
+    transform:translateY(0) rotate(0deg) !important;
+  }
+
+  .play-screen .play-table-zone .card-corner strong,
+  .play-screen .play-table-zone .luxury-card-corner strong{
+    font-size:8px !important;
+  }
+
+  .play-screen .play-table-zone .card-corner span,
+  .play-screen .play-table-zone .luxury-card-corner span{
+    font-size:7px !important;
+  }
+
+  .play-screen .play-table-zone .luxury-card-corner.top-left,
+  .play-screen .play-table-zone .card-corner.top-left{
+    top:3px !important;
+    left:3px !important;
+  }
+
+  .play-screen .play-table-zone .luxury-card-corner.bottom-right,
+  .play-screen .play-table-zone .card-corner.bottom-right{
+    right:3px !important;
+    bottom:3px !important;
+  }
+
+  .play-screen .play-table-zone .luxury-card-center-field,
+  .play-screen .play-table-zone .pip-layout{
+    inset:12px 5px !important;
+  }
+
+  .play-screen .play-table-zone .luxury-pip,
+  .play-screen .play-table-zone .pip-layout span{
     font-size:9px !important;
   }
 
-  .play-screen .play-actions,
-  .play-screen .luxury-action-bar{
-    position:fixed !important;
-    left:max(8px, env(safe-area-inset-left)) !important;
-    right:max(8px, env(safe-area-inset-right)) !important;
-    bottom:max(8px, env(safe-area-inset-bottom)) !important;
-    top:auto !important;
-    transform:none !important;
-    z-index:80 !important;
-    display:grid !important;
-    grid-template-columns:repeat(4, minmax(0,1fr)) !important;
-    gap:6px !important;
-    width:auto !important;
-    max-width:none !important;
+  .play-screen .play-table-zone .luxury-ace-field .ace-suit,
+  .play-screen .play-table-zone .ace-field span{
+    font-size:22px !important;
   }
 
-  .play-screen .play-actions .move,
-  .play-screen .luxury-action-bar .move{
-    min-height:38px !important;
-    height:38px !important;
-    padding:4px 6px !important;
-    font-size:10px !important;
-    line-height:1 !important;
-    border-radius:14px !important;
+  .play-screen .play-table-zone .luxury-face-rank{
+    font-size:14px !important;
   }
 
-  .play-screen .play-actions .move span,
-  .play-screen .luxury-action-bar .move span{
-    font-size:7px !important;
-    line-height:1 !important;
+  .play-screen .play-table-zone .luxury-face-name{
+    font-size:6px !important;
   }
 
-  /* Keep the bottom utility row from fighting the action buttons in landscape */
-  .play-screen .play-bottom-bar,
-  .play-screen .casino-utility-bar{
-    position:fixed !important;
-    left:max(8px, env(safe-area-inset-left)) !important;
-    bottom:52px !important;
-    top:auto !important;
-    z-index:79 !important;
+  .play-screen .play-chip-zone{
+    height:42px !important;
+    min-height:42px !important;
+    max-height:42px !important;
+    gap:3px !important;
   }
 
-  .play-screen .play-bottom-bar .tip-button,
-  .play-screen .casino-utility-bar .tip-button{
+  .play-screen .play-chip-zone .premium-chip{
+    width:30px !important;
+    height:30px !important;
+    min-width:30px !important;
+    min-height:30px !important;
+  }
+
+  .play-screen .play-chip-zone .clear-bet-button,
+  .play-screen .play-chip-zone .deal-button{
     min-height:32px !important;
     height:32px !important;
-    padding:4px 6px !important;
-    font-size:9px !important;
+    padding:2px 6px !important;
+    font-size:8px !important;
+    border-radius:999px !important;
+  }
+
+  .play-screen .play-action-zone{
+    height:40px !important;
+    min-height:40px !important;
+    max-height:40px !important;
+    align-self:end !important;
+    gap:5px !important;
+    margin-top:auto !important;
+  }
+
+  .play-screen .play-action-zone .move{
+    height:36px !important;
+    min-height:36px !important;
+    max-height:36px !important;
+    padding:3px 4px !important;
+    font-size:9.5px !important;
+    line-height:1 !important;
+    border-radius:999px !important;
+  }
+
+  .play-screen .play-utility-zone{
+    height:32px !important;
+    min-height:32px !important;
+    max-height:32px !important;
+    grid-template-columns:repeat(4,minmax(0,1fr)) !important;
+    gap:4px !important;
+  }
+
+  .play-screen .play-utility-zone .tip-button{
+    height:30px !important;
+    min-height:30px !important;
+    max-height:30px !important;
+    padding:2px 3px !important;
+    font-size:7.5px !important;
+    border-radius:999px !important;
   }
 }
 
-.play-screen {
-  outline: 10px solid red !important;
+/* Very short landscape screens get extra compression */
+@media(orientation:landscape) and (max-height:430px){
+  .play-screen{
+    grid-template-rows:34px minmax(0,1fr) 36px 36px 28px 0px !important;
+    gap:2px !important;
+  }
+
+  .play-screen .play-action-zone .move{
+    height:32px !important;
+    min-height:32px !important;
+    font-size:8.5px !important;
+  }
+
+  .play-screen .play-table-zone .dealer-area .cards > .playing-card,
+  .play-screen .play-table-zone .player-area .cards > .playing-card,
+  .play-screen .play-table-zone .split-hand .cards > .playing-card{
+    width:38px !important;
+    height:54px !important;
+    min-width:38px !important;
+    flex-basis:38px !important;
+  }
+
+  .play-screen .play-table-zone .dealer-area .cards > .playing-card:not(:first-child),
+  .play-screen .play-table-zone .player-area .cards > .playing-card:not(:first-child),
+  .play-screen .play-table-zone .split-hand .cards > .playing-card:not(:first-child){
+    margin-left:-14px !important;
+  }
 }
 
-.play-screen .cards-left-box {
-  outline: 6px solid lime !important;
-}
-
-.play-screen .play-actions {
-  outline: 6px solid cyan !important;
-}
-  
