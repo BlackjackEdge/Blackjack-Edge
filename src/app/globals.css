@@ -4441,3 +4441,15 @@ button,input{font:inherit}button{cursor:pointer}
   }
 }
 
+.play-screen {
+  outline: 10px solid red !important;
+}
+
+.play-screen .cards-left-box {
+  outline: 6px solid lime !important;
+}
+
+.play-screen .play-actions {
+  outline: 6px solid cyan !important;
+}
+  
