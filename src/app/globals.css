@@ -4172,3 +4172,162 @@ button,input{font:inherit}button{cursor:pointer}
     font-size:11px;
   }
 }
+
+/* FINAL v4 play layout correction */
+.play-screen .play-top-hud .money-hud .cards-left-box{
+  display:flex !important;
+  flex-direction:column !important;
+  justify-content:center !important;
+  align-items:center !important;
+  align-content:center !important;
+  text-align:center !important;
+  padding:4px 6px !important;
+  padding-left:6px !important;
+  padding-right:6px !important;
+  transform:none !important;
+}
+
+.play-screen .play-top-hud .money-hud .cards-left-box strong,
+.play-screen .play-top-hud .money-hud .cards-left-box span{
+  display:block !important;
+  width:100% !important;
+  text-align:center !important;
+  line-height:1 !important;
+  margin:0 !important;
+  padding:0 !important;
+  transform:none !important;
+}
+
+@media (orientation:portrait){
+  .play-screen{
+    --play-action-h:52px !important;
+  }
+
+  .play-screen .play-action-zone .move{
+    min-height:46px !important;
+    max-height:50px !important;
+    padding:5px 3px !important;
+  }
+}
+
+@media (orientation:landscape){
+  .play-screen .play-table-zone .dealer-area.dealer-zone .cards .playing-card.luxury-white-card,
+  .play-screen .play-table-zone .player-area .split-hand .cards .playing-card.luxury-white-card{
+    width:48px !important;
+    height:68px !important;
+    border-radius:9px !important;
+    flex:0 0 auto !important;
+  }
+
+  .play-screen .play-table-zone .dealer-area.dealer-zone .cards .playing-card.luxury-white-card:not(:first-child),
+  .play-screen .play-table-zone .player-area .split-hand .cards .playing-card.luxury-white-card:not(:first-child){
+    margin-left:-20px !important;
+  }
+
+  .play-screen .play-table-zone .dealer-area.dealer-zone .cards,
+  .play-screen .play-table-zone .player-area .split-hand .cards{
+    min-height:68px !important;
+    max-height:72px !important;
+    padding:2px 0 !important;
+  }
+
+  .play-screen .play-table-zone .dealer-area.dealer-zone .cards .playing-card.luxury-white-card:nth-child(2),
+  .play-screen .play-table-zone .player-area .split-hand .cards .playing-card.luxury-white-card:nth-child(2){
+    transform:translateY(1px) rotate(.8deg) !important;
+  }
+
+  .play-screen .play-table-zone .dealer-area.dealer-zone .cards .playing-card.luxury-white-card:nth-child(3),
+  .play-screen .play-table-zone .player-area .split-hand .cards .playing-card.luxury-white-card:nth-child(3){
+    transform:translateY(2px) rotate(1.2deg) !important;
+  }
+
+  .play-screen .play-table-zone .dealer-area.dealer-zone .cards .playing-card.luxury-white-card:nth-child(4),
+  .play-screen .play-table-zone .player-area .split-hand .cards .playing-card.luxury-white-card:nth-child(4){
+    transform:translateY(3px) rotate(1.6deg) !important;
+  }
+
+  .play-screen .play-table-zone .dealer-area.dealer-zone .cards .playing-card.luxury-white-card:nth-child(5),
+  .play-screen .play-table-zone .player-area .split-hand .cards .playing-card.luxury-white-card:nth-child(5){
+    transform:translateY(4px) rotate(2deg) !important;
+  }
+
+  .play-screen .play-table-zone .dealer-area.dealer-zone .cards .playing-card.luxury-white-card:nth-child(n+6),
+  .play-screen .play-table-zone .player-area .split-hand .cards .playing-card.luxury-white-card:nth-child(n+6){
+    transform:translateY(5px) rotate(2.4deg) !important;
+  }
+
+  .play-screen .play-table-zone .dealer-area.dealer-zone .cards .luxury-card-corner strong,
+  .play-screen .play-table-zone .player-area .split-hand .cards .luxury-card-corner strong{
+    font-size:10px !important;
+  }
+
+  .play-screen .play-table-zone .dealer-area.dealer-zone .cards .luxury-card-corner span,
+  .play-screen .play-table-zone .player-area .split-hand .cards .luxury-card-corner span{
+    font-size:8px !important;
+  }
+
+  .play-screen .play-table-zone .dealer-area.dealer-zone .cards .luxury-card-corner.top-left,
+  .play-screen .play-table-zone .player-area .split-hand .cards .luxury-card-corner.top-left{
+    top:3px !important;
+    left:3px !important;
+  }
+
+  .play-screen .play-table-zone .dealer-area.dealer-zone .cards .luxury-card-corner.bottom-right,
+  .play-screen .play-table-zone .player-area .split-hand .cards .luxury-card-corner.bottom-right{
+    right:3px !important;
+    bottom:3px !important;
+  }
+
+  .play-screen .play-table-zone .dealer-area.dealer-zone .cards .luxury-card-center-field,
+  .play-screen .play-table-zone .player-area .split-hand .cards .luxury-card-center-field{
+    inset:12px 5px 12px 5px !important;
+  }
+
+  .play-screen .play-table-zone .dealer-area.dealer-zone .cards .luxury-pip,
+  .play-screen .play-table-zone .player-area .split-hand .cards .luxury-pip{
+    font-size:10px !important;
+  }
+
+  .play-screen .play-table-zone .dealer-area.dealer-zone .cards .rank-10 .luxury-pip,
+  .play-screen .play-table-zone .player-area .split-hand .cards .rank-10 .luxury-pip{
+    font-size:8px !important;
+  }
+
+  .play-screen .play-table-zone .dealer-area.dealer-zone .cards .luxury-ace-field .ace-suit,
+  .play-screen .play-table-zone .player-area .split-hand .cards .luxury-ace-field .ace-suit{
+    font-size:22px !important;
+  }
+
+  .play-screen .play-table-zone .dealer-area.dealer-zone .cards .luxury-face-rank,
+  .play-screen .play-table-zone .player-area .split-hand .cards .luxury-face-rank{
+    font-size:14px !important;
+  }
+
+  .play-screen .play-table-zone .dealer-area.dealer-zone .cards .luxury-face-name,
+  .play-screen .play-table-zone .player-area .split-hand .cards .luxury-face-name{
+    font-size:6px !important;
+  }
+
+  .play-screen{
+    --play-action-h:40px !important;
+    --play-gap:2px !important;
+    padding-bottom:max(8px,env(safe-area-inset-bottom)) !important;
+  }
+
+  .play-screen .play-action-zone{
+    align-self:end !important;
+    min-height:var(--play-action-h) !important;
+    max-height:none !important;
+    transform:none !important;
+    margin-top:0 !important;
+    z-index:6 !important;
+  }
+
+  .play-screen .play-action-zone .move{
+    min-height:36px !important;
+    max-height:42px !important;
+    padding:5px 4px !important;
+    font-size:10.5px !important;
+    border-radius:999px !important;
+  }
+}
