@@ -115,6 +115,7 @@ h1 { font-size: clamp(28px, 6vw, 42px); } h2 { font-size: clamp(22px, 4vw, 30px)
 .brand-logo-md .brand-logo-ring { width: 64px; height: 64px; }
 .brand-logo-lg .brand-logo-ring { width: 88px; height: 88px; }
 .brand-logo-suit { font-size: 1.6em; color: var(--gold); }
+.play-landscape-stage { flex: 1; min-height: 0; display: flex; flex-direction: column; width: 100%; overflow: hidden; }
 .play-layout { display: flex; flex-direction: column; height: calc(100dvh - env(safe-area-inset-top)); overflow: hidden; min-height: 0; max-width: 100vw; width: 100%; }
 .play-top-bar {
   display: grid;
@@ -262,240 +263,387 @@ h1 { font-size: clamp(28px, 6vw, 42px); } h2 { font-size: clamp(22px, 4vw, 30px)
     margin: 0 auto;
   }
 }
-/* ─── Play Landscape ─── */
-@media (orientation: landscape) and (min-height: 360px) {
-  .app-play,
-  .screen-play,
-  .play-layout {
-    max-width: 100vw;
-    overflow-x: hidden;
-  }
-  .screen-play {
-    padding: calc(2px + env(safe-area-inset-top)) max(10px, env(safe-area-inset-left)) calc(4px + env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-right));
-  }
-  .play-layout {
-    display: grid;
-    grid-template-rows: auto minmax(0, 1fr) auto;
-    grid-template-columns: 1fr;
-    height: calc(100dvh - env(safe-area-inset-top));
-    gap: 0;
-    width: 100%;
+/* ─── Play Landscape (932×430 stage) ─── */
+@media (orientation: landscape) and (max-height: 500px) {
+  .app-play {
     max-width: 100vw;
     overflow: hidden;
   }
+  .screen-play {
+    position: relative;
+    width: 100vw;
+    height: 100dvh;
+    overflow: hidden;
+    padding: 0;
+    max-width: 100vw;
+    max-height: 100dvh;
+  }
+  .play-landscape-stage {
+    width: 932px;
+    height: 430px;
+    --landscape-scale: min(100vw / 932, 100dvh / 430);
+    transform: scale(var(--landscape-scale));
+    transform-origin: top left;
+    flex: none;
+    overflow: visible;
+  }
+  .play-layout {
+    position: relative;
+    width: 932px;
+    height: 430px;
+    display: block;
+    overflow: hidden;
+    min-height: 0;
+    max-width: none;
+  }
   .play-top-bar {
-    grid-row: 1;
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    grid-template-areas: "exit stats settings";
-    align-items: center;
-    gap: clamp(6px, 1.5vw, 10px);
-    padding: 4px max(2px, env(safe-area-inset-left)) 6px max(2px, env(safe-area-inset-right));
-    width: 100%;
-    max-width: 100%;
-    min-width: 0;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 932px;
+    height: 52px;
+    display: block;
+    padding: 0;
+    gap: 0;
+    z-index: 10;
   }
   .play-hud-exit {
-    flex-shrink: 0;
-    justify-self: start;
-    min-width: 44px;
-    min-height: 44px;
-    padding: 8px 12px !important;
+    position: absolute;
+    left: 12px;
+    top: 10px;
+    width: 70px;
+    height: 42px;
+    min-width: 0;
+    min-height: 0;
+    padding: 0 !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
   }
   .play-hud-stats {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(72px, 1fr));
-    gap: clamp(5px, 1.2vw, 8px);
+    position: absolute;
+    inset: 0;
+    display: block;
     min-width: 0;
-    max-width: min(68vw, 420px);
-    width: 100%;
-    justify-self: center;
+    max-width: none;
   }
-  .play-hud-stat-cards { display: flex; }
-  .play-top-bar .hud-stat {
-    min-width: 0;
-    width: 100%;
-    padding: clamp(4px, 1vw, 6px) clamp(6px, 1.5vw, 10px);
+  .play-hud-stats .hud-stat:nth-child(1) {
+    position: absolute;
+    left: 95px;
+    top: 10px;
+    width: 120px;
+    height: 42px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2px 6px;
+  }
+  .play-hud-stats .hud-stat:nth-child(2) {
+    position: absolute;
+    left: 225px;
+    top: 10px;
+    width: 120px;
+    height: 42px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2px 6px;
+  }
+  .play-hud-stat-cards {
+    display: flex;
+    position: absolute;
+    left: 680px;
+    top: 10px;
+    width: 175px;
+    height: 42px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2px 6px;
   }
   .play-top-bar .hud-stat-value {
-    font-size: clamp(11px, 2.2vw, 15px);
+    font-size: 13px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    max-width: 100%;
   }
-  .play-top-bar .hud-stat span { font-size: clamp(7px, 1.4vw, 9px); }
+  .play-top-bar .hud-stat span { font-size: 8px; }
   .play-hud-settings {
-    flex-shrink: 0;
-    justify-self: end;
-    min-width: 44px;
-    min-height: 44px;
-  }
-  .play-stage {
-    grid-row: 2;
+    position: absolute;
+    left: 870px;
+    top: 10px;
+    width: 46px;
+    height: 42px;
+    min-width: 0;
+    min-height: 0;
+    padding: 0 !important;
     display: flex;
     align-items: center;
     justify-content: center;
+  }
+  .play-stage {
+    position: absolute;
+    left: 95px;
+    top: 62px;
+    width: 742px;
+    height: 235px;
+    display: block;
+    flex: none;
     min-height: 0;
-    min-width: 0;
-    width: 100%;
-    max-width: 100%;
-    padding: 2px clamp(8px, 2vw, 20px);
+    padding: 0;
     overflow: hidden;
   }
   .play-table-wrap {
-    flex: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 0;
-    min-width: 0;
     width: 100%;
-    max-width: min(720px, calc(100vw - 48px));
     height: 100%;
+    flex: none;
+    display: block;
+    min-height: 0;
     padding: 0;
     overflow: hidden;
   }
   .casino-table {
     width: 100%;
-    max-width: min(680px, calc(100vw - 56px));
-    height: auto;
-    max-height: min(100%, calc(100dvh - 168px));
-    aspect-ratio: 5 / 3;
+    height: 100%;
     min-height: 0;
-    margin: 0 auto;
+    margin: 0;
     flex: none;
+    border-radius: 26px;
+    aspect-ratio: auto;
+    max-width: none;
+    max-height: none;
   }
-  .casino-table::after { font-size: clamp(11px, 2vw, 20px); top: 42%; }
+  .casino-table::before { inset: 8px; }
+  .casino-table::after { font-size: 18px; top: 42%; }
   .table-rules {
-    top: 6px;
-    left: 6px;
-    max-width: min(calc(100% - 24px), 200px);
-    padding: 3px 7px;
+    position: absolute;
+    left: 15px;
+    top: 10px;
+    width: 175px;
+    height: 22px;
+    max-width: 175px;
+    padding: 2px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: nowrap;
+    gap: 0 3px;
+    z-index: 4;
   }
-  .table-rules span { font-size: 6px; }
+  .table-rules span { font-size: 6px; line-height: 1; }
   .casino-table .cards-remaining-box { display: none; }
   .dealer-zone {
-    top: 11%;
-    gap: 3px;
-    max-width: min(78%, 320px);
-    left: 50%;
+    position: absolute;
+    left: 371px;
+    top: 33px;
     transform: translateX(-50%);
+    gap: 2px;
+    max-width: 200px;
   }
   .dealer-zone .zone-label { font-size: 7px; }
-  .dealer-result-banner { font-size: 7px; padding: 3px 10px; max-width: min(100%, 160px); }
-  .dealer-cards-fan .playing-card { width: clamp(30px, 4.5vw, 42px); height: clamp(43px, 6.5vw, 60px); }
-  .dealer-cards-fan .cards-fan-card { margin-left: calc(-1 * clamp(10px, 2vw, 16px)); }
+  .dealer-result-banner { font-size: 7px; padding: 2px 8px; max-width: 140px; }
+  .dealer-cards-fan .playing-card { width: 34px; height: 48px; }
+  .dealer-cards-fan .cards-fan-card { margin-left: -12px; }
+  .dealer-cards-fan .cards-fan-card:first-child { margin-left: 0; }
   .betting-spots {
-    bottom: 13%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    transform: none;
+    display: block;
+    max-width: none;
+    width: 100%;
+    gap: 0;
+  }
+  .betting-spots .bet-spot {
+    position: absolute;
+    display: block;
+    transform: translateX(-50%);
+  }
+  .betting-spots .bet-spot:nth-child(1) { left: 235px; top: 113px; }
+  .betting-spots .bet-spot:nth-child(2) { left: 371px; top: 113px; }
+  .betting-spots .bet-spot:nth-child(3) { left: 507px; top: 113px; }
+  .bet-spot-cards {
+    position: absolute;
+    top: 0;
     left: 50%;
     transform: translateX(-50%);
-    gap: clamp(4px, 1.2vw, 12px);
-    width: min(78%, 320px);
-    max-width: calc(100% - 20px);
-    justify-content: center;
-  }
-  .bet-spot { flex: 0 1 auto; min-width: 0; }
-  .bet-spot-circle { width: clamp(38px, 6vw, 50px); height: clamp(38px, 6vw, 50px); }
-  .bet-spot-cards {
-    min-height: 50px;
-    max-width: min(100%, 88px);
+    min-height: 0;
+    max-width: 100px;
     padding-top: 0;
-    padding-bottom: 10px;
-    margin-bottom: 2px;
+    margin-bottom: 0;
+    padding-bottom: 0;
   }
-  .bet-spot-cards:has(.is-split) { max-width: min(100%, 150px); min-height: 44px; }
-  .bet-spot .cards-fan .mini-card { width: clamp(24px, 3.6vw, 34px); height: clamp(34px, 5.2vw, 48px); }
-  .bet-spot .seat-split-hands:not(.is-split) .cards-fan-card {
-    margin-left: calc(-1 * (clamp(18px, 4vw, 26px) - min((var(--card-count, 2) - 2), 4) * clamp(2px, 0.4vw, 3px)));
+  .bet-spot-cards:has(.is-split) { max-width: 140px; }
+  .bet-spot-circle {
+    position: absolute;
+    top: 55px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 44px;
+    height: 44px;
   }
-  .bet-chip-stack-chip { width: clamp(28px, 5vw, 40px); height: clamp(28px, 5vw, 40px); }
-  .bet-chip-stack-amount { font-size: 8px; }
-  .seat-split-hands.is-split { gap: clamp(8px, 1.6vw, 12px); }
-  .seat-split-hands.is-split .mini-card { width: clamp(20px, 3.2vw, 28px); height: clamp(28px, 4.5vw, 38px); }
-  .player-hand-active { transform: scale(1.06); }
-  .hand-result-popup { bottom: auto; top: calc(100% + 3px); font-size: 6px; padding: 2px 7px; max-width: 68px; letter-spacing: .08em; }
-  .play-controls {
-    grid-row: 3;
-    width: 100%;
-    max-width: 100%;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 4px;
-    padding: 4px max(10px, env(safe-area-inset-left)) calc(4px + env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-right));
-    background: linear-gradient(180deg, rgba(6,10,20,.55), rgba(6,10,20,.95));
-    border-top: 1px solid rgba(212,175,55,.15);
-    overflow: hidden;
-  }
-  .play-controls-row {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto auto;
-    align-items: center;
-    gap: clamp(4px, 1vw, 10px);
-    width: 100%;
-    max-width: min(720px, 100%);
-    margin: 0 auto;
-    min-width: 0;
-  }
-  .play-chip-section { min-width: 0; max-width: 100%; overflow: hidden; }
-  .play-bet-section { flex-shrink: 0; min-width: 0; }
-  .play-action-section { flex-shrink: 0; min-width: 0; overflow: hidden; }
-  .play-controls .play-hud-utilities {
-    display: flex;
-    flex-shrink: 0;
-    justify-content: center;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: clamp(6px, 1.5vw, 10px);
-    width: 100%;
-    max-width: min(100%, 480px);
-    margin: 0 auto;
-    padding-top: 2px;
-  }
-  .play-controls .play-hud-utilities .btn-ghost {
-    font-size: clamp(9px, 1.8vw, 10px);
-    padding: 8px clamp(12px, 2.5vw, 16px);
-    min-height: 44px;
-    min-width: 44px;
-    flex: 0 1 auto;
-  }
-  .chip-rack-row { gap: 3px; min-width: 0; }
-  .chip-tray { gap: 4px; padding: 2px 0; min-width: 0; }
-  .chip-btn { width: clamp(40px, 5vw, 44px); height: clamp(40px, 5vw, 44px); }
-  .chip-scroll-btn { width: 28px; height: 28px; min-width: 28px; min-height: 28px; }
-  .bet-actions { flex-direction: row; gap: 6px; min-width: 0; }
-  .bet-actions .btn-secondary,
-  .bet-actions .btn-primary {
-    padding: 10px clamp(10px, 2vw, 14px);
-    font-size: clamp(9px, 1.8vw, 11px);
-    flex: none;
-    min-height: 44px;
+  .bet-chip-stack { position: relative; }
+  .bet-chip-stack-chip { width: 36px; height: 36px; }
+  .bet-chip-stack-amount {
+    position: absolute;
+    top: 93px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 8px;
     white-space: nowrap;
   }
-  .action-buttons {
-    flex-direction: row;
-    gap: clamp(5px, 1.2vw, 8px);
-    flex-wrap: nowrap;
+  .bet-spot .cards-fan { --fan-rotate: 1.2deg; --fan-lift: 1px; }
+  .bet-spot .cards-fan .mini-card { width: 28px; height: 40px; }
+  .bet-spot .seat-split-hands:not(.is-split) .cards-fan-card {
+    margin-left: calc(-1 * (18px - min((var(--card-count, 2) - 2), 4) * 2px));
   }
-  .action-btn {
-    width: clamp(44px, 6.5vw, 52px);
-    height: clamp(44px, 6.5vw, 52px);
-    font-size: clamp(8px, 1.6vw, 9px);
+  .seat-split-hands.is-split { gap: 10px; }
+  .seat-split-hands.is-split .split-hand .cards-fan-card { margin-left: -14px; }
+  .seat-split-hands.is-split .mini-card { width: 24px; height: 34px; }
+  .player-hand-active { transform: scale(1.05); }
+  .hand-result-popup { bottom: auto; top: calc(100% + 2px); font-size: 6px; padding: 2px 6px; max-width: 64px; }
+  .play-controls {
+    position: absolute;
+    inset: 0;
+    display: contents;
+    padding: 0;
+    background: transparent;
+    border: none;
+    overflow: visible;
+  }
+  .play-controls-row { display: contents; }
+  .play-chip-section {
+    position: absolute;
+    left: 95px;
+    top: 310px;
+    width: 270px;
+    height: 58px;
+    overflow: hidden;
+  }
+  .play-chip-section .chip-rack-row {
+    width: 100%;
+    height: 100%;
+    gap: 2px;
+    min-width: 0;
+  }
+  .play-chip-section .chip-tray { gap: 3px; padding: 0; min-width: 0; flex: 1; }
+  .play-chip-section .chip-btn { width: 40px; height: 40px; flex-shrink: 0; }
+  .play-chip-section .chip-scroll-btn { width: 24px; height: 24px; min-width: 24px; min-height: 24px; flex-shrink: 0; }
+  .play-bet-section {
+    position: absolute;
+    left: 378px;
+    top: 310px;
+    width: 164px;
+    height: 42px;
+  }
+  .play-bet-section .bet-actions {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: block;
+    gap: 0;
+  }
+  .play-bet-section .bet-actions .btn-secondary {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 86px;
+    height: 42px;
+    padding: 0;
+    font-size: 9px;
+    min-height: 0;
+    flex: none;
+  }
+  .play-bet-section .bet-actions .btn-primary {
+    position: absolute;
+    left: 94px;
+    top: 0;
+    width: 70px;
+    height: 42px;
+    padding: 0;
+    font-size: 9px;
+    min-height: 0;
+    flex: none;
+  }
+  .play-action-section {
+    position: absolute;
+    left: 552px;
+    top: 310px;
+    width: 336px;
+    height: 68px;
+    overflow: hidden;
+  }
+  .play-action-section .action-buttons {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 4px;
+    justify-content: flex-start;
+    width: 100%;
+    height: 100%;
+  }
+  .play-action-section .action-btn {
+    width: 64px;
+    height: 64px;
+    flex-shrink: 0;
+    font-size: 8px;
+    padding: 0;
   }
   .play-message {
-    font-size: clamp(9px, 1.8vw, 10px);
-    padding: 0 clamp(8px, 2vw, 12px);
+    position: absolute;
+    top: 370px;
+    left: 0;
+    width: 932px;
     text-align: center;
+    font-size: 10px;
+    padding: 0 12px;
+    line-height: 1.2;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 100%;
+    z-index: 5;
   }
+  .play-controls .play-hud-utilities {
+    position: absolute;
+    top: 382px;
+    left: 0;
+    width: 932px;
+    height: 36px;
+    display: block;
+    padding: 0;
+    flex-wrap: nowrap;
+    z-index: 6;
+  }
+  .play-controls .play-hud-utilities .btn-ghost {
+    position: absolute;
+    top: 0;
+    min-width: 0;
+    min-height: 0;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    height: 36px;
+    border-radius: 999px;
+  }
+  .play-controls .play-hud-utilities .play-util-strategy { left: 355px; width: 105px; }
+  .play-controls .play-hud-utilities .play-util-tip { left: 472px; width: 65px; }
+  .play-controls .play-hud-utilities .play-util-hud { left: 548px; width: 65px; }
   .app-play .tip-panel {
     top: auto;
-    bottom: calc(108px + env(safe-area-inset-bottom));
+    bottom: calc(48px * var(--landscape-scale, 1) + 8px);
     left: 50%;
     right: auto;
-    transform: translateX(-50%);
+    transform: translateX(-50%) scale(var(--landscape-scale, 1));
+    transform-origin: bottom center;
     max-width: min(360px, calc(100vw - 32px));
     margin: 0;
   }

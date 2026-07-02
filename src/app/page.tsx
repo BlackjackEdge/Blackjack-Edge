@@ -1136,6 +1136,7 @@ export default function App() {
       {/* PLAY */}
       {screen === "play" && (
         <section className={`screen screen-play ${playSettings.cardStyle === "classic" ? "card-style-classic" : ""}`}>
+          <div className="play-landscape-stage">
           <div className="play-layout">
             <header className="play-top-bar">
               <button className="btn-ghost play-hud-exit" onClick={() => setExitConfirmOpen(true)}>Exit</button>
@@ -1243,13 +1244,14 @@ export default function App() {
               </div>
               <p className="play-message">{playMessage}</p>
               <div className="play-hud-utilities">
-                <button className="btn-ghost" onClick={() => setStrategyOpen(true)} aria-label="Strategy card">Strategy</button>
+                <button className="btn-ghost play-util-strategy" onClick={() => setStrategyOpen(true)} aria-label="Strategy card">Strategy</button>
                 {playSettings.showBasicStrategyTips && (
-                  <button className={`btn-ghost ${playTipOpen ? "active" : ""}`} onClick={() => setPlayTipOpen((v) => !v)} aria-label="Basic strategy tip">Tip</button>
+                  <button className={`btn-ghost play-util-tip ${playTipOpen ? "active" : ""}`} onClick={() => setPlayTipOpen((v) => !v)} aria-label="Basic strategy tip">Tip</button>
                 )}
-                <button className="btn-ghost" onClick={() => setHudOpen(true)} aria-label="Open HUD">HUD</button>
+                <button className="btn-ghost play-util-hud" onClick={() => setHudOpen(true)} aria-label="Open HUD">HUD</button>
               </div>
             </footer>
+          </div>
           </div>
         </section>
       )}
