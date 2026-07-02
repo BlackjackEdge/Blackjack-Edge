@@ -1031,21 +1031,35 @@ export default function App() {
       )}
 
       {screen === "play" && (
-        <section className="drill play-screen">
-          <div className="play-topbar">
+        <section className="play-screen">
+          <header className="play-top-hud">
             <button className="play-exit-button" onClick={() => setExitConfirmOpen(true)}>Exit</button>
             <div className="play-hud money-hud">
               <div className="bankroll-box"><strong>${bankroll.toLocaleString()}</strong><span>Bankroll</span></div>
-              <div className="bet-box"><strong>${bet.toLocaleString()}</strong><span>Bet</span></div>
+              <div className="bet-box"><strong>${bet.toLocaleString()}</strong><span>Total Bet</span></div>
               <div className="cards-left-box">
-                <strong>{playShoe.length.toLocaleString()}/{(playDecks * 52).toLocaleString()}</strong>
-                <span>{playDecks}D Shoe</span>
+                <strong>{playShoe.length.toLocaleString()}</strong>
+                <span>Cards Left</span>
               </div>
             </div>
-          </div>
+          </header>
 
-          <div className="table play-table">
-            <div className="dealer-zone">
+          <div className="play-table-zone table">
+            <div className="table-props" aria-label="Table rules">
+              <span>H17</span>
+              <span>3:2</span>
+              <span>DAS</span>
+            </div>
+
+            <div className="table-shoe" aria-hidden="true">
+              <span>Shoe</span>
+              <small>{playDecks} Deck{playDecks > 1 ? "s" : ""}</small>
+            </div>
+
+            <div className="table-watermark" aria-hidden="true">BLACKJACK EDGE</div>
+            <div className="insurance-arc" aria-hidden="true" />
+
+            <div className="dealer-area dealer-zone">
               <span>Dealer</span>
               <div className="cards">
                 {dealerHand.length ? (
@@ -1060,7 +1074,7 @@ export default function App() {
               )}
             </div>
 
-            <div className="player-zone play-player-zone">
+            <div className="player-area player-zone play-player-zone">
               <div className="split-hands">
                 {playerHands.length ? playerHands.map((hand, index) => (
                   <div key={index} className={index === activeHand && playPhase === "player" ? "split-hand active" : "split-hand"}>
@@ -1080,6 +1094,8 @@ export default function App() {
               </div>
             </div>
 
+            <div className="table-rail" aria-hidden="true" />
+
             {roundBanner && playPhase === "roundOver" && (
               <div className={`round-banner table-result-banner ${roundBanner.type}`}>
                 <div className="banner-shine" />
@@ -1089,7 +1105,7 @@ export default function App() {
             )}
           </div>
 
-          <div className={`chip-tray ${playPhase !== "betting" && playPhase !== "roundOver" ? "chip-tray-locked" : ""}`}>
+          <div className={`play-chip-zone ${playPhase !== "betting" && playPhase !== "roundOver" ? "play-chip-zone-locked" : ""}`}>
             {chipValues.map((chip) => (
               <button
                 key={chip}
@@ -1118,23 +1134,21 @@ export default function App() {
             </button>
           </div>
 
-          {canAct && (
-            <div className="play-actions">
-              <button className="move H" onClick={hitPlayHand}>Hit</button>
-              <button className="move S" onClick={standPlayHand}>Stand</button>
-              <button className="move D" disabled={!canDouble} onClick={doublePlayHand}>Double</button>
-              <button className="move P" disabled={!canSplit} onClick={splitPlayHand}>Split</button>
-            </div>
-          )}
+          <div className={`play-action-zone ${canAct ? "play-action-zone-active" : ""}`}>
+            <button className="move P" disabled={!canSplit} onClick={splitPlayHand}>Split</button>
+            <button className="move D" disabled={!canDouble} onClick={doublePlayHand}>Double</button>
+            <button className="move S" disabled={!canAct} onClick={standPlayHand}>Stand</button>
+            <button className="move H" disabled={!canAct} onClick={hitPlayHand}>Hit</button>
+          </div>
 
-          <div className="play-bottom-bar">
+          <nav className="play-utility-zone" aria-label="Table utilities">
             <button onClick={() => setTipOpen((v) => !v)} className="tip-button"><Lightbulb size={18} /> Tip</button>
             <button onClick={() => setShowPlayTotals((value) => !value)} className="tip-button">
-              {showPlayTotals ? "Hide Totals" : "Show Totals"}
+              {showPlayTotals ? "Hide Totals" : "Totals"}
             </button>
             <button onClick={() => setHudOpen(true)} className="tip-button"><Settings2 size={18} /> HUD</button>
-            <button onClick={() => setHelpOpen("play")} className="tip-button"><HelpCircle size={18} /> Help</button>
-          </div>
+            <button onClick={() => setHelpOpen("play")} className="tip-button"><HelpCircle size={18} /> Rules</button>
+          </nav>
 
           {bankrollAlert && (
             <div className="money-alert-overlay" role="dialog" aria-modal="true">
