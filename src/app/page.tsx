@@ -1081,7 +1081,7 @@ export default function App() {
                     key={`${seat}-${hi}-${globalIdx}`}
                     className={`split-hand ${isHandActive ? "player-hand-active" : ""} ${isNaturalBJ ? "hand-blackjack-glow" : ""}`}
                   >
-                    {popupLabel && playPhase !== "betting" && (
+                    {popupLabel && playPhase !== "betting" && hand.result !== "Dealer Blackjack" && (
                       <div className={`hand-result-popup ${handResultClass(hand.result)}`}>
                         {popupLabel}
                       </div>
@@ -1137,28 +1137,29 @@ export default function App() {
       {screen === "play" && (
         <section className={`screen screen-play ${playSettings.cardStyle === "classic" ? "card-style-classic" : ""}`}>
           <div className="play-layout">
-            <header className="play-hud-bar">
+            <header className="play-top-bar">
               <button className="btn-ghost play-hud-exit" onClick={() => setExitConfirmOpen(true)}>Exit</button>
               <div className="play-hud-stats">
                 <div className="hud-stat hud-stat-accent">
-                  <strong>${bankroll.toLocaleString()}</strong>
+                  <strong className="hud-stat-value">${bankroll.toLocaleString()}</strong>
                   <span>Bankroll</span>
                 </div>
                 <div className="hud-stat">
-                  <strong>${totalBet.toLocaleString()}</strong>
+                  <strong className="hud-stat-value">${totalBet.toLocaleString()}</strong>
                   <span>Total Bet</span>
                 </div>
               </div>
-              <div className="play-hud-actions">
-                <button className="btn-ghost" onClick={() => setStrategyOpen(true)} aria-label="Strategy card">Strategy Card</button>
+              <div className="play-hud-utilities">
+                <button className="btn-ghost" onClick={() => setStrategyOpen(true)} aria-label="Strategy card">Strategy</button>
                 {playSettings.showBasicStrategyTips && (
                   <button className={`btn-ghost ${playTipOpen ? "active" : ""}`} onClick={() => setPlayTipOpen((v) => !v)} aria-label="Basic strategy tip">Tip</button>
                 )}
                 <button className="btn-ghost" onClick={() => setHudOpen(true)} aria-label="Open HUD">HUD</button>
-                <button className="btn-ghost" onClick={() => setPlaySettingsOpen(true)} aria-label="Table Settings"><Settings2 size={14} /></button>
               </div>
+              <button className="btn-ghost play-hud-settings" onClick={() => setPlaySettingsOpen(true)} aria-label="Table Settings"><Settings2 size={14} /></button>
             </header>
 
+            <div className="play-stage">
             <div className="play-table-wrap">
               <div className={`casino-table ${playSettings.tableGlow ? "table-glow-on" : "table-glow-off"}`}>
                 <div className="table-rules" aria-label="Table rules">
@@ -1179,6 +1180,9 @@ export default function App() {
 
                 <div className="dealer-zone">
                   <span className="zone-label">Dealer</span>
+                  {playPhase === "roundOver" && dealerHand.length >= 2 && isBlackjack(dealerHand) && (
+                    <div className="dealer-result-banner dealer-blackjack">Dealer Blackjack</div>
+                  )}
                   <div className="cards-fan dealer-cards-fan" style={{ ["--card-count" as string]: dealerVisibleHand.length + (playPhase === "player" && dealerHand[1] ? 1 : 0) }}>
                     {dealerHand.length ? (
                       <>
@@ -1213,15 +1217,20 @@ export default function App() {
                 <div className="table-gold-rail" />
               </div>
             </div>
+            </div>
 
-            <div className="play-controls">
+            <footer className="play-controls">
               <div className="play-controls-row">
-                <div className="play-main-controls">
+                <div className="play-chip-section">
                   <ChipTray selectedChip={selectedChip} onSelectChip={setSelectedChip} disabled={!canBet} />
+                </div>
+                <div className="play-bet-section">
                   <div className="bet-actions">
                     <button className="btn-secondary" onClick={clearBet} disabled={!canBet}>Clear Bet</button>
                     <button className="btn-primary" onClick={dealBlackjack} disabled={!canBet}>Deal</button>
                   </div>
+                </div>
+                <div className="play-action-section">
                   <ActionButtons
                     canHit={canHit}
                     canStand={canAct}
@@ -1233,10 +1242,10 @@ export default function App() {
                     onDouble={doublePlayHand}
                     onSplit={splitPlayHand}
                   />
-                  <p className="play-message">{playMessage}</p>
                 </div>
               </div>
-            </div>
+              <p className="play-message">{playMessage}</p>
+            </footer>
           </div>
         </section>
       )}
