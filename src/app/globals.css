@@ -4036,3 +4036,139 @@ button,input{font:inherit}button{cursor:pointer}
 .play-screen .play-chip-zone-locked{
   opacity:.76;
 }
+
+/* v4 landscape card + HUD polish */
+.play-screen .play-top-hud .cards-left-box{
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  text-align:center;
+  padding-left:0 !important;
+  padding-right:0 !important;
+}
+
+.play-screen .play-top-hud .cards-left-box strong,
+.play-screen .play-top-hud .cards-left-box span{
+  width:100%;
+  text-align:center;
+  margin-left:auto;
+  margin-right:auto;
+}
+
+@media (orientation:landscape) and (max-height:540px){
+  .play-screen .playing-card.luxury-white-card,
+  .play-screen .dealer-zone .cards .playing-card,
+  .play-screen .split-hand .cards .playing-card{
+    width:52px !important;
+    height:72px !important;
+    border-radius:10px !important;
+  }
+
+  .play-screen .dealer-zone .cards .playing-card:not(:first-child),
+  .play-screen .split-hand .cards .playing-card:not(:first-child){
+    margin-left:-21px;
+  }
+
+  .play-screen .dealer-zone .cards,
+  .play-screen .split-hand .cards{
+    min-height:72px;
+  }
+
+  .play-screen .dealer-zone .cards .playing-card:nth-child(2),
+  .play-screen .split-hand .cards .playing-card:nth-child(2){
+    transform:translateY(2px) rotate(1deg);
+  }
+
+  .play-screen .dealer-zone .cards .playing-card:nth-child(3),
+  .play-screen .split-hand .cards .playing-card:nth-child(3){
+    transform:translateY(4px) rotate(1.5deg);
+  }
+
+  .play-screen .dealer-zone .cards .playing-card:nth-child(4),
+  .play-screen .split-hand .cards .playing-card:nth-child(4){
+    transform:translateY(6px) rotate(2deg);
+  }
+
+  .play-screen .dealer-zone .cards .playing-card:nth-child(5),
+  .play-screen .split-hand .cards .playing-card:nth-child(5){
+    transform:translateY(8px) rotate(2.5deg);
+  }
+
+  .play-screen .dealer-zone .cards .playing-card:nth-child(n+6),
+  .play-screen .split-hand .cards .playing-card:nth-child(n+6){
+    transform:translateY(10px) rotate(3deg);
+  }
+
+  .play-screen .luxury-card-corner strong{
+    font-size:11px !important;
+  }
+
+  .play-screen .luxury-card-corner span{
+    font-size:9px !important;
+  }
+
+  .play-screen .luxury-card-corner.top-left{
+    top:4px !important;
+    left:4px !important;
+  }
+
+  .play-screen .luxury-card-corner.bottom-right{
+    right:4px !important;
+    bottom:4px !important;
+  }
+
+  .play-screen .luxury-card-center-field{
+    inset:14px 7px 14px 7px !important;
+  }
+
+  .play-screen .luxury-pip{
+    font-size:12px !important;
+  }
+
+  .play-screen .rank-10 .luxury-pip{
+    font-size:10px !important;
+  }
+
+  .play-screen .rank-9 .luxury-pip,
+  .play-screen .rank-8 .luxury-pip{
+    font-size:11px !important;
+  }
+
+  .play-screen .luxury-ace-field .ace-suit{
+    font-size:28px !important;
+  }
+
+  .play-screen .luxury-face-rank{
+    font-size:18px !important;
+  }
+
+  .play-screen .luxury-face-name{
+    font-size:7px !important;
+  }
+
+  .play-screen .luxury-face-crown{
+    font-size:8px !important;
+  }
+
+  .play-screen{
+    --play-action-h:42px;
+    --play-gap:3px;
+    padding-bottom:calc(env(safe-area-inset-bottom,0px) + 2px);
+  }
+
+  .play-screen .play-action-zone{
+    align-self:end;
+    min-height:var(--play-action-h);
+    max-height:none;
+    transform:translateY(6px);
+    z-index:6;
+  }
+
+  .play-screen .play-action-zone .move{
+    min-height:40px;
+    max-height:44px;
+    padding:6px 4px;
+    font-size:11px;
+  }
+}
