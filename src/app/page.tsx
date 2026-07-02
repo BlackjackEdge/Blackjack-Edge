@@ -1148,6 +1148,10 @@ export default function App() {
                   <strong className="hud-stat-value">${totalBet.toLocaleString()}</strong>
                   <span>Total Bet</span>
                 </div>
+                <div className="hud-stat play-hud-stat-cards" aria-label="Cards remaining">
+                  <strong className="hud-stat-value">{playShoe.length.toLocaleString()}</strong>
+                  <span>Cards Left</span>
+                </div>
               </div>
               <button className="btn-ghost play-hud-settings" onClick={() => setPlaySettingsOpen(true)} aria-label="Table Settings"><Settings2 size={14} /></button>
             </header>
