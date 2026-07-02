@@ -1149,13 +1149,6 @@ export default function App() {
                   <span>Total Bet</span>
                 </div>
               </div>
-              <div className="play-hud-utilities">
-                <button className="btn-ghost" onClick={() => setStrategyOpen(true)} aria-label="Strategy card">Strategy</button>
-                {playSettings.showBasicStrategyTips && (
-                  <button className={`btn-ghost ${playTipOpen ? "active" : ""}`} onClick={() => setPlayTipOpen((v) => !v)} aria-label="Basic strategy tip">Tip</button>
-                )}
-                <button className="btn-ghost" onClick={() => setHudOpen(true)} aria-label="Open HUD">HUD</button>
-              </div>
               <button className="btn-ghost play-hud-settings" onClick={() => setPlaySettingsOpen(true)} aria-label="Table Settings"><Settings2 size={14} /></button>
             </header>
 
@@ -1245,6 +1238,13 @@ export default function App() {
                 </div>
               </div>
               <p className="play-message">{playMessage}</p>
+              <div className="play-hud-utilities">
+                <button className="btn-ghost" onClick={() => setStrategyOpen(true)} aria-label="Strategy card">Strategy</button>
+                {playSettings.showBasicStrategyTips && (
+                  <button className={`btn-ghost ${playTipOpen ? "active" : ""}`} onClick={() => setPlayTipOpen((v) => !v)} aria-label="Basic strategy tip">Tip</button>
+                )}
+                <button className="btn-ghost" onClick={() => setHudOpen(true)} aria-label="Open HUD">HUD</button>
+              </div>
             </footer>
           </div>
         </section>

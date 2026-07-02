@@ -21,11 +21,11 @@ html, body { min-height: 100%; background: var(--navy-deep); color: var(--ivory)
 button, input { font: inherit; cursor: pointer; border: none; background: none; color: inherit; }
 button:disabled { cursor: not-allowed; opacity: .4; }
 .app { position: relative; min-height: 100dvh; max-width: 1200px; margin: 0 auto; overflow-x: hidden; display: flex; flex-direction: column; }
-.app-play { max-width: none; }
+.app-play { max-width: 100vw; overflow-x: hidden; }
 .app-bg { position: fixed; inset: 0; z-index: 0; background: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(212,175,55,.08), transparent), radial-gradient(ellipse 60% 40% at 10% 80%, rgba(10,61,46,.15), transparent), linear-gradient(165deg, var(--navy-felt) 0%, var(--navy-deep) 55%, #080510 100%); pointer-events: none; }
 .app-bg::before { content: ""; position: absolute; inset: 0; background-image: radial-gradient(rgba(212,175,55,.03) 1px, transparent 1px); background-size: 20px 20px; opacity: .6; }
 .screen { position: relative; z-index: 1; flex: 1; display: flex; flex-direction: column; padding: calc(8px + env(safe-area-inset-top)) 14px var(--nav-height); }
-.screen-play { padding: calc(4px + env(safe-area-inset-top)) 8px calc(6px + env(safe-area-inset-bottom)); max-height: 100dvh; overflow: hidden; }
+.screen-play { padding: calc(4px + env(safe-area-inset-top)) max(8px, env(safe-area-inset-left)) calc(6px + env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-right)); max-height: 100dvh; max-width: 100vw; width: 100%; overflow: hidden; }
 .eyebrow { display: block; font-size: 10px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: var(--gold); }
 h1, h2, h3 { font-family: var(--font-serif); font-weight: 600; line-height: 1.1; }
 h1 { font-size: clamp(28px, 6vw, 42px); } h2 { font-size: clamp(22px, 4vw, 30px); }
@@ -115,27 +115,26 @@ h1 { font-size: clamp(28px, 6vw, 42px); } h2 { font-size: clamp(22px, 4vw, 30px)
 .brand-logo-md .brand-logo-ring { width: 64px; height: 64px; }
 .brand-logo-lg .brand-logo-ring { width: 88px; height: 88px; }
 .brand-logo-suit { font-size: 1.6em; color: var(--gold); }
-.play-layout { display: flex; flex-direction: column; height: calc(100dvh - env(safe-area-inset-top)); overflow: hidden; min-height: 0; }
+.play-layout { display: flex; flex-direction: column; height: calc(100dvh - env(safe-area-inset-top)); overflow: hidden; min-height: 0; max-width: 100vw; width: 100%; }
 .play-top-bar {
   display: grid;
   flex-shrink: 0;
   align-items: center;
   padding: 6px 8px 4px;
-  gap: 4px 8px;
+  gap: 6px;
   min-width: 0;
+  max-width: 100%;
   grid-template-columns: auto 1fr auto;
-  grid-template-areas:
-    "exit stats settings"
-    "utilities utilities utilities";
+  grid-template-areas: "exit stats settings";
 }
-.play-hud-exit { grid-area: exit; flex-shrink: 0; justify-self: start; }
-.play-hud-settings { grid-area: settings; flex-shrink: 0; justify-self: end; min-width: 36px; padding: 6px 10px !important; }
-.play-hud-stats { grid-area: stats; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; min-width: 0; justify-self: stretch; }
+.play-hud-exit { grid-area: exit; flex-shrink: 0; justify-self: start; min-height: 44px; }
+.play-hud-settings { grid-area: settings; flex-shrink: 0; justify-self: end; min-width: 44px; min-height: 44px; padding: 6px 10px !important; }
+.play-hud-stats { grid-area: stats; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; min-width: 0; justify-self: stretch; max-width: 100%; }
 .play-top-bar .hud-stat { min-width: 0; width: 100%; padding: 5px 8px; overflow: hidden; container-type: inline-size; }
 .play-top-bar .hud-stat-value { display: block; font-size: clamp(10px, 9cqi, 16px); line-height: 1.15; font-variant-numeric: tabular-nums; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .play-top-bar .hud-stat span { font-size: 8px; white-space: nowrap; }
-.play-hud-utilities { grid-area: utilities; display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap; min-width: 0; padding-top: 2px; }
-.play-hud-utilities .btn-ghost { font-size: 9px; padding: 6px 12px; white-space: nowrap; border-radius: 999px; background: var(--cream-panel-bg); border: var(--cream-panel-border); color: var(--gold-deep); box-shadow: var(--cream-panel-shadow); min-height: 32px; min-width: 44px; }
+.play-hud-utilities { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; min-width: 0; width: 100%; padding-top: 4px; }
+.play-hud-utilities .btn-ghost { font-size: 10px; padding: 8px 14px; white-space: nowrap; border-radius: 999px; background: var(--cream-panel-bg); border: var(--cream-panel-border); color: var(--gold-deep); box-shadow: var(--cream-panel-shadow); min-height: 44px; min-width: 44px; }
 .play-hud-utilities .btn-ghost.active { border-color: var(--gold-light); background: rgba(212,175,55,.15); }
 .play-stage { flex: 1; display: flex; flex-direction: column; min-height: 0; min-width: 0; overflow: hidden; }
 .play-table-wrap { flex: 1; display: flex; flex-direction: column; min-height: 0; }
@@ -144,18 +143,18 @@ h1 { font-size: clamp(28px, 6vw, 42px); } h2 { font-size: clamp(22px, 4vw, 30px)
 .casino-table.table-glow-off { box-shadow: inset 0 0 60px rgba(0,0,0,.4), 0 4px 16px rgba(0,0,0,.35); }
 .casino-table::before { content: ""; position: absolute; inset: 12px; border: 1px solid rgba(212,175,55,.2); border-radius: 50%/30%; pointer-events: none; }
 .casino-table::after { content: "BLACKJACK EDGE"; position: absolute; top: 42%; left: 50%; transform: translate(-50%,-50%); font-family: var(--font-serif); font-size: clamp(16px,4vw,36px); font-weight: 700; letter-spacing: .12em; color: rgba(212,175,55,.06); white-space: nowrap; pointer-events: none; }
-.table-rules { position: absolute; top: 8px; left: 8px; display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 0 4px; max-width: min(calc(100% - 155px), 280px); padding: 4px 8px; border-radius: 999px; background: var(--cream-panel-bg); border: var(--cream-panel-border); box-shadow: var(--cream-panel-shadow); z-index: 2; }
+.table-rules { position: absolute; top: 8px; left: 8px; display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 0 4px; max-width: min(calc(100% - 132px), 220px); padding: 4px 8px; border-radius: 999px; background: var(--cream-panel-bg); border: var(--cream-panel-border); box-shadow: var(--cream-panel-shadow); z-index: 2; pointer-events: none; }
 .table-rules span { font-size: 7px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--gold-deep); white-space: nowrap; line-height: 1.3; }
 .table-rules-sep { opacity: .45; font-weight: 400; letter-spacing: 0; }
-.cards-remaining-box { position: absolute; top: 8px; right: 8px; display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 6px; width: clamp(128px, 20vw, 168px); min-height: 32px; max-height: 40px; padding: 5px 10px; border-radius: 999px; background: var(--cream-panel-bg); border: var(--cream-panel-border); box-shadow: var(--cream-panel-shadow); z-index: 2; }
+.cards-remaining-box { position: absolute; top: 8px; right: 8px; display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 6px; width: clamp(118px, 18vw, 152px); min-height: 32px; max-height: 40px; padding: 5px 10px; border-radius: 999px; background: var(--cream-panel-bg); border: var(--cream-panel-border); box-shadow: var(--cream-panel-shadow); z-index: 2; pointer-events: none; }
 .cards-remaining-label { font-size: 7px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--gold-deep); line-height: 1.2; flex: 1; min-width: 0; }
 .cards-remaining-count { font-family: var(--font-serif); font-size: clamp(14px, 3vw, 18px); font-weight: 800; color: var(--gold-deep); line-height: 1; flex-shrink: 0; }
-.dealer-zone { position: absolute; top: 10%; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 4px; z-index: 3; max-width: 92%; }
+.dealer-zone { position: absolute; top: 12%; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 4px; z-index: 3; max-width: min(92%, calc(100vw - 48px)); }
 .dealer-zone .zone-label { font-size: 9px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--ivory-dim); }
-.dealer-result-banner { display: flex; align-items: center; justify-content: center; padding: 4px 14px; border-radius: 999px; background: var(--cream-panel-bg); border: 1.5px solid var(--gold); box-shadow: var(--cream-panel-shadow), 0 0 14px var(--gold-glow); font-size: 8px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--gold-deep); white-space: nowrap; animation: hand-popup-in .35s ease; pointer-events: none; z-index: 4; }
+.dealer-result-banner { display: flex; align-items: center; justify-content: center; padding: 4px 14px; border-radius: 999px; background: var(--cream-panel-bg); border: 1.5px solid var(--gold); box-shadow: var(--cream-panel-shadow), 0 0 14px var(--gold-glow); font-size: 8px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--gold-deep); white-space: nowrap; animation: hand-popup-in .35s ease; pointer-events: none; z-index: 4; max-width: min(100%, 180px); overflow: hidden; text-overflow: ellipsis; }
 .dealer-result-banner.dealer-blackjack { color: #8b4513; border-color: var(--gold-light); }
 .hand-total { font-size: 11px; font-weight: 700; color: var(--gold-light); }
-.betting-spots { position: absolute; bottom: 14%; left: 50%; transform: translateX(-50%); display: flex; gap: clamp(12px,6vw,40px); z-index: 3; align-items: flex-end; }
+.betting-spots { position: absolute; bottom: 14%; left: 50%; transform: translateX(-50%); display: flex; gap: clamp(8px, 4vw, 32px); z-index: 3; align-items: flex-end; max-width: calc(100% - 16px); justify-content: center; }
 .bet-spot { display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; }
 .bet-spot-circle { width: clamp(56px,14vw,80px); height: clamp(56px,14vw,80px); border-radius: 50%; border: 2px dashed rgba(212,175,55,.45); display: grid; place-items: center; background: rgba(0,0,0,.25); }
 .bet-spot-circle.has-chip { border: none; background: transparent; box-shadow: none; }
@@ -204,7 +203,7 @@ h1 { font-size: clamp(28px, 6vw, 42px); } h2 { font-size: clamp(22px, 4vw, 30px)
 .seat-split-hands.is-split .split-hand .cards-fan-card:first-child { margin-left: 0; }
 .seat-split-hands.is-split .mini-card { width: clamp(30px, 7vw, 42px); height: clamp(43px, 10vw, 60px); }
 .table-gold-rail { position: absolute; bottom: 0; left: 0; right: 0; height: 8px; background: linear-gradient(90deg, var(--bronze), var(--gold), var(--bronze)); border-radius: 0 0 var(--radius-xl) var(--radius-xl); }
-.play-controls { flex-shrink: 0; display: flex; flex-direction: column; gap: 4px; padding: 6px 8px calc(6px + env(safe-area-inset-bottom)); background: linear-gradient(180deg, transparent, rgba(6,10,20,.9)); }
+.play-controls { flex-shrink: 0; display: flex; flex-direction: column; gap: 6px; padding: 6px 8px calc(6px + env(safe-area-inset-bottom)); background: linear-gradient(180deg, transparent, rgba(6,10,20,.9)); max-width: 100vw; min-width: 0; }
 .play-controls-row { display: flex; flex-direction: column; align-items: stretch; gap: 6px; min-width: 0; }
 .play-chip-section { min-width: 0; }
 .play-bet-section { min-width: 0; }
@@ -224,7 +223,7 @@ h1 { font-size: clamp(28px, 6vw, 42px); } h2 { font-size: clamp(22px, 4vw, 30px)
 .chip-10000 { background: linear-gradient(135deg, #f7e7b8, #c9a227); color: #111; border-color: var(--gold-light); }
 .chip-25000 { background: linear-gradient(135deg, #1a1a2e, #4a1942); color: #f4e4a6; border-color: var(--gold); }
 .bet-actions { display: flex; gap: 6px; }
-.bet-actions .btn-secondary, .bet-actions .btn-primary { flex: 1; padding: 10px; font-size: 11px; }
+.bet-actions .btn-secondary, .bet-actions .btn-primary { flex: 1; padding: 12px 10px; font-size: 11px; min-height: 44px; }
 .bet-actions .btn-primary { flex: 1.5; }
 .action-buttons { display: flex; justify-content: center; gap: clamp(8px,3vw,16px); }
 .action-btn { width: clamp(52px,13vw,68px); height: clamp(52px,13vw,68px); border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; font-weight: 800; border: 2px solid rgba(255,255,255,.2); box-shadow: 0 6px 16px rgba(0,0,0,.4); }
@@ -239,61 +238,63 @@ h1 { font-size: clamp(28px, 6vw, 42px); } h2 { font-size: clamp(22px, 4vw, 30px)
 @media (orientation: portrait) {
   .play-top-bar {
     grid-template-columns: auto 1fr auto;
-    grid-template-rows: auto auto;
-    grid-template-areas:
-      "exit stats settings"
-      "utilities utilities utilities";
+    grid-template-areas: "exit stats settings";
+    padding: 6px 10px 4px;
   }
-  .play-hud-exit { grid-area: exit; }
-  .play-hud-stats { grid-area: stats; max-width: none; }
-  .play-hud-settings { grid-area: settings; }
-  .play-hud-utilities { grid-area: utilities; padding-bottom: 2px; }
+  .play-hud-stats { max-width: none; }
   .play-table-wrap { flex: 1; display: flex; flex-direction: column; min-height: 0; padding: 0 2px; }
   .play-stage { flex: 1; min-height: 0; }
-  .casino-table { flex: 1; margin: 0 auto; width: calc(100% - 4px); max-width: 520px; }
-  .dealer-zone { top: 11%; }
-  .betting-spots { bottom: 13%; }
+  .casino-table { flex: 1; margin: 0 auto; width: calc(100% - 4px); max-width: min(520px, calc(100vw - 16px)); }
+  .dealer-zone { top: 13%; }
+  .dealer-result-banner { max-width: calc(100vw - 48px); overflow: hidden; text-overflow: ellipsis; }
+  .betting-spots { bottom: 13%; gap: clamp(8px, 3.5vw, 28px); }
   .bet-spot-cards { min-height: 76px; padding-top: 24px; }
   .hand-result-popup { bottom: calc(100% + 6px); max-width: min(130px, 32vw); }
+  .play-controls .play-hud-utilities { padding-top: 2px; padding-bottom: 2px; }
+  .play-controls .play-hud-utilities .btn-ghost { flex: 1 1 0; max-width: none; }
   .app-play .tip-panel {
-    top: calc(92px + env(safe-area-inset-top));
-    bottom: auto;
+    top: auto;
+    bottom: calc(168px + env(safe-area-inset-bottom));
     left: 10px;
     right: 10px;
-    max-width: min(400px, calc(100% - 20px));
+    max-width: min(400px, calc(100vw - 20px));
+    margin: 0 auto;
   }
 }
 /* ─── Play Landscape ─── */
 @media (orientation: landscape) and (min-height: 360px) {
-  .screen-play { padding: calc(2px + env(safe-area-inset-top)) 10px calc(4px + env(safe-area-inset-bottom)); }
+  .screen-play { padding: calc(2px + env(safe-area-inset-top)) max(8px, env(safe-area-inset-left)) calc(4px + env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-right)); }
   .play-layout {
     display: grid;
     grid-template-rows: auto minmax(0, 1fr) auto;
     grid-template-columns: 1fr;
-    height: 100dvh;
+    height: calc(100dvh - env(safe-area-inset-top));
     gap: 0;
+    max-width: 100vw;
+    overflow: hidden;
   }
   .play-top-bar {
     grid-row: 1;
-    display: flex;
-    flex-direction: row;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    grid-template-areas: "exit stats settings";
     align-items: center;
     gap: 8px;
     padding: 4px 4px 6px;
     width: 100%;
+    max-width: 100vw;
   }
   .play-hud-exit { flex-shrink: 0; }
   .play-hud-stats {
-    display: flex;
-    flex: 0 1 auto;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
     min-width: 0;
-    max-width: min(42vw, 320px);
+    max-width: min(50vw, 280px);
+    justify-self: center;
   }
-  .play-top-bar .hud-stat { flex: 1 1 0; min-width: 72px; padding: 4px 10px; }
+  .play-top-bar .hud-stat { flex: 1 1 0; min-width: 0; padding: 4px 10px; }
   .play-top-bar .hud-stat-value { font-size: clamp(10px, 1.8vw, 14px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .play-hud-utilities { flex: 1; justify-content: flex-end; flex-wrap: nowrap; gap: 4px; }
-  .play-hud-utilities .btn-ghost { font-size: 8px; padding: 5px 8px; min-height: 30px; }
   .play-hud-settings { flex-shrink: 0; }
   .play-stage {
     grid-row: 2;
@@ -302,7 +303,9 @@ h1 { font-size: clamp(28px, 6vw, 42px); } h2 { font-size: clamp(22px, 4vw, 30px)
     justify-content: center;
     min-height: 0;
     min-width: 0;
+    max-width: 100vw;
     padding: 2px 0;
+    overflow: hidden;
   }
   .play-table-wrap {
     flex: 1;
@@ -312,11 +315,13 @@ h1 { font-size: clamp(28px, 6vw, 42px); } h2 { font-size: clamp(22px, 4vw, 30px)
     min-height: 0;
     min-width: 0;
     width: 100%;
+    max-width: 100%;
     height: 100%;
     padding: 0;
+    overflow: hidden;
   }
   .casino-table {
-    width: min(96%, 920px);
+    width: min(100%, calc(100vw - 24px));
     height: 100%;
     max-height: 100%;
     min-height: 0;
@@ -324,59 +329,65 @@ h1 { font-size: clamp(28px, 6vw, 42px); } h2 { font-size: clamp(22px, 4vw, 30px)
     flex: none;
   }
   .casino-table::after { font-size: clamp(12px, 2.5vw, 24px); top: 44%; }
-  .table-rules { top: 6px; left: 6px; max-width: min(calc(100% - 140px), 240px); padding: 3px 7px; }
+  .table-rules { top: 6px; left: 6px; max-width: min(calc(100% - 130px), 220px); padding: 3px 7px; }
   .table-rules span { font-size: 6px; }
-  .cards-remaining-box { top: 6px; right: 6px; width: clamp(108px, 16vw, 140px); min-height: 26px; max-height: 32px; padding: 3px 8px; }
+  .cards-remaining-box { top: 6px; right: 6px; width: clamp(100px, 15vw, 132px); min-height: 26px; max-height: 32px; padding: 3px 8px; }
   .cards-remaining-label { font-size: 6px; }
   .cards-remaining-count { font-size: clamp(11px, 2vw, 15px); }
-  .dealer-zone { top: 8%; gap: 2px; }
+  .dealer-zone { top: 9%; gap: 2px; max-width: min(90%, calc(100vw - 40px)); }
   .dealer-zone .zone-label { font-size: 7px; }
-  .dealer-result-banner { font-size: 7px; padding: 3px 10px; }
-  .dealer-cards-fan .playing-card { width: clamp(36px, 5.5vw, 48px); height: clamp(52px, 8vw, 69px); }
-  .dealer-cards-fan .cards-fan-card { margin-left: calc(-1 * clamp(14px, 2.5vw, 20px)); }
-  .betting-spots { bottom: 9%; gap: clamp(16px, 4vw, 36px); }
-  .bet-spot-circle { width: clamp(44px, 8vw, 58px); height: clamp(44px, 8vw, 58px); }
-  .bet-spot-cards { min-height: 58px; max-width: min(100%, 100px); padding-top: 0; padding-bottom: 16px; margin-bottom: 4px; }
-  .bet-spot-cards:has(.is-split) { max-width: min(100%, 180px); min-height: 52px; }
-  .bet-spot .cards-fan .mini-card { width: clamp(28px, 4.5vw, 38px); height: clamp(40px, 6.5vw, 54px); }
-  .bet-chip-stack-chip { width: clamp(34px, 6vw, 46px); height: clamp(34px, 6vw, 46px); }
+  .dealer-result-banner { font-size: 7px; padding: 3px 10px; max-width: calc(100vw - 80px); }
+  .dealer-cards-fan .playing-card { width: clamp(32px, 5vw, 44px); height: clamp(46px, 7.2vw, 63px); }
+  .dealer-cards-fan .cards-fan-card { margin-left: calc(-1 * clamp(12px, 2.2vw, 18px)); }
+  .betting-spots { bottom: 10%; gap: clamp(10px, 3vw, 28px); max-width: calc(100% - 12px); }
+  .bet-spot-circle { width: clamp(40px, 7vw, 54px); height: clamp(40px, 7vw, 54px); }
+  .bet-spot-cards { min-height: 54px; max-width: min(100%, 92px); padding-top: 0; padding-bottom: 14px; margin-bottom: 4px; }
+  .bet-spot-cards:has(.is-split) { max-width: min(100%, 168px); min-height: 48px; }
+  .bet-spot .cards-fan .mini-card { width: clamp(26px, 4vw, 36px); height: clamp(37px, 5.8vw, 50px); }
+  .bet-chip-stack-chip { width: clamp(30px, 5.5vw, 42px); height: clamp(30px, 5.5vw, 42px); }
   .bet-chip-stack-amount { font-size: 8px; }
-  .seat-split-hands.is-split { gap: clamp(12px, 2.5vw, 18px); }
-  .seat-split-hands.is-split .mini-card { width: clamp(24px, 4vw, 32px); height: clamp(34px, 5.5vw, 46px); }
-  .hand-result-popup { bottom: auto; top: calc(100% + 3px); font-size: 6px; padding: 2px 7px; max-width: 72px; letter-spacing: .08em; }
+  .seat-split-hands.is-split { gap: clamp(10px, 2vw, 16px); }
+  .seat-split-hands.is-split .mini-card { width: clamp(22px, 3.5vw, 30px); height: clamp(31px, 5vw, 42px); }
+  .hand-result-popup { bottom: auto; top: calc(100% + 3px); font-size: 6px; padding: 2px 7px; max-width: 68px; letter-spacing: .08em; }
   .play-controls {
     grid-row: 3;
     width: 100%;
+    max-width: 100vw;
     flex-direction: column;
-    gap: 3px;
-    padding: 4px 4px calc(4px + env(safe-area-inset-bottom));
+    gap: 4px;
+    padding: 4px max(4px, env(safe-area-inset-left)) calc(4px + env(safe-area-inset-bottom)) max(4px, env(safe-area-inset-right));
     background: linear-gradient(180deg, rgba(6,10,20,.55), rgba(6,10,20,.95));
     border-top: 1px solid rgba(212,175,55,.15);
+    overflow: hidden;
   }
   .play-controls-row {
     flex-direction: row;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     flex-wrap: nowrap;
+    max-width: 100%;
+    min-width: 0;
   }
-  .play-chip-section { flex: 1 1 0; min-width: 0; max-width: 38%; }
+  .play-chip-section { flex: 1 1 0; min-width: 0; max-width: 36%; }
   .play-bet-section { flex: 0 0 auto; }
-  .play-action-section { flex: 0 0 auto; }
+  .play-action-section { flex: 0 0 auto; min-width: 0; }
+  .play-controls .play-hud-utilities { flex-shrink: 0; gap: 6px; padding-top: 0; }
+  .play-controls .play-hud-utilities .btn-ghost { font-size: 9px; padding: 6px 10px; min-height: 36px; min-width: 40px; }
   .chip-rack-row { gap: 2px; }
   .chip-tray { gap: 3px; padding: 2px 0; }
-  .chip-btn { width: clamp(32px, 5vw, 38px); height: clamp(32px, 5vw, 38px); }
+  .chip-btn { width: clamp(30px, 4.5vw, 36px); height: clamp(30px, 4.5vw, 36px); }
   .chip-scroll-btn { width: 24px; height: 24px; }
   .bet-actions { flex-direction: row; gap: 4px; min-width: 0; }
-  .bet-actions .btn-secondary, .bet-actions .btn-primary { padding: 8px 10px; font-size: 9px; flex: none; min-height: 36px; white-space: nowrap; }
-  .action-buttons { flex-direction: row; gap: clamp(4px, 1vw, 8px); flex-wrap: nowrap; }
-  .action-btn { width: clamp(40px, 6.5vw, 50px); height: clamp(40px, 6.5vw, 50px); font-size: 8px; }
+  .bet-actions .btn-secondary, .bet-actions .btn-primary { padding: 8px 8px; font-size: 9px; flex: none; min-height: 36px; white-space: nowrap; }
+  .action-buttons { flex-direction: row; gap: clamp(4px, 1vw, 6px); flex-wrap: nowrap; }
+  .action-btn { width: clamp(36px, 5.8vw, 46px); height: clamp(36px, 5.8vw, 46px); font-size: 8px; }
   .play-message { font-size: 9px; padding: 0 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .app-play .tip-panel {
-    top: calc(44px + env(safe-area-inset-top));
-    bottom: auto;
+    top: auto;
+    bottom: calc(88px + env(safe-area-inset-bottom));
     left: auto;
-    right: 10px;
-    max-width: min(280px, 42vw);
+    right: max(10px, env(safe-area-inset-right));
+    max-width: min(280px, 40vw);
     margin: 0;
   }
 }
@@ -696,8 +707,8 @@ h1 { font-size: clamp(28px, 6vw, 42px); } h2 { font-size: clamp(22px, 4vw, 30px)
 .alert-card { width: 100%; max-width: 360px; padding: 24px; border-radius: var(--radius-xl); background: var(--cream-panel-bg); border: var(--cream-panel-border); box-shadow: var(--cream-panel-shadow); text-align: center; display: flex; flex-direction: column; gap: 10px; color: var(--cream-text); }
 .alert-actions { display: flex; gap: 8px; margin-top: 8px; }
 .alert-actions button { flex: 1; }
-.tip-panel { position: fixed; bottom: calc(8px + env(safe-area-inset-bottom)); left: 14px; right: 14px; z-index: 50; padding: 14px; border-radius: var(--radius-lg); background: var(--cream-panel-bg); border: var(--cream-panel-border); box-shadow: var(--cream-panel-shadow); display: flex; flex-direction: column; gap: 6px; max-width: 400px; margin: 0 auto; color: var(--cream-text); }
-.app-play .tip-panel { bottom: calc(132px + env(safe-area-inset-bottom)); }
+.tip-panel { position: fixed; bottom: calc(8px + env(safe-area-inset-bottom)); left: 14px; right: 14px; z-index: 50; padding: 14px; border-radius: var(--radius-lg); background: var(--cream-panel-bg); border: var(--cream-panel-border); box-shadow: var(--cream-panel-shadow); display: flex; flex-direction: column; gap: 6px; max-width: min(400px, calc(100vw - 28px)); margin: 0 auto; color: var(--cream-text); }
+.app-play .tip-panel { bottom: calc(188px + env(safe-area-inset-bottom)); }
 .tip-panel-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .tip-panel-header strong { color: var(--gold-deep); }
 .tip-panel p { color: var(--cream-text-muted); font-size: 13px; line-height: 1.45; }
