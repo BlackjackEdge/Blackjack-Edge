@@ -1,9 +1,18 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Brain, ChevronLeft, ChevronRight, Clock, RotateCcw, Sparkles, PlayCircle, Lightbulb, Gauge, Settings2, HelpCircle } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  HelpCircle,
+  RotateCcw,
+  Settings2,
+  X,
+} from "lucide-react";
 import {
   buildShoe,
+  cardRank,
   correctAction,
   formatMove,
   generateTrainingHand,
@@ -13,20 +22,59 @@ import {
   isBlackjack,
   isBust,
   isPair,
+  calcTotalProfitLoss,
+  DEFAULT_BANKROLL,
+  formatProfitLoss,
+  migrateBankrollStats,
+  MAX_BET,
+  MIN_BET,
   moveNames,
+  recommendedTrainingBet,
   shouldDealerHit,
   type Move,
   type TrainingHand,
 } from "@/lib/blackjack";
-import { Coach, Logo, PlayingCard, StrategyCardOverlay } from "@/components/ui";
+import {
+  ActionButtons,
+  AppScreen,
+  BetChipStack,
+  BottomNav,
+  ChipTray,
+  chipLabel,
+  DialogCard,
+  FeatureCard,
+  HomeHeader,
+  HOME_ICON_MAP,
+  LogoBadge,
+  MainScreen,
+  OverlaySheet,
+  PlayingCard,
+  SeatId,
+  StrategyCardOverlay,
+  VaultBettingContent,
+  VaultCard,
+  VaultCountingContent,
+  VaultMistakesContent,
+  VaultPanel,
+  VaultRulesContent,
+  VaultSection,
+  VaultStrategyContent,
+  VaultWeaknessContent,
+} from "@/components/ui";
 
-type Screen = "home" | "basic" | "basicDrill" | "basicResults" | "counting" | "countLearn" | "countDrill" | "play";
+/* ─── Types & Constants ─── */
+
 type HandResult = { hand: TrainingHand; choice: Move; seconds: number };
 type SwipeValue = -1 | 0 | 1;
+type PlayPhase = "betting" | "player" | "dealer" | "roundOver";
+type SeatBets = Record<SeatId, number>;
+type SeatLastChips = Record<SeatId, number | null>;
+type VaultView = VaultSection | null;
 
 type PlayerHand = {
   cards: string[];
   bet: number;
+  seatId: SeatId;
   doubled?: boolean;
   stood?: boolean;
   busted?: boolean;
@@ -34,30 +82,162 @@ type PlayerHand = {
   payout?: number;
 };
 
-type PlayPhase = "betting" | "player" | "dealer" | "roundOver";
-
-const avg = (values: number[]) => values.length ? values.reduce((a, b) => a + b, 0) / values.length : 0;
-const swipeValue = (card: string): SwipeValue => hiLo(card) === 1 ? 1 : hiLo(card) === -1 ? -1 : 0;
-const chipValues = [5, 25, 50, 100, 250, 500, 1000];
-
-const premiumChips: Record<number, { label: string; image: string }> = {
-  5: { label: "$5", image: "/chips/chip-5.png" },
-  25: { label: "$25", image: "/chips/chip-25.png" },
-  50: { label: "$50", image: "/chips/chip-50.png" },
-  100: { label: "$100", image: "/chips/chip-100.png" },
-  250: { label: "$250", image: "/chips/chip-250.png" },
-  500: { label: "$500", image: "/chips/chip-500.png" },
-  1000: { label: "$1K", image: "/chips/chip-1000.png" },
+type GameStats = {
+  roundsPlayed: number;
+  wins: number;
+  losses: number;
+  pushes: number;
+  blackjacks: number;
+  basicDrills: number;
+  basicAccuracySum: number;
+  countDrills: number;
+  peakBankroll: number;
+  startingBankroll: number;
+  bankrollAdded: number;
+  biggestWin: number;
+  biggestLoss: number;
 };
-const STORAGE_KEY = "blackjack-edge-v0310-session";
+
+type AppSettings = {
+  soundEffects: boolean;
+  music: boolean;
+  haptics: boolean;
+  animations: boolean;
+  tableGlow: boolean;
+  showTutorials: boolean;
+};
+
+type PlaySettings = {
+  showHandTotals: boolean;
+  showBasicStrategyTips: boolean;
+  showRecommendedBet: boolean;
+  autoOpenHudAfterRound: boolean;
+  dealerSpeed: "slow" | "normal" | "fast";
+  soundEffects: boolean;
+  music: boolean;
+  haptics: boolean;
+  animations: boolean;
+  tableGlow: boolean;
+  cardStyle: "classic" | "premium";
+};
+
+const SEAT_ORDER: SeatId[] = ["right", "center", "left"];
+const DISPLAY_SEATS: SeatId[] = ["left", "center", "right"];
+const STORAGE_KEY = "blackjack-edge-v040-session";
+const STATS_KEY = "blackjack-edge-v040-stats";
+const APP_SETTINGS_KEY = "blackjack-edge-app-settings";
+const PLAY_SETTINGS_KEY = "blackjack-edge-play-settings";
+
+const defaultAppSettings = (): AppSettings => ({
+  soundEffects: true,
+  music: false,
+  haptics: true,
+  animations: false,
+  tableGlow: true,
+  showTutorials: true,
+});
+
+const defaultPlaySettings = (): PlaySettings => ({
+  showHandTotals: false,
+  showBasicStrategyTips: true,
+  showRecommendedBet: true,
+  autoOpenHudAfterRound: false,
+  dealerSpeed: "normal",
+  soundEffects: true,
+  music: false,
+  haptics: true,
+  animations: false,
+  tableGlow: true,
+  cardStyle: "premium",
+});
+
+const defaultSeatBets = (): SeatBets => ({ left: 0, center: 0, right: 0 });
+const defaultSeatLastChips = (): SeatLastChips => ({ left: null, center: null, right: null });
+
+function sanitizeSeatLastChips(bets: SeatBets, chips: SeatLastChips): SeatLastChips {
+  const sanitized = { ...defaultSeatLastChips(), ...chips };
+  for (const seat of SEAT_ORDER) {
+    if (bets[seat] <= 0) sanitized[seat] = null;
+  }
+  return sanitized;
+}
+
+function sumSeatBets(bets: SeatBets) {
+  return bets.left + bets.center + bets.right;
+}
+const MAX_BET_MSG = "Maximum bet is $250,000 per hand.";
+const BANKROLL_ADD_OPTIONS = [500, 5000, 25000, 100000, 250000] as const;
+const defaultStats = (bankroll = DEFAULT_BANKROLL): GameStats => ({
+  roundsPlayed: 0,
+  wins: 0,
+  losses: 0,
+  pushes: 0,
+  blackjacks: 0,
+  basicDrills: 0,
+  basicAccuracySum: 0,
+  countDrills: 0,
+  peakBankroll: bankroll,
+  startingBankroll: DEFAULT_BANKROLL,
+  bankrollAdded: 0,
+  biggestWin: 0,
+  biggestLoss: 0,
+});
+
+const avg = (values: number[]) => (values.length ? values.reduce((a, b) => a + b, 0) / values.length : 0);
+const swipeValue = (card: string): SwipeValue => (hiLo(card) === 1 ? 1 : hiLo(card) === -1 ? -1 : 0);
+const seatLabel = (s: SeatId) => (s === "left" ? "Left" : s === "center" ? "Center" : "Right");
+const handResultLabel = (result?: string) => {
+  if (!result) return null;
+  const map: Record<string, string> = {
+    Blackjack: "BLACKJACK",
+    Win: "WIN",
+    Lose: "LOSE",
+    Push: "PUSH",
+    Bust: "BUST",
+    "Dealer Blackjack": "DEALER BLACKJACK",
+  };
+  return map[result] ?? result.toUpperCase();
+};
+const handResultClass = (result?: string) => {
+  if (!result) return "";
+  return result.toLowerCase().replace(/\s+/g, "-");
+};
+const isHandComplete = (hand: PlayerHand) => Boolean(hand.stood || hand.busted || hand.result);
+const findNextActiveHandIndex = (hands: PlayerHand[], fromIndex = 0) => {
+  for (let i = fromIndex; i < hands.length; i++) {
+    if (!isHandComplete(hands[i])) return i;
+  }
+  return -1;
+};
+const dealerUpcardLabel = (card?: string) => {
+  if (!card) return "";
+  const rank = cardRank(card);
+  if (rank === "J" || rank === "Q" || rank === "K" || rank === "10") return "10";
+  return rank;
+};
+
+/* ─── App ─── */
 
 export default function App() {
-  const [screen, setScreen] = useState<Screen>("home");
+  const [screen, setScreen] = useState<AppScreen>("home");
   const [now, setNow] = useState(Date.now());
-  const [strategyOpen, setStrategyOpen] = useState(false);
-  const [helpOpen, setHelpOpen] = useState<"basic" | "counting" | "play" | "strategy" | null>(null);
-  const [exitConfirmOpen, setExitConfirmOpen] = useState(false);
 
+  // Overlays
+  const [strategyOpen, setStrategyOpen] = useState(false);
+  const [playTipOpen, setPlayTipOpen] = useState(false);
+  const [basicDrillTipOpen, setBasicDrillTipOpen] = useState(false);
+  const [countHowItWorksOpen, setCountHowItWorksOpen] = useState(false);
+  const [drillExitOpen, setDrillExitOpen] = useState<"basic" | "count" | null>(null);
+  const [helpOpen, setHelpOpen] = useState<"basic" | "counting" | "play" | "rules" | null>(null);
+  const [appSettingsOpen, setAppSettingsOpen] = useState(false);
+  const [playSettingsOpen, setPlaySettingsOpen] = useState(false);
+  const [hudOpen, setHudOpen] = useState(false);
+  const [exitConfirmOpen, setExitConfirmOpen] = useState(false);
+  const [vaultView, setVaultView] = useState<VaultView>(null);
+  const [appSettings, setAppSettings] = useState<AppSettings>(defaultAppSettings);
+  const [playSettings, setPlaySettings] = useState<PlaySettings>(defaultPlaySettings);
+
+  // Basic strategy
   const [roundSize, setRoundSize] = useState(10);
   const [currentHand, setCurrentHand] = useState<TrainingHand | null>(null);
   const [handIndex, setHandIndex] = useState(0);
@@ -65,7 +245,9 @@ export default function App() {
   const [start, setStart] = useState(0);
   const [results, setResults] = useState<HandResult[]>([]);
   const [feedback, setFeedback] = useState("The table is ready. Pick the correct play.");
+  const [showBasicReview, setShowBasicReview] = useState(false);
 
+  // Counting
   const [shoe, setShoe] = useState<string[]>([]);
   const [countCard, setCountCard] = useState<string | null>(null);
   const [dealt, setDealt] = useState<string[]>([]);
@@ -78,25 +260,34 @@ export default function App() {
   const [runningGuess, setRunningGuess] = useState("");
   const [trueGuess, setTrueGuess] = useState("");
   const [countFeedback, setCountFeedback] = useState("Swipe or tap: left -1, up 0, right +1.");
+  const [countSubmitted, setCountSubmitted] = useState(false);
 
+  // Play
   const [playDecks, setPlayDecks] = useState(6);
   const [playShoe, setPlayShoe] = useState<string[]>([]);
   const [seenCards, setSeenCards] = useState<string[]>([]);
-  const [bankroll, setBankroll] = useState(1000);
-  const [bet, setBet] = useState(0);
+  const [bankroll, setBankroll] = useState(DEFAULT_BANKROLL);
+  const [seatBets, setSeatBets] = useState<SeatBets>(defaultSeatBets());
+  const [seatLastChip, setSeatLastChip] = useState<SeatLastChips>(defaultSeatLastChips());
+  const [selectedChip, setSelectedChip] = useState(5);
   const [dealerHand, setDealerHand] = useState<string[]>([]);
   const [playerHands, setPlayerHands] = useState<PlayerHand[]>([]);
   const [activeHand, setActiveHand] = useState(0);
   const [playPhase, setPlayPhase] = useState<PlayPhase>("betting");
-  const [playMessage, setPlayMessage] = useState("Place your chips and deal.");
+  const [playMessage, setPlayMessage] = useState("Select a chip, then tap a betting spot.");
   const [bankrollAlert, setBankrollAlert] = useState<{ title: string; message: string } | null>(null);
   const [roundBanner, setRoundBanner] = useState<{ type: "win" | "lose" | "push" | "blackjack"; title: string; subtitle: string } | null>(null);
-  const [hudOpen, setHudOpen] = useState(false);
-  const [tipOpen, setTipOpen] = useState(false);
-  const [showPlayTotals, setShowPlayTotals] = useState(false);
-  const [showBasicReview, setShowBasicReview] = useState(false);
-  const [countSubmitted, setCountSubmitted] = useState(false);
   const [hasLoadedSession, setHasLoadedSession] = useState(false);
+  const [stats, setStats] = useState<GameStats>(defaultStats());
+
+  const totalBet = useMemo(() => {
+    if (playPhase === "player" || playPhase === "dealer") {
+      return playerHands.reduce((sum, h) => sum + h.bet, 0);
+    }
+    return sumSeatBets(seatBets);
+  }, [playPhase, playerHands, seatBets]);
+
+  /* ─── Effects ─── */
 
   useEffect(() => {
     const i = window.setInterval(() => setNow(Date.now()), 50);
@@ -106,16 +297,40 @@ export default function App() {
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
+      const statsRaw = window.localStorage.getItem(STATS_KEY);
+      const saved = raw ? JSON.parse(raw) : null;
+      const sessionBankroll =
+        typeof saved?.bankroll === "number" ? saved.bankroll : DEFAULT_BANKROLL;
+      const parsed = statsRaw ? JSON.parse(statsRaw) : {};
+      const sessionBankrollFields = saved
+        ? {
+            ...(typeof saved.startingBankroll === "number"
+              ? { startingBankroll: saved.startingBankroll }
+              : {}),
+            ...(typeof saved.bankrollAdded === "number" ? { bankrollAdded: saved.bankrollAdded } : {}),
+          }
+        : {};
+      setStats({
+        ...defaultStats(sessionBankroll),
+        ...parsed,
+        ...sessionBankrollFields,
+        ...migrateBankrollStats({ ...parsed, ...sessionBankrollFields }, sessionBankroll),
+      });
 
       if (!raw) {
         setHasLoadedSession(true);
         return;
       }
 
-      const saved = JSON.parse(raw);
-
       if (typeof saved.bankroll === "number") setBankroll(saved.bankroll);
-      if (typeof saved.bet === "number") setBet(saved.bet);
+      const loadedSeatBets = saved.seatBets
+        ? { ...defaultSeatBets(), ...saved.seatBets }
+        : typeof saved.bet === "number" && saved.bet > 0
+          ? { left: 0, center: saved.bet, right: 0 }
+          : defaultSeatBets();
+      setSeatBets(loadedSeatBets);
+      const savedChips = saved.seatLastChip ?? saved.seatBetVisuals ?? defaultSeatLastChips();
+      setSeatLastChip(sanitizeSeatLastChips(loadedSeatBets, savedChips));
       if (typeof saved.playDecks === "number") setPlayDecks(saved.playDecks);
       if (Array.isArray(saved.playShoe)) setPlayShoe(saved.playShoe);
       if (Array.isArray(saved.seenCards)) setSeenCards(saved.seenCards);
@@ -125,13 +340,26 @@ export default function App() {
       if (["betting", "player", "dealer", "roundOver"].includes(saved.playPhase)) setPlayPhase(saved.playPhase);
       if (typeof saved.playMessage === "string") setPlayMessage(saved.playMessage);
       if (saved.roundBanner === null || typeof saved.roundBanner === "object") setRoundBanner(saved.roundBanner);
-      if (typeof saved.showPlayTotals === "boolean") setShowPlayTotals(saved.showPlayTotals);
-
       if (typeof saved.countDecks === "number") setCountDecks(saved.countDecks);
       if (typeof saved.countCards === "number") setCountCards(saved.countCards);
       if (typeof saved.guided === "boolean") setGuided(saved.guided);
+      if (typeof saved.screen === "string") {
+        if (saved.screen === "counting") setScreen("countLearn");
+        else if (["home", "play", "trainer", "stats", "vault"].includes(saved.screen)) {
+          setScreen(saved.screen as AppScreen);
+        }
+      }
 
-      setPlayMessage((message) => message || "Session restored. Continue playing.");
+      const appRaw = window.localStorage.getItem(APP_SETTINGS_KEY);
+      if (appRaw) setAppSettings({ ...defaultAppSettings(), ...JSON.parse(appRaw) });
+
+      const playRaw = window.localStorage.getItem(PLAY_SETTINGS_KEY);
+      if (playRaw) {
+        const parsed = JSON.parse(playRaw);
+        setPlaySettings({ ...defaultPlaySettings(), ...parsed });
+      } else if (typeof saved.showPlayTotals === "boolean") {
+        setPlaySettings((prev) => ({ ...prev, showHandTotals: saved.showPlayTotals }));
+      }
     } catch {
       window.localStorage.removeItem(STORAGE_KEY);
     } finally {
@@ -141,49 +369,76 @@ export default function App() {
 
   useEffect(() => {
     if (!hasLoadedSession) return;
-
-    const saved = {
-      bankroll,
-      bet,
-      playDecks,
-      playShoe,
-      seenCards,
-      dealerHand,
-      playerHands,
-      activeHand,
-      playPhase,
-      playMessage,
-      roundBanner,
-      showPlayTotals,
-      countDecks,
-      countCards,
-      guided,
-      savedAt: Date.now(),
-    };
-
     try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
-    } catch {
-      // If browser storage is full or blocked, the app should keep working.
-    }
+      window.localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          bankroll,
+          startingBankroll: stats.startingBankroll,
+          bankrollAdded: stats.bankrollAdded,
+          seatBets,
+          seatLastChip,
+          playDecks,
+          playShoe,
+          seenCards,
+          dealerHand,
+          playerHands,
+          activeHand,
+          playPhase,
+          playMessage,
+          roundBanner,
+          countDecks,
+          countCards,
+          guided,
+          screen: ["home", "play", "trainer", "stats", "vault"].includes(screen) ? screen : "home",
+          savedAt: Date.now(),
+        })
+      );
+    } catch { /* storage full */ }
   }, [
-    hasLoadedSession,
-    bankroll,
-    bet,
-    playDecks,
-    playShoe,
-    seenCards,
-    dealerHand,
-    playerHands,
-    activeHand,
-    playPhase,
-    playMessage,
-    roundBanner,
-    showPlayTotals,
-    countDecks,
-    countCards,
-    guided,
+    hasLoadedSession, bankroll, stats.startingBankroll, stats.bankrollAdded, seatBets, seatLastChip, playDecks, playShoe, seenCards, dealerHand,
+    playerHands, activeHand, playPhase, playMessage, roundBanner,
+    countDecks, countCards, guided, screen,
   ]);
+
+  useEffect(() => {
+    if (!hasLoadedSession) return;
+    try {
+      window.localStorage.setItem(APP_SETTINGS_KEY, JSON.stringify(appSettings));
+    } catch { /* */ }
+  }, [hasLoadedSession, appSettings]);
+
+  useEffect(() => {
+    if (!hasLoadedSession) return;
+    try {
+      window.localStorage.setItem(PLAY_SETTINGS_KEY, JSON.stringify(playSettings));
+    } catch { /* */ }
+  }, [hasLoadedSession, playSettings]);
+
+  useEffect(() => {
+    if (!hasLoadedSession) return;
+    try {
+      window.localStorage.setItem(STATS_KEY, JSON.stringify(stats));
+    } catch { /* */ }
+  }, [hasLoadedSession, stats]);
+
+  useEffect(() => {
+    setPlayTipOpen(false);
+    setBasicDrillTipOpen(false);
+    setStrategyOpen(false);
+    setCountHowItWorksOpen(false);
+  }, [screen]);
+
+  useEffect(() => {
+    if (!hasLoadedSession) return;
+    if (!playShoe.length) setPlayShoe(buildShoe(playDecks));
+  }, [hasLoadedSession, playDecks, playShoe.length]);
+
+  useEffect(() => {
+    setStats((s) => ({ ...s, peakBankroll: Math.max(s.peakBankroll, bankroll) }));
+  }, [bankroll]);
+
+  /* ─── Derived ─── */
 
   const elapsed = start ? (now - start) / 1000 : 0;
   const accuracy = handIndex ? Math.round((correct / handIndex) * 100) : 0;
@@ -191,10 +446,8 @@ export default function App() {
   const finalRunning = dealt.reduce((sum, c) => sum + hiLo(c), 0);
   const decksRemaining = Math.max(shoe.length / 52, 0.1);
   const finalTrue = finalRunning / decksRemaining;
-  const guessedRunning = Number(runningGuess);
-  const guessedTrue = Number(trueGuess);
-  const runningGuessIsCorrect = countSubmitted && Number.isFinite(guessedRunning) && guessedRunning === finalRunning;
-  const trueGuessIsCorrect = countSubmitted && Number.isFinite(guessedTrue) && Math.abs(guessedTrue - Number(finalTrue.toFixed(1))) <= 0.1;
+  const runningGuessIsCorrect = countSubmitted && Number.isFinite(Number(runningGuess)) && Number(runningGuess) === finalRunning;
+  const trueGuessIsCorrect = countSubmitted && Number.isFinite(Number(trueGuess)) && Math.abs(Number(trueGuess) - Number(finalTrue.toFixed(1))) <= 0.1;
 
   const playRunning = seenCards.reduce((sum, c) => sum + hiLo(c), 0);
   const playDecksRemaining = Math.max(playShoe.length / 52, 0.1);
@@ -203,15 +456,95 @@ export default function App() {
 
   const activePlayHand = playerHands[activeHand];
   const dealerUpcard = dealerHand[0];
-  const canAct = Boolean(playPhase === "player" && activePlayHand && !activePlayHand.stood && !activePlayHand.busted);
+  const activeHandTotal = activePlayHand ? handValue(activePlayHand.cards).total : 0;
+  const canAct = Boolean(
+    playPhase === "player" &&
+    activePlayHand &&
+    !activePlayHand.stood &&
+    !activePlayHand.busted &&
+    !activePlayHand.result &&
+    activeHandTotal < 21
+  );
+  const canHit = Boolean(canAct && activeHandTotal < 21);
   const canSplit = Boolean(canAct && activePlayHand && isPair(activePlayHand.cards) && bankroll >= activePlayHand.bet);
   const canDouble = Boolean(canAct && activePlayHand && activePlayHand.cards.length === 2 && bankroll >= activePlayHand.bet);
   const tipMove = activePlayHand && dealerUpcard && activePlayHand.cards.length >= 2 ? correctAction(activePlayHand.cards, dealerUpcard) : null;
+  const dealerVisibleHand = playPhase === "player" && dealerHand.length > 1 ? [dealerHand[0]] : dealerHand;
+  const canBet = playPhase === "betting" || playPhase === "roundOver";
 
-  useEffect(() => {
-    if (!hasLoadedSession) return;
-    if (!playShoe.length) setPlayShoe(buildShoe(playDecks));
-  }, [hasLoadedSession]);
+  const handsBySeat = useMemo(() => {
+    const map: Record<SeatId, PlayerHand[]> = { left: [], center: [], right: [] };
+    playerHands.forEach((h) => map[h.seatId]?.push(h));
+    return map;
+  }, [playerHands]);
+
+  const activeSeatId = activePlayHand?.seatId;
+  const showPlayTotals = playSettings.showHandTotals;
+  const recBet = recommendedTrainingBet(playTrue, bankroll, MIN_BET, MAX_BET);
+  const totalProfitLoss = calcTotalProfitLoss(bankroll, stats.startingBankroll, stats.bankrollAdded);
+  const showPlayStrategyTip = playTipOpen && playSettings.showBasicStrategyTips;
+  const hasActivePlayableHand = Boolean(
+    playPhase === "player" &&
+    activePlayHand &&
+    !isHandComplete(activePlayHand)
+  );
+  const showBasicDrillTip = basicDrillTipOpen && currentHand && Boolean(currentHand.answer);
+  const basicDrillTipMove = currentHand?.answer ?? null;
+
+  function maybeOpenHudAfterRound() {
+    if (playSettings.autoOpenHudAfterRound) setHudOpen(true);
+  }
+
+  /* ─── Stats helpers ─── */
+
+  function recordRoundResult(type: "win" | "lose" | "push" | "blackjack") {
+    setStats((s) => ({
+      ...s,
+      roundsPlayed: s.roundsPlayed + 1,
+      wins: s.wins + (type === "win" || type === "blackjack" ? 1 : 0),
+      losses: s.losses + (type === "lose" ? 1 : 0),
+      pushes: s.pushes + (type === "push" ? 1 : 0),
+      blackjacks: s.blackjacks + (type === "blackjack" ? 1 : 0),
+    }));
+  }
+
+  function recordRoundNet(net: number) {
+    if (net <= 0) return;
+    setStats((s) => ({ ...s, biggestWin: Math.max(s.biggestWin, net) }));
+  }
+
+  function recordRoundNetLoss(net: number) {
+    if (net >= 0) return;
+    setStats((s) => ({ ...s, biggestLoss: Math.max(s.biggestLoss, Math.abs(net)) }));
+  }
+
+  function recordRoundProfitLoss(net: number) {
+    recordRoundNet(net);
+    recordRoundNetLoss(net);
+  }
+
+  function resetStatsTracking() {
+    setStats({
+      ...defaultStats(bankroll),
+      startingBankroll: bankroll,
+      bankrollAdded: 0,
+      peakBankroll: bankroll,
+    });
+  }
+
+  function resetBankrollTracking() {
+    setBankroll(DEFAULT_BANKROLL);
+    setSeatBets(defaultSeatBets());
+    setSeatLastChip(defaultSeatLastChips());
+    setStats((s) => ({
+      ...s,
+      startingBankroll: DEFAULT_BANKROLL,
+      bankrollAdded: 0,
+      peakBankroll: DEFAULT_BANKROLL,
+    }));
+  }
+
+  /* ─── Training ─── */
 
   function startBasic() {
     setResults([]);
@@ -226,19 +559,19 @@ export default function App() {
 
   function chooseMove(move: Move) {
     if (!currentHand) return;
-    const seconds = (Date.now() - start) / 1000;
+    const seconds = (now - start) / 1000;
     const ok = move === currentHand.answer;
-
     setResults((prev) => [...prev, { hand: currentHand, choice: move, seconds }]);
     setCorrect((prev) => prev + (ok ? 1 : 0));
     setFeedback(ok ? `Perfect. ${moveNames[move]} is the play.` : `Close. Correct play: ${moveNames[currentHand.answer]}.`);
-
     const next = handIndex + 1;
     setHandIndex(next);
-
     window.setTimeout(() => {
-      if (next >= roundSize) setScreen("basicResults");
-      else {
+      if (next >= roundSize) {
+        const acc = Math.round(((correct + (ok ? 1 : 0)) / roundSize) * 100);
+        setStats((s) => ({ ...s, basicDrills: s.basicDrills + 1, basicAccuracySum: s.basicAccuracySum + acc }));
+        setScreen("basicResults");
+      } else {
         setCurrentHand(generateTrainingHand());
         setStart(Date.now());
         setFeedback("Next hand. Stay sharp.");
@@ -247,17 +580,15 @@ export default function App() {
   }
 
   function getNextDifferentCard(current: string | null, shoeList: string[]) {
-    if (!shoeList.length) return { nextCard: null, nextShoe: shoeList };
+    if (!shoeList.length) return { nextCard: null as string | null, nextShoe: shoeList };
     let nextShoe = [...shoeList];
     let nextCard = nextShoe.pop()!;
     let attempts = 0;
-
     while (current && nextCard === current && nextShoe.length > 0 && attempts < 20) {
       nextShoe.unshift(nextCard);
       nextCard = nextShoe.pop()!;
       attempts++;
     }
-
     return { nextCard, nextShoe };
   }
 
@@ -278,16 +609,10 @@ export default function App() {
   }
 
   function reDrillSameCountingCards() {
-    if (!dealt.length) {
-      startCounting();
-      return;
-    }
-
+    if (!dealt.length) { startCounting(); return; }
     const repeatCards = [...dealt];
-    const firstCard = repeatCards[0];
-
     setShoe(repeatCards.slice(1).reverse());
-    setCountCard(firstCard);
+    setCountCard(repeatCards[0]);
     setDealt([]);
     setCountCorrect(0);
     setSwipeTimes([]);
@@ -304,17 +629,15 @@ export default function App() {
     const expected = swipeValue(countCard);
     const ms = Date.now() - cardStart;
     const nextDealt = [...dealt, countCard];
-
     setDealt(nextDealt);
     setSwipeTimes((prev) => [...prev, ms]);
     if (expected === value) setCountCorrect((prev) => prev + 1);
     setCountFeedback(expected === value ? `Correct. ${countCard} counts as ${expected}.` : `Careful. ${countCard} counts as ${expected}.`);
-
     if (nextDealt.length >= countCards || shoe.length === 0) {
       setCountCard(null);
+      setStats((s) => ({ ...s, countDrills: s.countDrills + 1 }));
       return;
     }
-
     const { nextCard, nextShoe } = getNextDifferentCard(countCard, shoe);
     window.setTimeout(() => {
       setShoe(nextShoe);
@@ -323,31 +646,22 @@ export default function App() {
     }, 250);
   }
 
+  /* ─── Play logic ─── */
+
   function drawFromPlayShoe(shoeList: string[], count = 1) {
     let working = [...shoeList];
     const drawn: string[] = [];
     let reshuffled = false;
-
     for (let i = 0; i < count; i++) {
       if (!working.length) {
         working = buildShoe(playDecks);
         setSeenCards([]);
         reshuffled = true;
       }
-
       drawn.push(working.pop()!);
     }
-
-    if (reshuffled) {
-      setPlayMessage("Shoe finished. New shoe shuffled.");
-    }
-
+    if (reshuffled) setPlayMessage("Shoe finished. New shoe shuffled.");
     return { drawn, nextShoe: working };
-  }
-
-  function openPlay() {
-    setScreen("play");
-    if (!playShoe.length) setPlayShoe(buildShoe(playDecks));
   }
 
   function showBankrollAlert(title: string, message: string) {
@@ -355,61 +669,68 @@ export default function App() {
     setPlayMessage(message);
   }
 
-  function showRoundBannerDelayed(banner: { type: "win" | "lose" | "push" | "blackjack"; title: string; subtitle: string }, delay = 650) {
-    window.setTimeout(() => {
-      setRoundBanner(banner);
-    }, delay);
+  function addBankroll(amount: number) {
+    setBankroll((b) => b + amount);
+    setStats((s) => ({ ...s, bankrollAdded: s.bankrollAdded + amount }));
+    setBankrollAlert(null);
+    setPlayMessage(`Added $${amount.toLocaleString()} bankroll.`);
   }
 
-  function addChip(amount: number) {
-    if (playPhase !== "betting" && playPhase !== "roundOver") return;
+  function resetBankrollToDefault() {
+    resetBankrollTracking();
+    setPlayMessage("Bankroll reset to $1,000.");
+  }
 
-    if (bankroll < 5) {
-      showBankrollAlert(
-        "Bankroll Needed",
-        "You do not have enough bankroll to place a bet. Add bankroll to keep playing."
-      );
+  function renderBankrollActions() {
+    return (
+      <div className="hud-actions bankroll-actions">
+        <button type="button" className="btn-secondary bankroll-action-wide" onClick={resetBankrollToDefault}>Reset Bankroll</button>
+        {BANKROLL_ADD_OPTIONS.map((amount) => (
+          <button key={amount} type="button" className="btn-secondary" onClick={() => addBankroll(amount)}>
+            Add ${amount.toLocaleString()}
+          </button>
+        ))}
+        <button type="button" className="btn-secondary bankroll-action-wide" onClick={() => resetShoe(playDecks)}>Shuffle New Shoe</button>
+        <button type="button" className="btn-secondary bankroll-action-wide" onClick={resetSavedSession}>Reset Saved Session</button>
+      </div>
+    );
+  }
+
+  function placeBetOnSeat(seat: SeatId) {
+    if (!canBet) return;
+    const amount = selectedChip;
+    const current = seatBets[seat];
+    const newAmount = current + amount;
+    const otherBets = totalBet - current;
+    const available = bankroll - otherBets;
+
+    if (newAmount > MAX_BET) {
+      showBankrollAlert("Table Limit", MAX_BET_MSG);
       return;
     }
-
-    setBet((current) => {
-      const requestedBet = current + amount;
-      const available = bankroll - current;
-
-      if (requestedBet > 5000) {
-        showBankrollAlert(
-          "Table Limit",
-          "Maximum bet is $5,000."
-        );
-        return current;
-      }
-
-      if (available <= 0) {
-        showBankrollAlert(
-          "Full Bankroll Bet",
-          "Your full bankroll is already on the table. Lower the bet or add bankroll."
-        );
-        return current;
-      }
-
-      if (amount > available) {
-        showBankrollAlert(
-          "Not Enough Bankroll",
-          `You only have $${available.toLocaleString()} available for this bet. Lower the bet or add bankroll.`
-        );
-        return current;
-      }
-
-      setBankrollAlert(null);
-      setPlayMessage(`Bet set to $${requestedBet.toLocaleString()}.`);
-      return requestedBet;
-    });
+    if (available < amount || otherBets + newAmount > bankroll) {
+      showBankrollAlert("Not Enough Bankroll", `Not enough bankroll for a ${chipLabel(amount)} chip.`);
+      return;
+    }
+    setBankrollAlert(null);
+    setSeatBets((prev) => ({ ...prev, [seat]: newAmount }));
+    setSeatLastChip((prev) => ({ ...prev, [seat]: amount }));
+    setPlayMessage(`$${amount.toLocaleString()} on ${seatLabel(seat)}. Total bet: $${(otherBets + newAmount).toLocaleString()}.`);
   }
 
   function clearBet() {
-    if (playPhase !== "betting" && playPhase !== "roundOver") return;
+    if (!canBet) return;
+    setSeatBets(defaultSeatBets());
+    setSeatLastChip(defaultSeatLastChips());
     setBankrollAlert(null);
-    setBet(0);
+    setRoundBanner(null);
+    if (playPhase === "roundOver") {
+      setPlayerHands([]);
+      setDealerHand([]);
+      setActiveHand(0);
+      setPlayPhase("betting");
+    }
+    setPlayMessage("Bets cleared. Select a chip, then tap a betting spot.");
   }
 
   function resetShoe(decks = playDecks) {
@@ -418,15 +739,32 @@ export default function App() {
     setPlayMessage(`${decks}-deck shoe loaded.`);
   }
 
-  function resetSavedSession() {
-    window.localStorage.removeItem(STORAGE_KEY);
-    const freshDecks = 6;
+  function patchPlaySettings(patch: Partial<PlaySettings>) {
+    setPlaySettings((prev) => ({ ...prev, ...patch }));
+  }
 
+  function patchAppSettings(patch: Partial<AppSettings>) {
+    setAppSettings((prev) => ({ ...prev, ...patch }));
+  }
+
+  function resetAppData() {
+    window.localStorage.removeItem(STORAGE_KEY);
+    window.localStorage.removeItem(STATS_KEY);
+    window.localStorage.removeItem(APP_SETTINGS_KEY);
+    window.localStorage.removeItem(PLAY_SETTINGS_KEY);
+    setAppSettings(defaultAppSettings());
+    setPlaySettings(defaultPlaySettings());
+    resetBankrollTracking();
+    setStats(defaultStats(DEFAULT_BANKROLL));
+    resetSavedSessionPlayState();
+    setAppSettingsOpen(false);
+  }
+
+  function resetSavedSessionPlayState() {
+    const freshDecks = 6;
     setPlayDecks(freshDecks);
     setPlayShoe(buildShoe(freshDecks));
     setSeenCards([]);
-    setBankroll(1000);
-    setBet(0);
     setDealerHand([]);
     setPlayerHands([]);
     setActiveHand(0);
@@ -434,164 +772,187 @@ export default function App() {
     setRoundBanner(null);
     setBankrollAlert(null);
     setHudOpen(false);
-    setTipOpen(false);
-    setShowPlayTotals(false);
     setCountDecks(6);
     setCountCards(20);
     setGuided(true);
-    setPlayMessage("Saved session reset. Place your chips and deal.");
+    setPlayMessage("Session reset. Select a chip and tap a betting spot.");
+  }
+
+  function resetSavedSession() {
+    window.localStorage.removeItem(STORAGE_KEY);
+    resetBankrollTracking();
+    resetSavedSessionPlayState();
   }
 
   function dealBlackjack() {
-    if (playPhase !== "betting" && playPhase !== "roundOver") return;
+    if (!canBet) return;
 
-    if (bankroll < 5) {
-      showBankrollAlert(
-        "Bankroll Needed",
-        "You do not have enough bankroll to deal a hand. Add bankroll to keep playing."
-      );
+    const activeSeats = SEAT_ORDER.filter((s) => seatBets[s] >= MIN_BET);
+    if (!activeSeats.length) {
+      showBankrollAlert("Place a Bet", `Minimum bet is $${MIN_BET} per hand. Tap a chip, then a betting spot.`);
       return;
     }
-
-    if (bet < 5) {
-      showBankrollAlert(
-        "Place a Bet",
-        "Minimum bet is $5. Tap a chip before you deal."
-      );
-      return;
+    for (const s of activeSeats) {
+      if (seatBets[s] > MAX_BET) {
+        showBankrollAlert("Table Limit", MAX_BET_MSG);
+        return;
+      }
     }
-
-    if (bet > 5000) {
-      showBankrollAlert(
-        "Table Limit",
-        "Maximum bet is $5,000."
-      );
-      return;
-    }
-
-    if (bankroll < bet) {
-      showBankrollAlert(
-        "Not Enough Bankroll",
-        "You do not have enough bankroll for that bet. Lower your bet or add bankroll."
-      );
+    if (totalBet > bankroll) {
+      showBankrollAlert("Not Enough Bankroll", "Lower your bets or add bankroll.");
       return;
     }
 
     setBankrollAlert(null);
     setRoundBanner(null);
-
-    const { drawn, nextShoe } = drawFromPlayShoe(playShoe, 4);
-    const player = [drawn[0], drawn[2]];
-    const dealer = [drawn[1], drawn[3]];
-    const visibleNow = [drawn[0], drawn[2], drawn[1]];
-
-    setTipOpen(false);
     setHudOpen(false);
-    setActiveHand(0);
+
+    const cardsNeeded = activeSeats.length * 2 + 2;
+    const { drawn, nextShoe } = drawFromPlayShoe(playShoe, cardsNeeded);
+    let idx = 0;
+
+    const hands: PlayerHand[] = activeSeats.map((seat) => ({
+      cards: [],
+      bet: seatBets[seat],
+      seatId: seat,
+    }));
+
+    // Round 1: first card to each seat, then dealer up
+    for (const hand of hands) hand.cards.push(drawn[idx++]);
+    const dealer: string[] = [drawn[idx++]];
+
+    // Round 2: second card to each seat, then dealer hole
+    for (const hand of hands) hand.cards.push(drawn[idx++]);
+    dealer.push(drawn[idx++]);
+
+    const visibleNow = [...hands.flatMap((h) => h.cards), dealer[0]];
     setPlayShoe(nextShoe);
     setSeenCards((prev) => [...prev, ...visibleNow]);
-    setBankroll((b) => b - bet);
+    setBankroll((b) => b - totalBet);
     setDealerHand(dealer);
-    setPlayerHands([{ cards: player, bet }]);
+    setPlayerHands(hands);
     setActiveHand(0);
 
-    const playerBJ = isBlackjack(player);
     const dealerBJ = isBlackjack(dealer);
 
-    if (playerBJ || dealerBJ) {
+    if (dealerBJ) {
       const reveal = dealer[1];
       setSeenCards((prev) => [...prev, reveal]);
 
-      let payout = 0;
-      let result = "";
+      let totalReturn = 0;
+      const settled = hands.map((hand) => {
+        const playerBJ = isBlackjack(hand.cards);
+        let payout = 0;
+        let result = "";
+        if (playerBJ) {
+          payout = hand.bet;
+          result = "Push";
+        } else {
+          payout = 0;
+          result = "Dealer Blackjack";
+        }
+        totalReturn += payout;
+        return { ...hand, stood: true, result, payout };
+      });
 
-      if (playerBJ && dealerBJ) {
-        payout = bet;
-        result = "Push. Both you and the dealer have blackjack.";
-        showRoundBannerDelayed({ type: "push", title: "PUSH", subtitle: "Both you and the dealer have blackjack." });
-      } else if (playerBJ) {
-        payout = bet + bet * 1.5;
-        result = "Blackjack. Paid 3:2.";
-        showRoundBannerDelayed({ type: "blackjack", title: "BLACKJACK!", subtitle: `Paid 3:2 • +$${(bet * 1.5).toFixed(0)}` }, 800);
-      } else {
-        payout = 0;
-        result = "Dealer blackjack. Hand over.";
-        showRoundBannerDelayed({ type: "lose", title: "DEALER BLACKJACK", subtitle: `Lost $${bet}` });
-      }
-
-      setBankroll((b) => b + payout);
-      setPlayerHands([{ cards: player, bet, result, payout }]);
+      setBankroll((b) => b + totalReturn);
+      setPlayerHands(settled);
       setPlayPhase("roundOver");
-      setPlayMessage(result);
+
+      const net = totalReturn - totalBet;
+      recordRoundProfitLoss(net);
+      if (net > 0) recordRoundResult("win");
+      else if (net < 0) recordRoundResult("lose");
+      else recordRoundResult("push");
+      setPlayMessage(net > 0 ? `You won $${net}.` : net < 0 ? `You lost $${Math.abs(net)}.` : "Push round.");
+      maybeOpenHudAfterRound();
       return;
     }
 
+    let immediateReturn = 0;
+    const handsAfterDeal = hands.map((hand) => {
+      if (isBlackjack(hand.cards)) {
+        const payout = hand.bet + hand.bet * 1.5;
+        immediateReturn += payout;
+        return { ...hand, stood: true, result: "Blackjack", payout };
+      }
+      return hand;
+    });
+
+    if (immediateReturn > 0) {
+      setBankroll((b) => b + immediateReturn);
+    }
+
+    const firstPlayable = handsAfterDeal.findIndex((h) => !h.result);
+    if (firstPlayable === -1) {
+      setPlayerHands(handsAfterDeal);
+      setPlayPhase("roundOver");
+      const net = immediateReturn - totalBet;
+      recordRoundProfitLoss(net);
+      recordRoundResult("blackjack");
+      setPlayMessage(`Blackjack! +$${net.toFixed(0)} (3:2).`);
+      maybeOpenHudAfterRound();
+      return;
+    }
+
+    setPlayerHands(handsAfterDeal);
+    setActiveHand(firstPlayable);
     setPlayPhase("player");
-    setPlayMessage("Dealer has a hole card. Your move.");
+    setPlayMessage(`Playing ${seatLabel(handsAfterDeal[firstPlayable].seatId)} hand. Your move.`);
   }
 
   function finishHand(updatedHands: PlayerHand[], nextIndex = activeHand + 1) {
-    if (nextIndex < updatedHands.length) {
+    let idx = nextIndex;
+    while (idx < updatedHands.length) {
+      const h = updatedHands[idx];
+      if (!h.stood && !h.busted && !h.result) break;
+      idx++;
+    }
+    if (idx < updatedHands.length) {
       setPlayerHands(updatedHands);
-      setActiveHand(nextIndex);
-      setPlayMessage(`Playing hand ${nextIndex + 1} of ${updatedHands.length}.`);
+      setActiveHand(idx);
+      setPlayMessage(`Playing ${seatLabel(updatedHands[idx].seatId)} hand.`);
       return;
     }
-
     runDealerAndSettle(updatedHands);
   }
 
   function hitPlayHand() {
     if (playPhase !== "player") return;
-
     const { drawn, nextShoe } = drawFromPlayShoe(playShoe, 1);
-    const updated = playerHands.map((h, i) => i === activeHand ? { ...h, cards: [...h.cards, drawn[0]] } : h);
+    const updated = playerHands.map((h, i) => (i === activeHand ? { ...h, cards: [...h.cards, drawn[0]] } : h));
     const hand = updated[activeHand];
-
     setPlayShoe(nextShoe);
     setSeenCards((prev) => [...prev, drawn[0]]);
-
     if (isBust(hand.cards)) {
       hand.busted = true;
       hand.stood = true;
       hand.result = "Bust";
-      setPlayMessage("Bust. Moving to next hand.");
+      setPlayMessage("Bust. Next hand.");
       finishHand(updated);
       return;
     }
-
     if (handValue(hand.cards).total === 21) {
       hand.stood = true;
-      setPlayMessage("21. Standing automatically.");
+      setPlayMessage("21. Standing.");
       finishHand(updated);
       return;
     }
-
     setPlayerHands(updated);
   }
 
   function standPlayHand() {
     if (playPhase !== "player") return;
-    const updated = playerHands.map((h, i) => i === activeHand ? { ...h, stood: true } : h);
+    const updated = playerHands.map((h, i) => (i === activeHand ? { ...h, stood: true } : h));
     finishHand(updated);
   }
 
   function doublePlayHand() {
     if (playPhase !== "player" || !activePlayHand) return;
-
-    if (activePlayHand.cards.length !== 2) {
-      setPlayMessage("Double is only available on your first two cards.");
-      return;
-    }
-
-    if (bankroll < activePlayHand.bet) {
-      setPlayMessage("Not enough bankroll to double.");
-      return;
-    }
-
+    if (activePlayHand.cards.length !== 2) { setPlayMessage("Double on first two cards only."); return; }
+    if (bankroll < activePlayHand.bet) { setPlayMessage("Not enough bankroll to double."); return; }
     const { drawn, nextShoe } = drawFromPlayShoe(playShoe, 1);
     const updated = [...playerHands];
-
     updated[activeHand] = {
       ...activePlayHand,
       cards: [...activePlayHand.cards, drawn[0]],
@@ -599,12 +960,10 @@ export default function App() {
       doubled: true,
       stood: true,
     };
-
     if (isBust(updated[activeHand].cards)) {
       updated[activeHand].busted = true;
       updated[activeHand].result = "Bust";
     }
-
     setBankroll((b) => b - activePlayHand.bet);
     setPlayShoe(nextShoe);
     setSeenCards((prev) => [...prev, drawn[0]]);
@@ -613,42 +972,34 @@ export default function App() {
 
   function splitPlayHand() {
     if (playPhase !== "player" || !activePlayHand) return;
-
-    if (!isPair(activePlayHand.cards)) {
-      setPlayMessage("You can only split matching pairs.");
-      return;
-    }
-
-    if (bankroll < activePlayHand.bet) {
-      setPlayMessage("Not enough bankroll to split.");
-      return;
-    }
-
+    if (!isPair(activePlayHand.cards)) { setPlayMessage("Split matching pairs only."); return; }
+    if (bankroll < activePlayHand.bet) { setPlayMessage("Not enough bankroll to split."); return; }
     const { drawn, nextShoe } = drawFromPlayShoe(playShoe, 2);
-    const first: PlayerHand = { cards: [activePlayHand.cards[0], drawn[0]], bet: activePlayHand.bet };
-    const second: PlayerHand = { cards: [activePlayHand.cards[1], drawn[1]], bet: activePlayHand.bet };
+    let first: PlayerHand = { cards: [activePlayHand.cards[0], drawn[0]], bet: activePlayHand.bet, seatId: activePlayHand.seatId };
+    let second: PlayerHand = { cards: [activePlayHand.cards[1], drawn[1]], bet: activePlayHand.bet, seatId: activePlayHand.seatId };
+    if (handValue(first.cards).total === 21 && !isBlackjack(first.cards)) first = { ...first, stood: true };
+    if (handValue(second.cards).total === 21 && !isBlackjack(second.cards)) second = { ...second, stood: true };
     const updated = [...playerHands];
     updated.splice(activeHand, 1, first, second);
-
     setBankroll((b) => b - activePlayHand.bet);
     setPlayShoe(nextShoe);
     setSeenCards((prev) => [...prev, ...drawn]);
+    if (first.stood && !first.busted) {
+      finishHand(updated);
+      return;
+    }
     setPlayerHands(updated);
     setPlayMessage("Split. Playing first hand.");
   }
 
   function runDealerAndSettle(hands: PlayerHand[]) {
     setPlayPhase("dealer");
-
     let dealer = [...dealerHand];
     let workingShoe = [...playShoe];
     const newlySeen: string[] = [];
-
     if (dealer[1]) newlySeen.push(dealer[1]);
-
-    const anyLiveHand = hands.some((h) => !isBust(h.cards));
-
-    if (anyLiveHand) {
+    const needsDealerPlay = hands.some((h) => !h.result && !isBust(h.cards));
+    if (needsDealerPlay) {
       while (shouldDealerHit(dealer, true)) {
         const draw = drawFromPlayShoe(workingShoe, 1);
         dealer = [...dealer, draw.drawn[0]];
@@ -656,661 +1007,860 @@ export default function App() {
         newlySeen.push(draw.drawn[0]);
       }
     }
-
     const dealerTotal = handValue(dealer).total;
     const dealerBust = isBust(dealer);
-    let totalReturn = 0;
-
+    let additionalReturn = 0;
     const settled = hands.map((hand) => {
-      const playerTotal = handValue(hand.cards).total;
-      let result = "";
-      let payout = 0;
-
-      if (isBust(hand.cards)) {
-        result = "Bust";
-      } else if (dealerBust) {
-        result = "Win";
-        payout = hand.bet * 2;
-      } else if (playerTotal > dealerTotal) {
-        result = "Win";
-        payout = hand.bet * 2;
-      } else if (playerTotal < dealerTotal) {
-        result = "Lose";
-      } else {
-        result = "Push";
-        payout = hand.bet;
+      if (hand.result === "Blackjack") return hand;
+      let result = hand.result || "";
+      let payout = hand.payout ?? 0;
+      if (hand.result === "Bust" || isBust(hand.cards)) {
+        return { ...hand, result: "Bust", payout: 0 };
       }
-
-      totalReturn += payout;
+      if (dealerBust) { result = "Win"; payout = hand.bet * 2; }
+      else if (handValue(hand.cards).total > dealerTotal) { result = "Win"; payout = hand.bet * 2; }
+      else if (handValue(hand.cards).total < dealerTotal) { result = "Lose"; payout = 0; }
+      else { result = "Push"; payout = hand.bet; }
+      additionalReturn += payout;
       return { ...hand, result, payout };
     });
-
     setDealerHand(dealer);
     setPlayShoe(workingShoe);
     setSeenCards((prev) => [...prev, ...newlySeen]);
     setPlayerHands(settled);
-    setBankroll((b) => b + totalReturn);
+    setBankroll((b) => b + additionalReturn);
     setPlayPhase("roundOver");
-
-    const totalBet = hands.reduce((sum, h) => sum + h.bet, 0);
-    const net = totalReturn - totalBet;
-
-    if (net > 0) {
-      showRoundBannerDelayed({ type: "win", title: "YOU WIN", subtitle: `+$${net}` });
-    } else if (net < 0) {
-      showRoundBannerDelayed({ type: "lose", title: "DEALER WINS", subtitle: `-$${Math.abs(net)}` });
-    } else {
-      showRoundBannerDelayed({ type: "push", title: "PUSH", subtitle: "Bet returned." });
-    }
-
+    const totalBetRound = hands.reduce((sum, h) => sum + h.bet, 0);
+    const totalReturn = settled.reduce((sum, h) => sum + (h.payout || 0), 0);
+    const net = totalReturn - totalBetRound;
+    recordRoundProfitLoss(net);
+    if (net > 0) recordRoundResult("win");
+    else if (net < 0) recordRoundResult("lose");
+    else recordRoundResult("push");
     setPlayMessage(net > 0 ? `You won $${net}.` : net < 0 ? `You lost $${Math.abs(net)}.` : "Push round.");
+    maybeOpenHudAfterRound();
   }
 
-  const dealerVisibleHand = playPhase === "player" && dealerHand.length > 1 ? [dealerHand[0]] : dealerHand;
+  function navigate(s: MainScreen) {
+    if (s === "play" && !playShoe.length) setPlayShoe(buildShoe(playDecks));
+    setScreen(s);
+  }
+
+  function goToScreen(s: AppScreen) {
+    setScreen(s);
+  }
+
+  function renderBetSpot(seat: SeatId) {
+    const seatHands = handsBySeat[seat];
+    const hasCards = seatHands.length > 0;
+    const inActiveRound = playPhase === "player" || playPhase === "dealer";
+    const seatHandBet = hasCards ? seatHands.reduce((sum, h) => sum + h.bet, 0) : 0;
+    const bet = inActiveRound ? seatHandBet : seatBets[seat];
+    const chipValue = bet > 0 ? seatLastChip[seat] : null;
+    const isActive = playPhase === "player" && activeSeatId === seat;
+
+    return (
+      <div
+        key={seat}
+        className={`bet-spot ${bet > 0 ? "has-bet" : ""} ${isActive ? "active-seat" : ""}`}
+        onClick={() => canBet && placeBetOnSeat(seat)}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => e.key === "Enter" && canBet && placeBetOnSeat(seat)}
+      >
+        <div className="bet-spot-cards">
+          {hasCards ? (
+            <div className={`seat-split-hands ${seatHands.length > 1 ? "is-split" : ""}`}>
+              {seatHands.map((hand, hi) => {
+                const globalIdx = playerHands.indexOf(hand);
+                const isHandActive = playPhase === "player" && globalIdx === activeHand;
+                const popupLabel = handResultLabel(hand.result);
+                const isNaturalBJ = hand.result === "Blackjack";
+                return (
+                  <div
+                    key={`${seat}-${hi}-${globalIdx}`}
+                    className={`split-hand ${isHandActive ? "player-hand-active" : ""} ${isNaturalBJ ? "hand-blackjack-glow" : ""}`}
+                  >
+                    {popupLabel && playPhase !== "betting" && (
+                      <div className={`hand-result-popup ${handResultClass(hand.result)}`}>
+                        {popupLabel}
+                      </div>
+                    )}
+                    <div className="cards-fan" style={{ ["--card-count" as string]: hand.cards.length }}>
+                      {hand.cards.map((c, ci) => (
+                        <div key={`${c}-${ci}`} className="cards-fan-card" style={{ ["--card-index" as string]: ci }}>
+                          <PlayingCard value={c} mini cardStyle={playSettings.cardStyle} />
+                        </div>
+                      ))}
+                    </div>
+                    {showPlayTotals && <span className="bet-spot-amount">{handValue(hand.cards).total}</span>}
+                  </div>
+                );
+              })}
+            </div>
+          ) : null}
+        </div>
+        <div className={`bet-spot-circle ${bet > 0 ? "has-chip" : ""}`}>
+          {bet > 0 && <BetChipStack amount={bet} chipValue={chipValue} />}
+        </div>
+      </div>
+    );
+  }
+
+  /* ─── JSX ─── */
 
   return (
-    <main className={`app ${screen === "play" ? "play-app" : ""}`}>
-      <div className="bg" />
+    <main className={`app ${screen === "play" ? "app-play" : ""}`}>
+      <div className="app-bg" />
 
-      <header className={`top ${screen === "play" ? "play-top" : ""}`}>
-        <button onClick={() => setScreen("home")} className="brand brand-with-logo">
-          <Logo compact />
-          <span>
-            Blackjack Edge
-            <em>Master The Game</em>
-          </span>
-        </button>
-
-        {screen.startsWith("basic") && (
-          <button onClick={() => setStrategyOpen(true)} className="small-btn">Strategy Card</button>
-        )}
-
-
-      </header>
-
+      {/* HOME */}
       {screen === "home" && (
-        <section className="home compact-home v04-home">
-          <div className="home-title-block v04-home-title">
-            <span className="eyebrow">Blackjack Edge</span>
-            <h1>Play. Train. Count.</h1>
-            <p className="home-subtitle">Perfect strategy, professional card counting, and live shoe practice in one premium blackjack app.</p>
+        <section className="screen home-screen">
+          <HomeHeader onSettings={() => setAppSettingsOpen(true)} />
+          <div className="home-hero">
+            <LogoBadge />
+            <p className="home-tagline">Play. Train. Count.</p>
+            <p className="home-subtext">
+              Master blackjack strategy, card counting, and live shoe play in one premium casino trainer.
+            </p>
           </div>
+          <div className="home-features">
+            <FeatureCard iconSrc={HOME_ICON_MAP.play} title="Play Blackjack" subtitle="Live shoe practice with multi-hand betting, splits, doubles, and 3:2 blackjack." action="Enter Table" variant="play" onClick={() => navigate("play")} />
+            <FeatureCard iconSrc={HOME_ICON_MAP.trainer} title="Trainer" subtitle="Basic strategy drills and Hi-Lo card counting academy." action="Start Training" variant="trainer" onClick={() => navigate("trainer")} />
+            <FeatureCard iconSrc={HOME_ICON_MAP.stats} title="Stats" subtitle="Track your sessions, accuracy, and bankroll performance." action="View Stats" variant="stats" onClick={() => navigate("stats")} />
+            <FeatureCard iconSrc={HOME_ICON_MAP.vault} title="Vault" subtitle="Strategy cards, rules guides, and premium references." action="Open Vault" variant="vault" onClick={() => navigate("vault")} />
+          </div>
+        </section>
+      )}
 
-          <div className="home-actions home-actions-three v04-mode-grid">
-            <button onClick={openPlay} className="big-card play-card mode-card mode-play">
-              <div className="mode-art premium-mode-art">
-                <img src="/mode-play-blackjack.png" alt="" />
+      {/* PLAY */}
+      {screen === "play" && (
+        <section className={`screen screen-play ${playSettings.cardStyle === "classic" ? "card-style-classic" : ""}`}>
+          <div className="play-layout">
+            <header className="play-hud-bar">
+              <button className="btn-ghost play-hud-exit" onClick={() => setExitConfirmOpen(true)}>Exit</button>
+              <div className="play-hud-stats">
+                <div className="hud-stat hud-stat-accent">
+                  <strong>${bankroll.toLocaleString()}</strong>
+                  <span>Bankroll</span>
+                </div>
+                <div className="hud-stat">
+                  <strong>${totalBet.toLocaleString()}</strong>
+                  <span>Total Bet</span>
+                </div>
               </div>
-              <strong>Play Blackjack</strong>
-              <span>Live shoe practice with betting, splits, doubles, H17, and 3:2 blackjack.</span>
+              <div className="play-hud-actions">
+                <button className="btn-ghost" onClick={() => setStrategyOpen(true)} aria-label="Strategy card">Strategy Card</button>
+                {playSettings.showBasicStrategyTips && (
+                  <button className={`btn-ghost ${playTipOpen ? "active" : ""}`} onClick={() => setPlayTipOpen((v) => !v)} aria-label="Basic strategy tip">Tip</button>
+                )}
+                <button className="btn-ghost" onClick={() => setHudOpen(true)} aria-label="Open HUD">HUD</button>
+                <button className="btn-ghost" onClick={() => setPlaySettingsOpen(true)} aria-label="Table Settings"><Settings2 size={14} /></button>
+              </div>
+            </header>
+
+            <div className="play-table-wrap">
+              <div className={`casino-table ${playSettings.tableGlow ? "table-glow-on" : "table-glow-off"}`}>
+                <div className="table-rules" aria-label="Table rules">
+                  <span>H17</span>
+                  <span className="table-rules-sep">·</span>
+                  <span>3:2</span>
+                  <span className="table-rules-sep">·</span>
+                  <span>DAS</span>
+                  <span className="table-rules-sep">·</span>
+                  <span>MIN ${MIN_BET}</span>
+                  <span className="table-rules-sep">·</span>
+                  <span>MAX $250K</span>
+                </div>
+                <div className="cards-remaining-box" aria-label="Cards remaining">
+                  <span className="cards-remaining-label">CARDS REMAINING</span>
+                  <strong className="cards-remaining-count">{playShoe.length}</strong>
+                </div>
+
+                <div className="dealer-zone">
+                  <span className="zone-label">Dealer</span>
+                  <div className="cards-fan dealer-cards-fan" style={{ ["--card-count" as string]: dealerVisibleHand.length + (playPhase === "player" && dealerHand[1] ? 1 : 0) }}>
+                    {dealerHand.length ? (
+                      <>
+                        {dealerVisibleHand.map((c, i) => (
+                          <div key={`${c}-${i}`} className="cards-fan-card" style={{ ["--card-index" as string]: i }}>
+                            <PlayingCard value={c} cardStyle={playSettings.cardStyle} />
+                          </div>
+                        ))}
+                        {playPhase === "player" && dealerHand[1] && (
+                          <div className="cards-fan-card" style={{ ["--card-index" as string]: dealerVisibleHand.length }}>
+                            <PlayingCard value="back" faceDown cardStyle={playSettings.cardStyle} />
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="cards-fan-card" style={{ ["--card-index" as string]: 0 }}>
+                        <PlayingCard value="back" faceDown cardStyle={playSettings.cardStyle} />
+                      </div>
+                    )}
+                  </div>
+                  {showPlayTotals && dealerHand.length > 0 && (
+                    <span className="hand-total">
+                      {playPhase === "player" ? handValue([dealerHand[0]]).total : handValue(dealerHand).total}
+                    </span>
+                  )}
+                </div>
+
+                <div className="betting-spots">
+                  {DISPLAY_SEATS.map(renderBetSpot)}
+                </div>
+
+                <div className="table-gold-rail" />
+              </div>
+            </div>
+
+            <div className="play-controls">
+              <div className="play-controls-row">
+                <div className="play-main-controls">
+                  <ChipTray selectedChip={selectedChip} onSelectChip={setSelectedChip} disabled={!canBet} />
+                  <div className="bet-actions">
+                    <button className="btn-secondary" onClick={clearBet} disabled={!canBet}>Clear Bet</button>
+                    <button className="btn-primary" onClick={dealBlackjack} disabled={!canBet}>Deal</button>
+                  </div>
+                  <ActionButtons
+                    canHit={canHit}
+                    canStand={canAct}
+                    canDouble={canDouble}
+                    canSplit={canSplit}
+                    canSurrender={false}
+                    onHit={hitPlayHand}
+                    onStand={standPlayHand}
+                    onDouble={doublePlayHand}
+                    onSplit={splitPlayHand}
+                  />
+                  <p className="play-message">{playMessage}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* TRAINER HUB */}
+      {screen === "trainer" && (
+        <section className="screen panel-screen">
+          <div className="panel-header">
+            <span className="eyebrow">Training Academy</span>
+            <h1>Sharpen Your Edge</h1>
+            <p className="text-muted">Build instinct through structured drills and guided lessons.</p>
+          </div>
+          <div className="trainer-grid trainer-grid-two">
+            <button className="trainer-card" onClick={() => goToScreen("basic")}>
+              <strong>Basic Strategy Academy</strong>
+              <span>Hard, soft, and pair decisions against every dealer upcard.</span>
+              <em>Enter Academy</em>
             </button>
-
-            <button onClick={() => setScreen("basic")} className="big-card mode-card mode-bs">
-              <div className="mode-art premium-mode-art">
-                <img src="/mode-basic-strategy.png" alt="" />
-              </div>
-              <strong>Basic Strategy</strong>
-              <span>Drill perfect decisions and open the strategy card anytime.</span>
-            </button>
-
-            <button onClick={() => setScreen("counting")} className="big-card mode-card mode-cc">
-              <div className="mode-art premium-mode-art">
-                <img src="/mode-card-counting.png" alt="" />
-              </div>
-              <strong>Card Counting</strong>
-              <span>Practice Hi-Lo recognition, running count, and true count.</span>
+            <button className="trainer-card" onClick={() => goToScreen("countLearn")}>
+              <strong>Card Counting Academy</strong>
+              <span>Hi-Lo values, running/true count, and deck estimation drills.</span>
+              <em>Enter Academy</em>
             </button>
           </div>
         </section>
       )}
 
+      {/* BASIC ACADEMY */}
       {screen === "basic" && (
-        <section className="panel">
-          <span className="eyebrow">Basic Strategy</span>
-          <h1>Perfect decisions.</h1>
-          <p>Train the mathematically correct play until it becomes automatic.</p>
-
-          <button className="primary" onClick={startBasic}>Start Drill</button>
-          <button className="secondary" onClick={() => setStrategyOpen(true)}>Open Strategy Card</button>
-
+        <section className="screen panel-screen">
+          <button className="back-link" onClick={() => setScreen("trainer")}>← Trainer</button>
+          <div className="panel-header">
+            <span className="eyebrow">Basic Strategy Academy</span>
+            <h1>Perfect Decisions</h1>
+            <p className="text-muted">Train until the correct play is automatic.</p>
+          </div>
+          <div className="action-plan">
+            <p><strong>Hard totals:</strong> Stand, hit, double, or surrender based on your total vs dealer upcard.</p>
+            <p><strong>Soft totals:</strong> Hands with an Ace counted as 11 — often double or stand.</p>
+            <p><strong>Pairs:</strong> Split matching ranks when the math favors two hands.</p>
+            <p><strong>Dealer upcards:</strong> 2 through Ace drive every decision on the strategy card.</p>
+            <p><strong>Actions:</strong> Hit, Stand, Double, Split, Surrender when allowed.</p>
+          </div>
+          <div className="academy-actions">
+            <button className="btn-primary" onClick={startBasic}>Start Drill</button>
+            <button className="btn-secondary" onClick={() => setStrategyOpen(true)}>Strategy Card</button>
+          </div>
           <div className="selector">
             {[10, 25, 50].map((n) => (
               <button key={n} className={roundSize === n ? "selected" : ""} onClick={() => setRoundSize(n)}>{n} hands</button>
             ))}
           </div>
-
-          <button className="secondary help-inline-btn" onClick={() => setHelpOpen("basic")}><HelpCircle size={17} /> How This Works</button>
-
+          <button className="btn-secondary" onClick={() => setHelpOpen("basic")}><HelpCircle size={16} /> How This Works</button>
         </section>
       )}
 
+      {/* BASIC DRILL */}
       {screen === "basicDrill" && currentHand && (
-        <section className="drill">
-          <div className="table">
-            <div className="dealer-zone">
-              <span>Dealer</span>
+        <section className="screen drill-screen">
+          <div className="drill-header">
+            <button className="drill-exit-btn" onClick={() => setDrillExitOpen("basic")}>Exit</button>
+            <div className="drill-header-actions">
+              <button className="btn-ghost" onClick={() => setBasicDrillTipOpen((v) => !v)}>Tip</button>
+              <button className="btn-ghost" onClick={() => setStrategyOpen(true)}>Strategy Card</button>
+            </div>
+          </div>
+          <div className="drill-table">
+            <div>
+              <span className="zone-label">Dealer</span>
               <PlayingCard value={currentHand.dealer} />
             </div>
-
-            <div className="player-zone">
-              <span>Your hand</span>
+            <div>
+              <span className="zone-label">Your Hand</span>
               <h2>{handLabel(currentHand)}</h2>
-              <div className="cards">
+              <div className="cards-row">
                 {currentHand.player.map((c, i) => <PlayingCard key={`${c}-${i}`} value={c} />)}
               </div>
             </div>
           </div>
-
-          <div className="timer"><Clock size={18} /> {elapsed.toFixed(2)}s</div>
-
-          <div className="moves">
-            {(["H", "S", "D", "P", "R"] as Move[]).map((m) => (
-              <button key={m} className={`move ${m}`} onClick={() => chooseMove(m)}>
-                {moveNames[m]}<span>{m}</span>
+          <div className="timer-bar"><Clock size={16} /> {elapsed.toFixed(2)}s</div>
+          <div className="drill-moves">
+            {(["R", "P", "D", "S", "H"] as Move[]).map((m) => (
+              <button key={m} className={`action-btn ${m === "H" ? "hit" : m === "S" ? "stand" : m === "D" ? "double" : m === "P" ? "split" : "surrender"}`} onClick={() => chooseMove(m)}>
+                {moveNames[m]}
               </button>
             ))}
           </div>
-
-          <button className="floating-help" onClick={() => setHelpOpen("basic")}><HelpCircle size={18} /> Tip</button>
+          <div className="feedback-bar">{feedback}</div>
         </section>
       )}
 
+      {/* BASIC RESULTS */}
       {screen === "basicResults" && (
-        <section className="panel">
-          <span className="eyebrow">Action Plan</span>
-          <h1>{accuracy >= 90 ? "Strong round." : "Good reps."}</h1>
-
-          <div className="stats">
+        <section className="screen panel-screen">
+          <div className="panel-header">
+            <span className="eyebrow">Drill Complete</span>
+            <h1>{accuracy >= 90 ? "Strong Round" : "Good Reps"}</h1>
+          </div>
+          <div className="drill-stats">
             <div><strong>{accuracy}%</strong><span>Accuracy</span></div>
             <div><strong>{correct}/{roundSize}</strong><span>Correct</span></div>
-            <div><strong>{avgTime.toFixed(2)}s</strong><span>Avg time</span></div>
+            <div><strong>{avgTime.toFixed(2)}s</strong><span>Avg Time</span></div>
           </div>
-
           <div className="action-plan">
-            <p>• Under 90%? Run another 10-hand drill before moving on.</p>
-            <p>• Review any missed hands below and compare your choice to the correct Basic Strategy play.</p>
-            <p>• Tap Strategy Card anytime to study the full chart.</p>
+            <p>• Under 90%? Run another drill before moving on.</p>
+            <p>• Review missed hands below.</p>
+            <p>• Open the Strategy Card anytime to study.</p>
           </div>
-
           <div className="result-actions">
-            <button className="primary" onClick={startBasic}><RotateCcw size={18} /> Run Again</button>
-            <button className="secondary" onClick={() => setShowBasicReview((value) => !value)}>
-              {showBasicReview ? "Hide Answer Review" : "Show Answer Review"}
+            <button className="btn-primary" onClick={startBasic}><RotateCcw size={16} /> Run Again</button>
+            <button className="btn-secondary" onClick={() => setShowBasicReview((v) => !v)}>
+              {showBasicReview ? "Hide Review" : "Show Review"}
             </button>
           </div>
-
           {showBasicReview && (
             <div className="answer-review">
-              {results.map((result, index) => {
-                const isCorrect = result.choice === result.hand.answer;
-
+              {results.map((r, i) => {
+                const ok = r.choice === r.hand.answer;
                 return (
-                  <div key={`${result.hand.player.join("-")}-${result.hand.dealer}-${index}`} className={isCorrect ? "review-card correct" : "review-card wrong"}>
-                    <div className="review-top">
-                      <strong>Hand {index + 1}</strong>
-                      <span>{isCorrect ? "Correct" : "Wrong"}</span>
-                    </div>
-
-                    <p>
-                      You had <b>{result.hand.player.join(" ")}</b> against dealer <b>{result.hand.dealer}</b>.
-                    </p>
-
+                  <div key={i} className={`review-card ${ok ? "correct" : "wrong"}`}>
+                    <div className="review-top"><strong>Hand {i + 1}</strong><span>{ok ? "Correct" : "Wrong"}</span></div>
+                    <p>You had <b>{r.hand.player.join(" ")}</b> vs dealer <b>{r.hand.dealer}</b></p>
                     <div className="review-grid">
-                      <div>
-                        <small>Your play</small>
-                        <strong>{moveNames[result.choice]}</strong>
-                      </div>
-
-                      <div>
-                        <small>Basic Strategy</small>
-                        <strong>{moveNames[result.hand.answer]}</strong>
-                      </div>
-
-                      <div>
-                        <small>Time</small>
-                        <strong>{result.seconds.toFixed(2)}s</strong>
-                      </div>
+                      <div><small>Your Play</small><strong>{moveNames[r.choice]}</strong></div>
+                      <div><small>Correct</small><strong>{moveNames[r.hand.answer]}</strong></div>
+                      <div><small>Time</small><strong>{r.seconds.toFixed(2)}s</strong></div>
                     </div>
-
-                    {!isCorrect && (
-                      <p className="review-note">
-                        Basic Strategy says to <b>{moveNames[result.hand.answer]}</b> on this exact hand.
-                      </p>
-                    )}
                   </div>
                 );
               })}
             </div>
           )}
+          <button className="btn-secondary" onClick={() => setScreen("trainer")}>Back to Trainer</button>
         </section>
       )}
 
-      {screen === "counting" && (
-        <section className="panel">
-          <span className="eyebrow">Card Counting</span>
-          <h1>Train Hi-Lo.</h1>
-          <p>Start with the basics or jump straight into card recognition.</p>
-
-          <button className="primary" onClick={startCounting}>Start Swipe Drill</button>
-          <button className="secondary" onClick={() => setScreen("countLearn")}>Learn the Basics</button>
-
+      {/* COUNTING ACADEMY */}
+      {screen === "countLearn" && (
+        <section className="screen panel-screen">
+          <button className="back-link" onClick={() => setScreen("trainer")}>← Trainer</button>
+          <div className="panel-header">
+            <span className="eyebrow">Card Counting Academy</span>
+            <h1>Track the Shoe</h1>
+            <p className="text-muted">Hi-Lo assigns a value to every card. Keep a running total.</p>
+          </div>
+          <div className="academy-actions">
+            <button className="btn-primary" onClick={startCounting}>Start Drill</button>
+            <button className="btn-secondary" onClick={() => setCountHowItWorksOpen(true)}><HelpCircle size={16} /> How It Works</button>
+          </div>
           <div className="selector">
             {[10, 20, 40, 60].map((n) => (
               <button key={n} className={countCards === n ? "selected" : ""} onClick={() => setCountCards(n)}>{n} cards</button>
             ))}
           </div>
-
-          <div className="cc-deck-block">
-            <span className="mini-label">Decks in shoe</span>
-            <div className="selector cc-deck-selector">
-              {[1, 2, 4, 6].map((n) => (
-                <button key={n} className={countDecks === n ? "selected" : ""} onClick={() => setCountDecks(n)}>
-                  {n} Deck{n > 1 ? "s" : ""}
-                </button>
-              ))}
-            </div>
+          <div className="selector">
+            {[1, 2, 4, 6].map((n) => (
+              <button key={n} className={countDecks === n ? "selected" : ""} onClick={() => setCountDecks(n)}>{n} Deck{n > 1 ? "s" : ""}</button>
+            ))}
           </div>
-
           <label className="toggle">
-            <input type="checkbox" checked={guided} onChange={(e) => setGuided(e.target.checked)} /> Guided mode: show running count
+            <input type="checkbox" checked={guided} onChange={(e) => setGuided(e.target.checked)} />
+            Guided mode: show running count
           </label>
-
-          <button className="secondary help-inline-btn" onClick={() => setHelpOpen("counting")}><HelpCircle size={17} /> Counting Help</button>
         </section>
       )}
 
-      {screen === "countLearn" && (
-        <section className="panel learn-panel">
-          <span className="eyebrow">Counting Basics</span>
-          <h1>You are tracking the shoe.</h1>
-          <p className="text">Card counting is not memorizing every card. You are keeping a simple score that estimates whether the remaining deck is rich in high cards or low cards.</p>
-
-          <div className="lesson-stack">
-            <div className="lesson-card plus">
-              <strong>Low cards leaving is good.</strong>
-              <span>2 • 3 • 4 • 5 • 6</span>
-              <em>+1</em>
-              <p>When low cards leave the shoe, more 10s and Aces remain. That helps blackjacks, doubles, and dealer busts.</p>
-            </div>
-
-            <div className="lesson-card neutral">
-              <strong>Middle cards are neutral.</strong>
-              <span>7 • 8 • 9</span>
-              <em>0</em>
-              <p>These cards do not strongly shift the shoe in either direction.</p>
-            </div>
-
-            <div className="lesson-card minus">
-              <strong>High cards leaving is bad.</strong>
-              <span>10 • J • Q • K • A</span>
-              <em>-1</em>
-              <p>When high cards leave the shoe, fewer premium cards remain for the player.</p>
-            </div>
-          </div>
-
-          <div className="action-plan">
-            <p><strong>Running count:</strong> the live total as cards are seen.</p>
-            <p><strong>True count:</strong> running count divided by decks remaining.</p>
-            <p><strong>Goal:</strong> keep the count in your head while cards move quickly.</p>
-          </div>
-
-          <button className="primary" onClick={startCounting}>Start Swipe Drill</button>
-        </section>
-      )}
-
+      {/* COUNT DRILL */}
       {screen === "countDrill" && (
-        <section className="drill">
-          <div className="stats">
+        <section className="screen drill-screen">
+          <div className="drill-header">
+            <button className="drill-exit-btn" onClick={() => setDrillExitOpen("count")}>Exit</button>
+          </div>
+          <div className="drill-stats">
             <div><strong>{dealt.length}/{countCards}</strong><span>Cards</span></div>
             <div><strong>{dealt.length ? Math.round((countCorrect / dealt.length) * 100) : 0}%</strong><span>Recognition</span></div>
-            <div><strong>{(avg(swipeTimes) / 1000).toFixed(2)}s</strong><span>Avg speed</span></div>
+            <div><strong>{(avg(swipeTimes) / 1000).toFixed(2)}s</strong><span>Avg Speed</span></div>
           </div>
-
-          {guided && countCard && <div className="running">Running Count: <strong>{finalRunning >= 0 ? "+" : ""}{finalRunning}</strong></div>}
-
-          <div className="count-table">
-            {countCard ? <PlayingCard value={countCard} /> : <div className="complete">Drill Complete</div>}
-            <div className="hint-row"><span>← -1</span><span>↑ 0</span><span>+1 →</span></div>
+          {guided && countCard && (
+            <div className="running-count">Running Count: <strong>{finalRunning >= 0 ? "+" : ""}{finalRunning}</strong></div>
+          )}
+          <div className="drill-table">
+            {countCard ? <PlayingCard value={countCard} /> : <strong style={{ color: "var(--gold)", fontSize: 24 }}>Drill Complete</strong>}
+            {countCard && <div className="count-hint"><span>← -1</span><span>0</span><span>+1 →</span></div>}
           </div>
-
           {countCard ? (
             <div className="swipe-buttons">
-              <button onClick={() => chooseCount(-1)}><ChevronLeft /> -1</button>
-              <button onClick={() => chooseCount(0)}>↑ 0</button>
-              <button onClick={() => chooseCount(1)}>+1 <ChevronRight /></button>
+              <button onClick={() => chooseCount(-1)}><ChevronLeft size={16} /> -1</button>
+              <button onClick={() => chooseCount(0)}>0</button>
+              <button onClick={() => chooseCount(1)}>+1 <ChevronRight size={16} /></button>
             </div>
           ) : (
-            <div className="panel compact final-count-panel">
-              <h2>Final count quiz</h2>
-              <p>{countDecks}-deck shoe • Decks remaining: {decksRemaining.toFixed(1)}</p>
-              <p className="text">Enter your running count and true count before revealing the answer.</p>
-
-              <input
-                placeholder="Running count"
-                value={runningGuess}
-                onChange={(e) => setRunningGuess(e.target.value)}
-              />
-
-              <input
-                placeholder="True count"
-                value={trueGuess}
-                onChange={(e) => setTrueGuess(e.target.value)}
-              />
-
-              <button className="primary" onClick={() => setCountSubmitted(true)}>
-                Check My Count
-              </button>
-
+            <div className="glass-panel" style={{ padding: 16, display: "flex", flexDirection: "column", gap: 10 }}>
+              <h2>Final Count Quiz</h2>
+              <p className="text-muted">{countDecks}-deck shoe • Decks remaining: {decksRemaining.toFixed(1)}</p>
+              <input className="form-input" placeholder="Running count" value={runningGuess} onChange={(e) => setRunningGuess(e.target.value)} />
+              <input className="form-input" placeholder="True count" value={trueGuess} onChange={(e) => setTrueGuess(e.target.value)} />
+              <button className="btn-primary" onClick={() => setCountSubmitted(true)}>Check My Count</button>
               {countSubmitted && (
                 <div className="count-grade">
-                  <div className={runningGuessIsCorrect ? "grade-card correct" : "grade-card wrong"}>
-                    <small>Running Count</small>
-                    <strong>{runningGuessIsCorrect ? "Correct" : "Wrong"}</strong>
-                    <span>Your answer: {runningGuess || "blank"}</span>
-                    <span>Actual: {finalRunning >= 0 ? "+" : ""}{finalRunning}</span>
+                  <div className={`grade-card ${runningGuessIsCorrect ? "correct" : "wrong"}`}>
+                    <small>Running Count</small><strong>{runningGuessIsCorrect ? "Correct" : "Wrong"}</strong>
+                    <span>Yours: {runningGuess || "—"}</span><span>Actual: {finalRunning >= 0 ? "+" : ""}{finalRunning}</span>
                   </div>
-
-                  <div className={trueGuessIsCorrect ? "grade-card correct" : "grade-card wrong"}>
-                    <small>True Count</small>
-                    <strong>{trueGuessIsCorrect ? "Correct" : "Wrong"}</strong>
-                    <span>Your answer: {trueGuess || "blank"}</span>
-                    <span>Actual: {finalTrue >= 0 ? "+" : ""}{finalTrue.toFixed(1)}</span>
+                  <div className={`grade-card ${trueGuessIsCorrect ? "correct" : "wrong"}`}>
+                    <small>True Count</small><strong>{trueGuessIsCorrect ? "Correct" : "Wrong"}</strong>
+                    <span>Yours: {trueGuess || "—"}</span><span>Actual: {finalTrue >= 0 ? "+" : ""}{finalTrue.toFixed(1)}</span>
                   </div>
                 </div>
               )}
-
-              <div className="count-complete-actions">
-                <button className="primary" onClick={reDrillSameCountingCards}>Re-Drill Same Cards</button>
-                <button className="secondary" onClick={() => setScreen("counting")}>Change Drill Settings</button>
-              </div>
+              <button className="btn-primary" onClick={reDrillSameCountingCards}>Re-Drill Same Cards</button>
+              <button className="btn-secondary" onClick={() => setScreen("countLearn")}>Back to Academy</button>
             </div>
           )}
-
-          <button className="floating-help" onClick={() => setHelpOpen("counting")}><HelpCircle size={18} /> Help</button>
+          <div className="feedback-bar">{countFeedback}</div>
         </section>
       )}
 
-      {screen === "play" && (
-        <section className="play-screen">
-          <header className="play-top-hud">
-            <button className="play-exit-button" onClick={() => setExitConfirmOpen(true)}>Exit</button>
-            <div className="play-hud money-hud">
-              <div className="bankroll-box"><strong>${bankroll.toLocaleString()}</strong><span>Bankroll</span></div>
-              <div className="bet-box"><strong>${bet.toLocaleString()}</strong><span>Total Bet</span></div>
-              <div className="cards-left-box">
-                <strong>{playShoe.length.toLocaleString()}</strong>
-                <span>Cards Left</span>
-              </div>
-            </div>
-          </header>
-
-          <div className="play-table-zone table">
-            <div className="table-props" aria-label="Table rules">
-              <span>H17</span>
-              <span>3:2</span>
-              <span>DAS</span>
-            </div>
-
-            <div className="table-shoe" aria-hidden="true">
-              <span>Shoe</span>
-              <small>{playDecks} Deck{playDecks > 1 ? "s" : ""}</small>
-            </div>
-
-            <div className="table-watermark" aria-hidden="true">BLACKJACK EDGE</div>
-            <div className="insurance-arc" aria-hidden="true" />
-
-            <div className="dealer-area dealer-zone">
-              <span>Dealer</span>
-              <div className="cards">
-                {dealerHand.length ? (
-                  <>
-                    {dealerVisibleHand.map((card, i) => <PlayingCard key={`${card}-${i}`} value={card} />)}
-                    {playPhase === "player" && dealerHand[1] && <PlayingCard value="back" faceDown />}
-                  </>
-                ) : <PlayingCard value="back" faceDown />}
-              </div>
-              {showPlayTotals && (
-                <h2>{dealerHand.length ? (playPhase === "player" ? handValue([dealerHand[0]]).total : handValue(dealerHand).total) : ""}</h2>
-              )}
-            </div>
-
-            <div className="player-area player-zone play-player-zone">
-              <div className="split-hands">
-                {playerHands.length ? playerHands.map((hand, index) => (
-                  <div key={index} className={index === activeHand && playPhase === "player" ? "split-hand active" : "split-hand"}>
-                    <small className="hand-bet-pill">${hand.bet}</small>
-                    <div className="cards">
-                      {hand.cards.map((card, i) => <PlayingCard key={`${card}-${i}`} value={card} />)}
-                    </div>
-                    {showPlayTotals && <strong>{handValue(hand.cards).total}</strong>}
-                    {hand.result && <em>{hand.result}</em>}
-                  </div>
-                )) : (
-                  <div className="bet-circle">
-                    <span>Bet</span>
-                    <strong>${bet}</strong>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="table-rail" aria-hidden="true" />
-
-            {roundBanner && playPhase === "roundOver" && (
-              <div className={`round-banner table-result-banner ${roundBanner.type}`}>
-                <div className="banner-shine" />
-                <strong>{roundBanner.title}</strong>
-                <span>{roundBanner.subtitle}</span>
-              </div>
-            )}
+      {/* STATS */}
+      {screen === "stats" && (
+        <section className="screen panel-screen">
+          <div className="panel-header">
+            <span className="eyebrow">Performance</span>
+            <h1>Your Stats</h1>
+            <p className="text-muted">Tracked locally on this device.</p>
           </div>
-
-          <div className={`play-chip-zone ${playPhase !== "betting" && playPhase !== "roundOver" ? "play-chip-zone-locked" : ""}`}>
-            {chipValues.map((chip) => (
-              <button
-                key={chip}
-                className={`chip premium-chip chip-${chip}`}
-                onClick={() => addChip(chip)}
-                disabled={playPhase !== "betting" && playPhase !== "roundOver"}
-                aria-label={`Add ${premiumChips[chip].label} chip`}
-              >
-                <img src={premiumChips[chip].image} alt="" />
-                <span>{premiumChips[chip].label}</span>
-              </button>
-            ))}
-            <button
-              className="secondary clear-bet-button"
-              onClick={clearBet}
-              disabled={playPhase !== "betting" && playPhase !== "roundOver"}
-            >
-              Clear Bet
-            </button>
-            <button
-              className="primary deal-button"
-              onClick={dealBlackjack}
-              disabled={playPhase !== "betting" && playPhase !== "roundOver"}
-            >
-              Deal
-            </button>
+          <div className="stats-grid">
+            <div className="stat-card"><strong>{stats.roundsPlayed}</strong><span>Rounds Played</span></div>
+            <div className="stat-card"><strong>{stats.wins}</strong><span>Wins</span></div>
+            <div className="stat-card"><strong>{stats.losses}</strong><span>Losses</span></div>
+            <div className="stat-card"><strong>{stats.pushes}</strong><span>Pushes</span></div>
+            <div className="stat-card"><strong>{stats.blackjacks}</strong><span>Blackjacks</span></div>
+            <div className="stat-card"><strong>{stats.roundsPlayed ? Math.round((stats.wins / stats.roundsPlayed) * 100) : 0}%</strong><span>Win Rate</span></div>
+            <div className="stat-card"><strong>{stats.basicDrills}</strong><span>BS Drills</span></div>
+            <div className="stat-card"><strong>{stats.basicDrills ? Math.round(stats.basicAccuracySum / stats.basicDrills) : 0}%</strong><span>Avg BS Accuracy</span></div>
+            <div className="stat-card"><strong>{stats.countDrills}</strong><span>Count Drills</span></div>
+            <div className="stat-card wide"><strong>{formatProfitLoss(totalProfitLoss)}</strong><span>Net Profit / Loss</span></div>
+            <div className="stat-card wide"><strong>${stats.bankrollAdded.toLocaleString()}</strong><span>Total Bankroll Added</span></div>
+            <div className="stat-card wide"><strong>${stats.peakBankroll.toLocaleString()}</strong><span>Peak Bankroll</span></div>
+            <div className="stat-card wide"><strong>${bankroll.toLocaleString()}</strong><span>Current Bankroll</span></div>
+            <div className="stat-card"><strong>{stats.biggestWin > 0 ? `+$${stats.biggestWin.toLocaleString()}` : "$0"}</strong><span>Biggest Win</span></div>
+            <div className="stat-card"><strong>{stats.biggestLoss > 0 ? `-$${stats.biggestLoss.toLocaleString()}` : "$0"}</strong><span>Biggest Loss</span></div>
           </div>
-
-          <div className={`play-action-zone ${canAct ? "play-action-zone-active" : ""}`}>
-            <button className="move P" disabled={!canSplit} onClick={splitPlayHand}>Split</button>
-            <button className="move D" disabled={!canDouble} onClick={doublePlayHand}>Double</button>
-            <button className="move S" disabled={!canAct} onClick={standPlayHand}>Stand</button>
-            <button className="move H" disabled={!canAct} onClick={hitPlayHand}>Hit</button>
-          </div>
-
-          <nav className="play-utility-zone" aria-label="Table utilities">
-            <button onClick={() => setTipOpen((v) => !v)} className="tip-button"><Lightbulb size={18} /> Tip</button>
-            <button onClick={() => setShowPlayTotals((value) => !value)} className="tip-button">
-              {showPlayTotals ? "Hide Totals" : "Totals"}
-            </button>
-            <button onClick={() => setHudOpen(true)} className="tip-button"><Settings2 size={18} /> HUD</button>
-            <button onClick={() => setHelpOpen("play")} className="tip-button"><HelpCircle size={18} /> Rules</button>
-          </nav>
-
-          {bankrollAlert && (
-            <div className="money-alert-overlay" role="dialog" aria-modal="true">
-              <div className="money-alert-card">
-                <span className="eyebrow">Blackjack Edge</span>
-                <h2>{bankrollAlert.title}</h2>
-                <p>{bankrollAlert.message}</p>
-                <div className="money-alert-actions">
-                  <button className="secondary" onClick={() => setBankrollAlert(null)}>Got it</button>
-                  <button
-                    className="primary"
-                    onClick={() => {
-                      setBankroll((value) => value + 500);
-                      setBankrollAlert(null);
-                      setPlayMessage("Added $500 bankroll. Place your bet and deal.");
-                    }}
-                  >
-                    Add $500
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {tipOpen && (
-            <div className="tip-panel">
-              <strong>Basic Strategy Tip</strong>
-              {tipMove && activePlayHand && dealerUpcard ? (
-                <p>Against dealer {dealerUpcard}, this hand says: <b>{formatMove(tipMove)}</b>.</p>
-              ) : (
-                <p>Deal a hand first and the tip will show the recommended basic strategy play.</p>
-              )}
-              <button className="secondary" onClick={() => setStrategyOpen(true)}>Open Strategy Card</button>
-            </div>
-          )}
-
-          <div className="play-message-pill">{playMessage}</div>
+          <button className="btn-secondary" onClick={resetStatsTracking}>
+            Reset Stats
+          </button>
         </section>
       )}
 
-      {exitConfirmOpen && (
-        <div className="overlay exit-confirm-overlay">
-          <div className="exit-confirm-card">
-            <span className="eyebrow">Leave Table?</span>
-            <h2>Exit Play Blackjack?</h2>
-            <p>Your bankroll and shoe are saved on this device, but the table view will close.</p>
-            <div className="exit-confirm-actions">
-              <button className="secondary" onClick={() => setExitConfirmOpen(false)}>Stay</button>
-              <button
-                className="primary"
-                onClick={() => {
-                  setExitConfirmOpen(false);
-                  setTipOpen(false);
-                  setHudOpen(false);
-                  setHelpOpen(null);
-                  setScreen("home");
-                }}
-              >
-                Exit
-              </button>
-            </div>
+      {/* VAULT */}
+      {screen === "vault" && !vaultView && (
+        <section className="screen panel-screen vault-screen">
+          <div className="panel-header">
+            <h1>Vault</h1>
+            <p className="text-muted">Fast blackjack knowledge, strategy references, counting tools, and review guides.</p>
           </div>
-        </div>
+          <div className="vault-features">
+            <VaultCard
+              title="Basic Strategy Card"
+              subtitle="The full reference for hard totals, soft totals, pairs, and dealer upcards."
+              action="Open Full Strategy Card"
+              onClick={() => setVaultView("strategy")}
+            />
+            <VaultCard
+              title="Table Rules"
+              subtitle="Know the rules before you play the shoe."
+              action="View Rules"
+              onClick={() => setVaultView("rules")}
+            />
+            <VaultCard
+              title="Hi-Lo Counting Guide"
+              subtitle="Track the shoe and learn when the deck favors the player."
+              action="Study Counting"
+              onClick={() => setVaultView("counting")}
+            />
+            <VaultCard
+              title="True Count Betting Guide"
+              subtitle="Learn when the count justifies a bigger bet."
+              action="Learn Betting"
+              onClick={() => setVaultView("betting")}
+            />
+            <VaultCard
+              title="Common Mistakes"
+              subtitle="Avoid the plays that cost beginners the most money."
+              action="Review Mistakes"
+              onClick={() => setVaultView("mistakes")}
+            />
+            <VaultCard
+              title="Weakness Review"
+              subtitle="Review the hands and skills that need the most work."
+              action="View Weaknesses"
+              onClick={() => setVaultView("weaknesses")}
+            />
+          </div>
+        </section>
       )}
+
+      {screen === "vault" && vaultView === "strategy" && (
+        <VaultPanel
+          title="Basic Strategy Card"
+          subtitle="The full reference for hard totals, soft totals, pairs, and dealer upcards."
+          onBack={() => setVaultView(null)}
+        >
+          <VaultStrategyContent onOpenStrategyCard={() => setStrategyOpen(true)} />
+        </VaultPanel>
+      )}
+
+      {screen === "vault" && vaultView === "rules" && (
+        <VaultPanel title="Table Rules" subtitle="Know the rules before you play the shoe." onBack={() => setVaultView(null)}>
+          <VaultRulesContent />
+        </VaultPanel>
+      )}
+
+      {screen === "vault" && vaultView === "counting" && (
+        <VaultPanel
+          title="Hi-Lo Counting Guide"
+          subtitle="Track the shoe and learn when the deck favors the player."
+          onBack={() => setVaultView(null)}
+        >
+          <VaultCountingContent />
+        </VaultPanel>
+      )}
+
+      {screen === "vault" && vaultView === "betting" && (
+        <VaultPanel
+          title="True Count Betting Guide"
+          subtitle="Learn when the count justifies a bigger bet."
+          onBack={() => setVaultView(null)}
+        >
+          <VaultBettingContent />
+        </VaultPanel>
+      )}
+
+      {screen === "vault" && vaultView === "mistakes" && (
+        <VaultPanel
+          title="Common Mistakes"
+          subtitle="Avoid the plays that cost beginners the most money."
+          onBack={() => setVaultView(null)}
+        >
+          <VaultMistakesContent />
+        </VaultPanel>
+      )}
+
+      {screen === "vault" && vaultView === "weaknesses" && (
+        <VaultPanel
+          title="Weakness Review"
+          subtitle="Review the hands and skills that need the most work."
+          onBack={() => setVaultView(null)}
+        >
+          <VaultWeaknessContent
+            stats={{
+              basicDrills: stats.basicDrills,
+              basicAccuracySum: stats.basicAccuracySum,
+              countDrills: stats.countDrills,
+              roundsPlayed: stats.roundsPlayed,
+              wins: stats.wins,
+              peakBankroll: stats.peakBankroll,
+              bankroll,
+            }}
+            onReDrillBasic={() => { setVaultView(null); goToScreen("basic"); }}
+            onReDrillCounting={() => { setVaultView(null); goToScreen("countLearn"); }}
+            onOpenStrategyCard={() => setStrategyOpen(true)}
+            onStartPlay={() => { setVaultView(null); navigate("play"); }}
+          />
+        </VaultPanel>
+      )}
+
+      {/* Bottom Nav */}
+      {(["home", "trainer", "stats", "vault"] as MainScreen[]).includes(screen as MainScreen) && (
+        <BottomNav active={screen as MainScreen} onNavigate={navigate} />
+      )}
+
+      {/* Overlays */}
+      {strategyOpen && <StrategyCardOverlay onClose={() => setStrategyOpen(false)} />}
 
       {hudOpen && (
-        <div className="overlay hud-overlay">
-          <div className="hud-sheet">
-            <div className="sheet-header luxury-sheet-header">
-              <div>
-                <span className="eyebrow">Training HUD</span>
-                <h2>Live Shoe Data</h2>
-                <p>Counts use visible cards only. The shoe no longer resets until empty or manually shuffled.</p>
+        <OverlaySheet title="Live Shoe Data" eyebrow="Training HUD" description="Card counting data from visible cards only." onClose={() => setHudOpen(false)}>
+          <div className="hud-grid hud-grid-live">
+            <div><strong>{playRunning >= 0 ? "+" : ""}{playRunning}</strong><span>Running Count</span></div>
+            <div><strong>{playTrue >= 0 ? "+" : ""}{playTrue.toFixed(1)}</strong><span>True Count</span></div>
+            <div><strong>{playDecksRemaining.toFixed(1)}</strong><span>Decks Remaining</span></div>
+            <div><strong>{penetration}%</strong><span>Penetration</span></div>
+            <div><strong>{playShoe.length}</strong><span>Cards Remaining</span></div>
+          </div>
+          {playSettings.showRecommendedBet && (
+            <div className="recommended-bet-panel recommended-bet-panel-hud glass-panel">
+              <span className="eyebrow">Recommended Training Bet</span>
+              <div className="recommended-bet-stats">
+                <div><strong>${recBet.amount}</strong><span>Recommended Bet</span></div>
+                <div><strong>{recBet.units}</strong><span>Units</span></div>
+                <div><strong>{recBet.reason}</strong><span>Reason</span></div>
               </div>
-              <button className="icon-button" onClick={() => setHudOpen(false)}><XIcon /></button>
+              <p className="text-muted recommended-bet-note">
+                Educational only — based on ${MIN_BET} units (TC 0/+1=$5, +2=$10, +3=$20, +4=$30, +5+=$40). Capped at table max and bankroll. Does not place bets.
+              </p>
             </div>
+          )}
+          <div className="settings-section hud-bankroll-section">
+            <span className="eyebrow">Bankroll</span>
+            <p className="text-muted recommended-bet-note">Current bankroll: <strong>${bankroll.toLocaleString()}</strong></p>
+            {renderBankrollActions()}
+          </div>
+        </OverlaySheet>
+      )}
 
-            <div className="hud-grid">
-              <div><strong>{playRunning >= 0 ? "+" : ""}{playRunning}</strong><span>Running Count</span></div>
-              <div><strong>{playTrue >= 0 ? "+" : ""}{playTrue.toFixed(1)}</strong><span>True Count</span></div>
-              <div><strong>{playDecksRemaining.toFixed(1)}</strong><span>Decks Remaining</span></div>
-              <div><strong>{penetration}%</strong><span>Penetration</span></div>
+      {playSettingsOpen && (
+        <OverlaySheet title="Table Settings" eyebrow="Play Blackjack" description="Gameplay preferences for the live table." onClose={() => setPlaySettingsOpen(false)}>
+          <div className="settings-section">
+            <span className="eyebrow">Gameplay</span>
+            <label className="toggle"><input type="checkbox" checked={playSettings.showHandTotals} onChange={(e) => patchPlaySettings({ showHandTotals: e.target.checked })} />Show hand totals</label>
+            <label className="toggle"><input type="checkbox" checked={playSettings.showBasicStrategyTips} onChange={(e) => patchPlaySettings({ showBasicStrategyTips: e.target.checked })} />Show basic strategy tips</label>
+            <label className="toggle"><input type="checkbox" checked={playSettings.showRecommendedBet} onChange={(e) => patchPlaySettings({ showRecommendedBet: e.target.checked })} />Show recommended bet in HUD</label>
+            <label className="toggle"><input type="checkbox" checked={playSettings.autoOpenHudAfterRound} onChange={(e) => patchPlaySettings({ autoOpenHudAfterRound: e.target.checked })} />Auto-open HUD after round</label>
+            <div className="settings-row">
+              <span>Dealer speed</span>
+              <div className="selector selector-inline">
+                {(["slow", "normal", "fast"] as const).map((speed) => (
+                  <button key={speed} className={playSettings.dealerSpeed === speed ? "selected" : ""} onClick={() => patchPlaySettings({ dealerSpeed: speed })}>{speed}</button>
+                ))}
+              </div>
             </div>
-
-            <div className="selector deck-selector">
+          </div>
+          <div className="settings-section">
+            <span className="eyebrow">Audio (placeholders)</span>
+            <label className="toggle"><input type="checkbox" checked={playSettings.soundEffects} onChange={(e) => patchPlaySettings({ soundEffects: e.target.checked })} />Sound effects</label>
+            <label className="toggle"><input type="checkbox" checked={playSettings.music} onChange={(e) => patchPlaySettings({ music: e.target.checked })} />Music</label>
+            <label className="toggle"><input type="checkbox" checked={playSettings.haptics} onChange={(e) => patchPlaySettings({ haptics: e.target.checked })} />Haptics</label>
+          </div>
+          <div className="settings-section">
+            <span className="eyebrow">Visual</span>
+            <label className="toggle"><input type="checkbox" checked={playSettings.animations} onChange={(e) => patchPlaySettings({ animations: e.target.checked })} />Animations</label>
+            <label className="toggle"><input type="checkbox" checked={playSettings.tableGlow} onChange={(e) => patchPlaySettings({ tableGlow: e.target.checked })} />Table glow</label>
+            <div className="settings-row">
+              <span>Card style</span>
+              <div className="selector selector-inline">
+                {(["classic", "premium"] as const).map((style) => (
+                  <button key={style} className={playSettings.cardStyle === style ? "selected" : ""} onClick={() => patchPlaySettings({ cardStyle: style })}>{style}</button>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="settings-section">
+            <span className="eyebrow">Shoe</span>
+            <div className="selector">
               {[1, 2, 6, 8].map((n) => (
-                <button
-                  key={n}
-                  className={playDecks === n ? "selected" : ""}
-                  onClick={() => {
-                    if (playPhase === "betting" || playPhase === "roundOver") {
-                      setPlayDecks(n);
-                      resetShoe(n);
-                    } else {
-                      setPlayMessage("Change decks after the round ends.");
-                    }
-                  }}
-                >
+                <button key={n} className={playDecks === n ? "selected" : ""} onClick={() => { if (canBet) { setPlayDecks(n); resetShoe(n); } else setPlayMessage("Change decks after the round ends."); }}>
                   {n} Deck{n > 1 ? "s" : ""}
                 </button>
               ))}
             </div>
+          </div>
+          <div className="settings-section">
+            <span className="eyebrow">Session</span>
+            {renderBankrollActions()}
+          </div>
+        </OverlaySheet>
+      )}
 
+      {appSettingsOpen && (
+        <OverlaySheet title="App Settings" eyebrow="Blackjack Edge" description="General preferences across the app." onClose={() => setAppSettingsOpen(false)}>
+          <div className="settings-section">
+            <span className="eyebrow">Audio</span>
+            <label className="toggle"><input type="checkbox" checked={appSettings.soundEffects} onChange={(e) => patchAppSettings({ soundEffects: e.target.checked })} />Sound effects</label>
+            <label className="toggle"><input type="checkbox" checked={appSettings.music} onChange={(e) => patchAppSettings({ music: e.target.checked })} />Music</label>
+            <label className="toggle"><input type="checkbox" checked={appSettings.haptics} onChange={(e) => patchAppSettings({ haptics: e.target.checked })} />Haptics</label>
+          </div>
+          <div className="settings-section">
+            <span className="eyebrow">Visual</span>
+            <label className="toggle"><input type="checkbox" checked={appSettings.animations} onChange={(e) => patchAppSettings({ animations: e.target.checked })} />Animations</label>
+            <label className="toggle"><input type="checkbox" checked={appSettings.tableGlow} onChange={(e) => patchAppSettings({ tableGlow: e.target.checked })} />Table glow</label>
+          </div>
+          <div className="settings-section">
+            <span className="eyebrow">Learning</span>
+            <label className="toggle"><input type="checkbox" checked={appSettings.showTutorials} onChange={(e) => patchAppSettings({ showTutorials: e.target.checked })} />Show tutorials</label>
+          </div>
+          <div className="settings-section">
+            <span className="eyebrow">Data</span>
             <div className="hud-actions">
-              <button className="secondary" onClick={() => setBankroll((b) => b + 500)}>Add $500</button>
-              <button className="secondary" onClick={() => { setBankroll(1000); setBet(0); }}>Reset Bankroll</button>
-              <button className="secondary reset-session-button" onClick={resetSavedSession}>Reset Saved Session</button>
-              <button className="primary" onClick={() => resetShoe(playDecks)}>Shuffle New Shoe</button>
+              <button className="btn-secondary" onClick={resetSavedSession}>Reset play session</button>
+              <button className="btn-secondary" onClick={resetStatsTracking}>Reset stats</button>
+              <button className="btn-primary" onClick={resetAppData}>Reset all app data</button>
             </div>
           </div>
-        </div>
+        </OverlaySheet>
       )}
 
       {helpOpen && (
-        <div className="overlay help-overlay">
-          <div className="help-sheet">
-            <div className="sheet-header luxury-sheet-header">
-              <div>
-                <span className="eyebrow">Blackjack Edge Help</span>
-                <h2>
-                  {helpOpen === "play" ? "Play Blackjack" : helpOpen === "counting" ? "Card Counting" : helpOpen === "strategy" ? "Strategy Card" : "Basic Strategy"}
-                </h2>
-              </div>
-              <button className="icon-button" onClick={() => setHelpOpen(null)}><XIcon /></button>
-            </div>
-
+        <OverlaySheet
+          title={helpOpen === "play" ? "Play Blackjack" : helpOpen === "counting" ? "Card Counting" : helpOpen === "rules" ? "Table Rules" : "Basic Strategy"}
+          eyebrow="Help"
+          onClose={() => setHelpOpen(null)}
+        >
+          <div className="help-copy">
             {helpOpen === "play" && (
-              <div className="help-copy">
-                <p>Play like a real shoe: the deck is shuffled, cards are dealt in order, and the dealer hole card is hidden until revealed.</p>
-                <p>Use the HUD for shoe data, bankroll tools, and deck settings. Use Show Totals only when you want help checking the math.</p>
-              </div>
+              <>
+                <p>Select a chip, then tap left/center/right betting spots. Deal plays hands right to left.</p>
+                <p>Use HUD for shoe data. Hole card hidden until dealer plays.</p>
+              </>
             )}
-
             {helpOpen === "basic" && (
-              <div className="help-copy">
-                <p>Pick the mathematically correct move for the hand shown. The goal is to build instant recognition.</p>
-                <p>Use the Strategy Card when studying, then hide it and drill until the decisions feel automatic.</p>
-              </div>
+              <>
+                <p>Pick the mathematically correct move. Build instant recognition.</p>
+                <p>Open the Strategy Card when studying.</p>
+              </>
             )}
-
             {helpOpen === "counting" && (
-              <div className="help-copy">
-                <p>Hi-Lo values: 2–6 are +1, 7–9 are 0, and 10 through Ace are -1.</p>
-                <p>After the drill, enter your running count and true count. You can re-drill the same sequence or change the setup.</p>
-              </div>
+              <>
+                <p>Hi-Lo: 2–6 = +1, 7–9 = 0, 10–A = -1.</p>
+                <p>Enter running and true count after the drill.</p>
+              </>
             )}
-
-            {helpOpen === "strategy" && (
-              <div className="help-copy">
-                <p>Use Hard, Soft, and Pairs to quickly reference the correct move against the dealer upcard.</p>
-                <p>The v0.4 layout keeps the card compact so it works better in both portrait and landscape.</p>
-              </div>
+            {helpOpen === "rules" && (
+              <>
+                <p>H17 dealer, 3:2 blackjack, double after split.</p>
+                <p>Min ${MIN_BET}, max ${MAX_BET.toLocaleString()} per hand. Up to 3 hands.</p>
+              </>
             )}
           </div>
+        </OverlaySheet>
+      )}
+
+      {exitConfirmOpen && (
+        <DialogCard
+          eyebrow="Leave Table?"
+          title="Exit Play?"
+          message="Your session is saved on this device."
+          cancelLabel="Stay"
+          confirmLabel="Exit"
+          onCancel={() => setExitConfirmOpen(false)}
+          onConfirm={() => { setExitConfirmOpen(false); setScreen("home"); }}
+        />
+      )}
+
+      {bankrollAlert && (
+        <DialogCard
+          eyebrow="Blackjack Edge"
+          title={bankrollAlert.title}
+          message={bankrollAlert.message}
+          cancelLabel="Got it"
+          confirmLabel="Add $500"
+          onCancel={() => setBankrollAlert(null)}
+          onConfirm={() => addBankroll(500)}
+        />
+      )}
+
+      {showPlayStrategyTip && (
+        <div className="tip-panel">
+          <div className="tip-panel-header">
+            <strong>Basic Strategy Tip</strong>
+            <button className="btn-icon tip-close" onClick={() => setPlayTipOpen(false)} aria-label="Close tip"><X size={14} /></button>
+          </div>
+          {!hasActivePlayableHand ? (
+            <p>Place a bet and deal a hand first. Then Tip will show the best Basic Strategy play for your current hand.</p>
+          ) : !dealerUpcard ? (
+            <p>Tip available once the dealer upcard is shown.</p>
+          ) : activePlayHand!.cards.length < 2 ? (
+            <p>Tip available once the dealer upcard is shown.</p>
+          ) : tipMove ? (
+            <p>Against dealer {dealerUpcardLabel(dealerUpcard)}, play: <b>{formatMove(tipMove)}</b>.</p>
+          ) : (
+            <p>Place a bet and deal a hand first. Then Tip will show the best Basic Strategy play for your current hand.</p>
+          )}
         </div>
       )}
 
-      {strategyOpen && <StrategyCardOverlay onClose={() => setStrategyOpen(false)} />}
+      {showBasicDrillTip && currentHand && (
+        <div className="tip-panel tip-panel-drill">
+          <div className="tip-panel-header">
+            <strong>Basic Strategy Tip</strong>
+            <button className="btn-icon tip-close" onClick={() => setBasicDrillTipOpen(false)} aria-label="Close tip"><X size={14} /></button>
+          </div>
+          {basicDrillTipMove ? (
+            <p>Against dealer {currentHand.dealer}, play: <b>{formatMove(basicDrillTipMove)}</b>.</p>
+          ) : (
+            <p>Review the strategy card for this spot.</p>
+          )}
+        </div>
+      )}
+
+      {countHowItWorksOpen && (
+        <OverlaySheet title="How It Works" eyebrow="Card Counting Academy" description="Hi-Lo card values and count mechanics." onClose={() => setCountHowItWorksOpen(false)}>
+          <div className="lesson-stack">
+            <div className="lesson-card plus"><strong>Low cards leaving = good</strong><span>2 • 3 • 4 • 5 • 6</span><em>+1</em><p>When low cards leave the shoe, more high cards remain — shifting the edge toward the player.</p></div>
+            <div className="lesson-card neutral"><strong>Middle cards = neutral</strong><span>7 • 8 • 9</span><em>0</em><p>Middle cards do not significantly change the count or player advantage.</p></div>
+            <div className="lesson-card minus"><strong>High cards leaving = bad</strong><span>10 • J • Q • K • A</span><em>-1</em><p>When high cards leave, fewer blackjacks and strong doubles remain for the player.</p></div>
+          </div>
+          <div className="action-plan">
+            <p><strong>Running count:</strong> The live Hi-Lo total as each card is seen. Add +1 for low cards, subtract -1 for high cards, and ignore middle cards.</p>
+            <p><strong>True count:</strong> Running count divided by estimated decks remaining. This normalizes the count for bet sizing and strategy decisions.</p>
+            <p><strong>Deck estimation:</strong> Divide cards remaining in the shoe by 52 to estimate how many decks are left. Use this to convert running count into true count.</p>
+          </div>
+        </OverlaySheet>
+      )}
+
+      {drillExitOpen && (
+        <div className="overlay overlay-center" onClick={() => setDrillExitOpen(null)}>
+          <div className="dialog-card glass-panel glass-panel-gold" onClick={(e) => e.stopPropagation()}>
+            <span className="eyebrow">Exit Drill</span>
+            <h2>Leave this drill?</h2>
+            <p className="text-muted">Choose where to return.</p>
+            <div className="dialog-actions drill-exit-actions">
+              <button
+                className="btn-secondary"
+                onClick={() => {
+                  setDrillExitOpen(null);
+                  setBasicDrillTipOpen(false);
+                  setScreen(drillExitOpen === "basic" ? "basic" : "countLearn");
+                }}
+              >
+                {drillExitOpen === "basic" ? "Basic Strategy Academy" : "Card Counting Academy"}
+              </button>
+              <button
+                className="btn-primary"
+                onClick={() => {
+                  setDrillExitOpen(null);
+                  setBasicDrillTipOpen(false);
+                  setScreen("trainer");
+                }}
+              >
+                Trainer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
-}
-
-function XIcon() {
-  return <span style={{ fontSize: 20, lineHeight: 1 }}>×</span>;
 }

@@ -18,15 +18,106 @@ export const moveNames: Record<Move, string> = {
 
 export const ranks = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
 export const suits = ["♠", "♥", "♦", "♣"];
+export const suitLetters = ["S", "H", "D", "C"] as const;
 export const dealerRanks = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "A"];
 
-export function cardRank(card: string) {
-  return card.replace(/[♠♥♦♣]/g, "");
+export const MIN_BET = 5;
+export const MAX_BET = 250_000;
+export const DEFAULT_BANKROLL = 1000;
+
+/** Net P/L from play only — excludes bankroll top-ups. */
+export function calcTotalProfitLoss(
+  currentBankroll: number,
+  startingBankroll: number,
+  bankrollAdded: number
+): number {
+  return currentBankroll - startingBankroll - bankrollAdded;
 }
 
-export function cardSuit(card: string) {
-  const suit = card.replace(cardRank(card), "");
-  return suit || "♠";
+export function formatProfitLoss(amount: number): string {
+  if (amount === 0) return "$0";
+  const sign = amount > 0 ? "+" : "-";
+  return `${sign}$${Math.abs(amount).toLocaleString()}`;
+}
+
+export type BankrollStatsFields = {
+  startingBankroll: number;
+  bankrollAdded: number;
+  biggestWin: number;
+  biggestLoss: number;
+};
+
+export function migrateBankrollStats<T extends Partial<BankrollStatsFields>>(
+  saved: T,
+  currentBankroll: number
+): BankrollStatsFields {
+  return {
+    startingBankroll:
+      typeof saved.startingBankroll === "number" ? saved.startingBankroll : DEFAULT_BANKROLL,
+    bankrollAdded: typeof saved.bankrollAdded === "number" ? saved.bankrollAdded : 0,
+    biggestWin: typeof saved.biggestWin === "number" ? saved.biggestWin : 0,
+    biggestLoss: typeof saved.biggestLoss === "number" ? saved.biggestLoss : 0,
+  };
+}
+
+const SUIT_LETTER_MAP: Record<string, string> = { S: "♠", H: "♥", D: "♦", C: "♣" };
+const VALID_RANKS = new Set(ranks);
+
+export function cardRank(card: string): string {
+  if (!card || card === "back") return "";
+  const trimmed = card.trim();
+  const letterMatch = trimmed.match(/^((?:10|[2-9AJQK]))([SHDC])$/i);
+  if (letterMatch) {
+    const r = letterMatch[1].toUpperCase();
+    return r === "10" ? "10" : r;
+  }
+  const unicodeRank = trimmed.replace(/[♠♥♦♣]/g, "");
+  if (VALID_RANKS.has(unicodeRank)) return unicodeRank;
+  if (VALID_RANKS.has(trimmed)) return trimmed;
+  return trimmed;
+}
+
+export function cardSuit(card: string): string {
+  if (!card || card === "back") return "♠";
+  const trimmed = card.trim();
+  const letterMatch = trimmed.match(/^((?:10|[2-9AJQK]))([SHDC])$/i);
+  if (letterMatch) return SUIT_LETTER_MAP[letterMatch[2].toUpperCase()] || "♠";
+  const unicode = trimmed.match(/[♠♥♦♣]/);
+  if (unicode) return unicode[0];
+  return "♠";
+}
+
+export function isKnownCard(card: string): boolean {
+  if (!card || card === "back") return true;
+  const rank = cardRank(card);
+  return VALID_RANKS.has(rank);
+}
+
+export function recommendedBetUnits(trueCount: number): number {
+  const tc = Math.floor(trueCount);
+  if (tc < 2) return 1;
+  if (tc === 2) return 2;
+  if (tc === 3) return 4;
+  if (tc === 4) return 6;
+  return 8;
+}
+
+export function recommendedTrainingBet(
+  trueCount: number,
+  bankroll: number,
+  minBet = MIN_BET,
+  maxBet = MAX_BET
+) {
+  const units = recommendedBetUnits(trueCount);
+  const flooredTc = Math.floor(trueCount);
+  const amount = Math.min(units * minBet, maxBet, Math.max(bankroll, 0));
+  return {
+    amount,
+    units,
+    unitSize: minBet,
+    trueCount: flooredTc,
+    reason: `True count ${flooredTc >= 0 ? "+" : ""}${flooredTc}`,
+  };
 }
 
 export function cardValue(card: string): number {
@@ -182,8 +273,8 @@ export function buildShoe(decks: number) {
   const shoe: string[] = [];
 
   for (let d = 0; d < decks; d++) {
-    for (const suit of suits) {
-      for (const rank of ranks) shoe.push(`${rank}${suit}`);
+    for (const letter of suitLetters) {
+      for (const rank of ranks) shoe.push(`${rank}${letter}`);
     }
   }
 
