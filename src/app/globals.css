@@ -301,7 +301,7 @@ h1 { font-size: clamp(28px, 6vw, 42px); } h2 { font-size: clamp(22px, 4vw, 30px)
     top: 0;
     left: 0;
     width: 932px;
-    height: 44px;
+    height: 38px;
     display: block;
     padding: 0;
     gap: 0;
@@ -309,70 +309,63 @@ h1 { font-size: clamp(28px, 6vw, 42px); } h2 { font-size: clamp(22px, 4vw, 30px)
   }
   .play-hud-exit {
     position: absolute;
-    left: 10px;
-    top: 6px;
-    width: 64px;
-    height: 44px;
+    left: 8px;
+    top: 4px;
+    width: 56px;
+    height: 32px;
     min-width: 0;
     min-height: 0;
     padding: 0 !important;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 10px;
+    font-size: 9px;
   }
   .play-hud-stats {
     position: absolute;
-    inset: 0;
-    display: block;
+    left: 50%;
+    top: 4px;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
     min-width: 0;
     max-width: none;
+    width: auto;
   }
-  .play-hud-stats .hud-stat:nth-child(1) {
-    position: absolute;
-    left: 84px;
-    top: 6px;
-    width: 118px;
-    height: 44px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 2px 6px;
-  }
+  .play-hud-stats .hud-stat:nth-child(1),
   .play-hud-stats .hud-stat:nth-child(2) {
-    position: absolute;
-    left: 210px;
-    top: 6px;
-    width: 118px;
-    height: 44px;
+    position: static;
+    width: 82px;
+    height: 30px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 2px 6px;
+    padding: 2px 5px;
   }
   .play-hud-stat-cards {
     display: none;
   }
   .play-top-bar .hud-stat-value {
-    font-size: 13px;
+    font-size: 11px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 100%;
   }
-  .play-top-bar .hud-stat span { font-size: 8px; }
+  .play-top-bar .hud-stat span { font-size: 7px; }
   .play-hud-settings {
     position: absolute;
-    right: 10px;
+    right: 8px;
     left: auto;
-    top: 6px;
-    width: 44px;
-    height: 44px;
-    min-width: 44px;
-    max-width: 44px;
-    min-height: 44px;
+    top: 4px;
+    width: 40px;
+    height: 32px;
+    min-width: 40px;
+    max-width: 40px;
+    min-height: 32px;
     padding: 0 !important;
     display: flex;
     align-items: center;
@@ -390,10 +383,10 @@ h1 { font-size: clamp(28px, 6vw, 42px); } h2 { font-size: clamp(22px, 4vw, 30px)
   }
   .play-stage {
     position: absolute;
-    left: 56px;
-    top: 44px;
-    width: 820px;
-    height: 336px;
+    left: 46px;
+    top: 38px;
+    width: 840px;
+    height: 282px;
     display: block;
     flex: none;
     min-height: 0;
@@ -427,9 +420,9 @@ h1 { font-size: clamp(28px, 6vw, 42px); } h2 { font-size: clamp(22px, 4vw, 30px)
     position: absolute;
     left: 15px;
     top: 10px;
-    width: 175px;
+    width: 165px;
     height: 22px;
-    max-width: 175px;
+    max-width: 165px;
     padding: 2px 8px;
     display: flex;
     align-items: center;
@@ -439,11 +432,25 @@ h1 { font-size: clamp(28px, 6vw, 42px); } h2 { font-size: clamp(22px, 4vw, 30px)
     z-index: 4;
   }
   .table-rules span { font-size: 6px; line-height: 1; }
-  .casino-table .cards-remaining-box { display: none; }
+  .casino-table .cards-remaining-box {
+    display: flex;
+    position: absolute;
+    right: 10px;
+    top: 6px;
+    left: auto;
+    width: 112px;
+    min-height: 22px;
+    max-height: 26px;
+    padding: 3px 8px;
+    gap: 4px;
+    z-index: 5;
+  }
+  .casino-table .cards-remaining-label { font-size: 6px; }
+  .casino-table .cards-remaining-count { font-size: 12px; }
   .dealer-zone {
     position: absolute;
-    left: 410px;
-    top: 44px;
+    left: 50%;
+    top: 34px;
     transform: translateX(-50%);
     gap: 2px;
     max-width: 220px;
@@ -470,24 +477,24 @@ h1 { font-size: clamp(28px, 6vw, 42px); } h2 { font-size: clamp(22px, 4vw, 30px)
     display: block;
     transform: translateX(-50%);
   }
-  .betting-spots .bet-spot:nth-child(1) { left: 250px; top: 158px; }
-  .betting-spots .bet-spot:nth-child(2) { left: 410px; top: 158px; }
-  .betting-spots .bet-spot:nth-child(3) { left: 570px; top: 158px; }
+  .betting-spots .bet-spot:nth-child(1) { left: 28%; top: 50%; }
+  .betting-spots .bet-spot:nth-child(2) { left: 50%; top: 50%; }
+  .betting-spots .bet-spot:nth-child(3) { left: 72%; top: 50%; }
   .bet-spot-cards {
     position: absolute;
     top: 0;
     left: 50%;
     transform: translateX(-50%);
     min-height: 0;
-    max-width: 100px;
+    max-width: 110px;
     padding-top: 0;
     margin-bottom: 0;
     padding-bottom: 0;
   }
-  .bet-spot-cards:has(.is-split) { max-width: 140px; }
+  .bet-spot-cards:has(.is-split) { max-width: 150px; }
   .bet-spot-circle {
     position: absolute;
-    top: 55px;
+    top: 62px;
     left: 50%;
     transform: translateX(-50%);
     width: 44px;
@@ -497,22 +504,31 @@ h1 { font-size: clamp(28px, 6vw, 42px); } h2 { font-size: clamp(22px, 4vw, 30px)
   .bet-chip-stack-chip { width: 36px; height: 36px; }
   .bet-chip-stack-amount {
     position: absolute;
-    top: 93px;
+    top: 100px;
     left: 50%;
     transform: translateX(-50%);
     font-size: 8px;
     white-space: nowrap;
   }
   .bet-spot .cards-fan { --fan-rotate: 1.2deg; --fan-lift: 1px; }
-  .bet-spot .cards-fan .mini-card { width: 28px; height: 40px; }
+  .bet-spot .cards-fan .mini-card { width: 32px; height: 46px; }
+  .bet-spot .mini-card .luxury-card-corner strong { font-size: 9px; }
+  .bet-spot .mini-card .luxury-card-corner span { font-size: 8px; }
   .bet-spot .seat-split-hands:not(.is-split) .cards-fan-card {
     margin-left: calc(-1 * (18px - min((var(--card-count, 2) - 2), 4) * 2px));
   }
   .seat-split-hands.is-split { gap: 10px; }
-  .seat-split-hands.is-split .split-hand .cards-fan-card { margin-left: -14px; }
-  .seat-split-hands.is-split .mini-card { width: 24px; height: 34px; }
-  .player-hand-active { transform: scale(1.05); }
-  .hand-result-popup { bottom: auto; top: calc(100% + 2px); font-size: 6px; padding: 2px 6px; max-width: 64px; }
+  .seat-split-hands.is-split .split-hand .cards-fan-card { margin-left: -16px; }
+  .seat-split-hands.is-split .mini-card { width: 28px; height: 40px; }
+  .player-hand-active { transform: scale(1.06); }
+  .hand-result-popup {
+    bottom: calc(100% + 5px);
+    top: auto;
+    font-size: 7px;
+    padding: 3px 8px;
+    max-width: 76px;
+    letter-spacing: .08em;
+  }
   .play-controls {
     position: absolute;
     inset: 0;
@@ -525,9 +541,9 @@ h1 { font-size: clamp(28px, 6vw, 42px); } h2 { font-size: clamp(22px, 4vw, 30px)
   .play-controls-row { display: contents; }
   .play-chip-section {
     position: absolute;
-    left: 118px;
-    top: 322px;
-    width: 248px;
+    left: 178px;
+    top: 328px;
+    width: 440px;
     height: 48px;
     overflow: hidden;
     z-index: 8;
@@ -543,8 +559,8 @@ h1 { font-size: clamp(28px, 6vw, 42px); } h2 { font-size: clamp(22px, 4vw, 30px)
   .play-chip-section .chip-scroll-btn { width: 24px; height: 24px; min-width: 24px; min-height: 24px; flex-shrink: 0; }
   .play-bet-section {
     position: absolute;
-    left: 376px;
-    top: 324px;
+    left: 636px;
+    top: 328px;
     width: 156px;
     height: 44px;
     z-index: 8;
@@ -575,9 +591,10 @@ h1 { font-size: clamp(28px, 6vw, 42px); } h2 { font-size: clamp(22px, 4vw, 30px)
   }
   .play-action-section {
     position: absolute;
-    left: 548px;
-    top: 296px;
-    width: 290px;
+    left: 50%;
+    top: 262px;
+    transform: translateX(-50%);
+    width: 320px;
     height: 52px;
     overflow: visible;
     z-index: 9;
@@ -587,27 +604,27 @@ h1 { font-size: clamp(28px, 6vw, 42px); } h2 { font-size: clamp(22px, 4vw, 30px)
     display: flex;
     flex-direction: row;
     flex-wrap: nowrap;
-    gap: 5px;
-    justify-content: flex-end;
-    align-items: flex-end;
+    gap: 8px;
+    justify-content: center;
+    align-items: center;
     width: 100%;
     height: 100%;
     pointer-events: auto;
   }
   .play-action-section .action-btn {
-    width: 46px;
-    height: 46px;
-    min-width: 46px;
-    min-height: 46px;
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    min-height: 48px;
     flex-shrink: 0;
     font-size: 7px;
     padding: 0;
   }
   .play-message {
     position: absolute;
-    top: 392px;
-    left: 56px;
-    width: 820px;
+    top: 384px;
+    left: 46px;
+    width: 840px;
     text-align: center;
     font-size: 9px;
     padding: 0 8px;
@@ -620,40 +637,43 @@ h1 { font-size: clamp(28px, 6vw, 42px); } h2 { font-size: clamp(22px, 4vw, 30px)
   }
   .play-controls .play-hud-utilities {
     position: absolute;
-    top: 108px;
-    left: 66px;
-    width: 72px;
-    height: auto;
+    top: 328px;
+    left: 8px;
+    width: 160px;
+    height: 48px;
     display: flex;
-    flex-direction: column;
-    gap: 6px;
+    flex-direction: row;
+    align-items: center;
+    gap: 4px;
     padding: 0;
     z-index: 8;
   }
   .play-controls .play-hud-utilities .btn-ghost {
     position: static;
-    width: 72px;
-    min-width: 72px;
+    width: 48px;
+    min-width: 48px;
     min-height: 44px;
     height: 44px;
-    padding: 0 4px;
+    padding: 0 2px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 8px;
+    font-size: 7px;
     border-radius: var(--radius-sm);
     white-space: nowrap;
+    flex: 1;
   }
   .play-controls .play-hud-utilities .play-util-strategy,
   .play-controls .play-hud-utilities .play-util-tip,
   .play-controls .play-hud-utilities .play-util-hud {
     left: auto;
-    width: 72px;
+    width: auto;
+    flex: 1;
   }
   .app-play .tip-panel {
     top: auto;
-    bottom: calc(48px * var(--landscape-scale, 1) + 8px);
-    left: 66px;
+    bottom: calc(56px * var(--landscape-scale, 1) + 6px);
+    left: 8px;
     right: auto;
     transform: scale(var(--landscape-scale, 1));
     transform-origin: bottom left;
