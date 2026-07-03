@@ -1154,7 +1154,7 @@ export default function App() {
                   <span>Cards Left</span>
                 </div>
               </div>
-              <button className="btn-ghost play-hud-settings" onClick={() => setPlaySettingsOpen(true)} aria-label="Table Settings"><Settings2 size={14} /></button>
+              <button className="btn-ghost play-hud-settings play-hud-settings-btn" onClick={() => setPlaySettingsOpen(true)} aria-label="Table Settings"><Settings2 size={14} /></button>
             </header>
 
             <div className="play-stage">

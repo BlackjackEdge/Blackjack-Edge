@@ -301,7 +301,7 @@ h1 { font-size: clamp(28px, 6vw, 42px); } h2 { font-size: clamp(22px, 4vw, 30px)
     top: 0;
     left: 0;
     width: 932px;
-    height: 52px;
+    height: 44px;
     display: block;
     padding: 0;
     gap: 0;
@@ -309,10 +309,10 @@ h1 { font-size: clamp(28px, 6vw, 42px); } h2 { font-size: clamp(22px, 4vw, 30px)
   }
   .play-hud-exit {
     position: absolute;
-    left: 12px;
-    top: 10px;
-    width: 70px;
-    height: 42px;
+    left: 10px;
+    top: 6px;
+    width: 64px;
+    height: 44px;
     min-width: 0;
     min-height: 0;
     padding: 0 !important;
@@ -330,10 +330,10 @@ h1 { font-size: clamp(28px, 6vw, 42px); } h2 { font-size: clamp(22px, 4vw, 30px)
   }
   .play-hud-stats .hud-stat:nth-child(1) {
     position: absolute;
-    left: 95px;
-    top: 10px;
-    width: 120px;
-    height: 42px;
+    left: 84px;
+    top: 6px;
+    width: 118px;
+    height: 44px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -342,10 +342,10 @@ h1 { font-size: clamp(28px, 6vw, 42px); } h2 { font-size: clamp(22px, 4vw, 30px)
   }
   .play-hud-stats .hud-stat:nth-child(2) {
     position: absolute;
-    left: 225px;
-    top: 10px;
-    width: 120px;
-    height: 42px;
+    left: 210px;
+    top: 6px;
+    width: 118px;
+    height: 44px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -353,16 +353,7 @@ h1 { font-size: clamp(28px, 6vw, 42px); } h2 { font-size: clamp(22px, 4vw, 30px)
     padding: 2px 6px;
   }
   .play-hud-stat-cards {
-    display: flex;
-    position: absolute;
-    left: 680px;
-    top: 10px;
-    width: 175px;
-    height: 42px;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 2px 6px;
+    display: none;
   }
   .play-top-bar .hud-stat-value {
     font-size: 13px;
@@ -374,28 +365,41 @@ h1 { font-size: clamp(28px, 6vw, 42px); } h2 { font-size: clamp(22px, 4vw, 30px)
   .play-top-bar .hud-stat span { font-size: 8px; }
   .play-hud-settings {
     position: absolute;
-    left: 870px;
-    top: 10px;
-    width: 46px;
-    height: 42px;
-    min-width: 0;
-    min-height: 0;
+    right: 10px;
+    left: auto;
+    top: 6px;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    max-width: 44px;
+    min-height: 44px;
     padding: 0 !important;
     display: flex;
     align-items: center;
     justify-content: center;
+    border-radius: var(--radius-sm);
+    flex-shrink: 0;
+    letter-spacing: 0;
+    overflow: hidden;
+  }
+  .play-hud-settings svg {
+    flex-shrink: 0;
+  }
+  .play-hud-settings-btn {
+    aspect-ratio: 1;
   }
   .play-stage {
     position: absolute;
-    left: 95px;
-    top: 62px;
-    width: 742px;
-    height: 235px;
+    left: 56px;
+    top: 44px;
+    width: 820px;
+    height: 336px;
     display: block;
     flex: none;
     min-height: 0;
     padding: 0;
-    overflow: hidden;
+    overflow: visible;
+    z-index: 2;
   }
   .play-table-wrap {
     width: 100%;
@@ -438,11 +442,11 @@ h1 { font-size: clamp(28px, 6vw, 42px); } h2 { font-size: clamp(22px, 4vw, 30px)
   .casino-table .cards-remaining-box { display: none; }
   .dealer-zone {
     position: absolute;
-    left: 371px;
-    top: 33px;
+    left: 410px;
+    top: 44px;
     transform: translateX(-50%);
     gap: 2px;
-    max-width: 200px;
+    max-width: 220px;
   }
   .dealer-zone .zone-label { font-size: 7px; }
   .dealer-result-banner { font-size: 7px; padding: 2px 8px; max-width: 140px; }
@@ -466,9 +470,9 @@ h1 { font-size: clamp(28px, 6vw, 42px); } h2 { font-size: clamp(22px, 4vw, 30px)
     display: block;
     transform: translateX(-50%);
   }
-  .betting-spots .bet-spot:nth-child(1) { left: 235px; top: 113px; }
-  .betting-spots .bet-spot:nth-child(2) { left: 371px; top: 113px; }
-  .betting-spots .bet-spot:nth-child(3) { left: 507px; top: 113px; }
+  .betting-spots .bet-spot:nth-child(1) { left: 250px; top: 158px; }
+  .betting-spots .bet-spot:nth-child(2) { left: 410px; top: 158px; }
+  .betting-spots .bet-spot:nth-child(3) { left: 570px; top: 158px; }
   .bet-spot-cards {
     position: absolute;
     top: 0;
@@ -521,11 +525,12 @@ h1 { font-size: clamp(28px, 6vw, 42px); } h2 { font-size: clamp(22px, 4vw, 30px)
   .play-controls-row { display: contents; }
   .play-chip-section {
     position: absolute;
-    left: 95px;
-    top: 310px;
-    width: 270px;
-    height: 58px;
+    left: 118px;
+    top: 322px;
+    width: 248px;
+    height: 48px;
     overflow: hidden;
+    z-index: 8;
   }
   .play-chip-section .chip-rack-row {
     width: 100%;
@@ -534,117 +539,125 @@ h1 { font-size: clamp(28px, 6vw, 42px); } h2 { font-size: clamp(22px, 4vw, 30px)
     min-width: 0;
   }
   .play-chip-section .chip-tray { gap: 3px; padding: 0; min-width: 0; flex: 1; }
-  .play-chip-section .chip-btn { width: 40px; height: 40px; flex-shrink: 0; }
+  .play-chip-section .chip-btn { width: 44px; height: 44px; flex-shrink: 0; }
   .play-chip-section .chip-scroll-btn { width: 24px; height: 24px; min-width: 24px; min-height: 24px; flex-shrink: 0; }
   .play-bet-section {
     position: absolute;
-    left: 378px;
-    top: 310px;
-    width: 164px;
-    height: 42px;
+    left: 376px;
+    top: 324px;
+    width: 156px;
+    height: 44px;
+    z-index: 8;
   }
   .play-bet-section .bet-actions {
     position: relative;
     width: 100%;
     height: 100%;
-    display: block;
-    gap: 0;
+    display: flex;
+    gap: 6px;
+    align-items: center;
   }
   .play-bet-section .bet-actions .btn-secondary {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 86px;
-    height: 42px;
-    padding: 0;
-    font-size: 9px;
-    min-height: 0;
+    width: 78px;
+    height: 44px;
+    padding: 0 4px;
+    font-size: 8px;
+    min-height: 44px;
     flex: none;
   }
   .play-bet-section .bet-actions .btn-primary {
-    position: absolute;
-    left: 94px;
-    top: 0;
-    width: 70px;
-    height: 42px;
-    padding: 0;
+    width: 72px;
+    height: 44px;
+    padding: 0 4px;
     font-size: 9px;
-    min-height: 0;
+    min-height: 44px;
     flex: none;
   }
   .play-action-section {
     position: absolute;
-    left: 552px;
-    top: 310px;
-    width: 336px;
-    height: 68px;
-    overflow: hidden;
+    left: 548px;
+    top: 296px;
+    width: 290px;
+    height: 52px;
+    overflow: visible;
+    z-index: 9;
+    pointer-events: none;
   }
   .play-action-section .action-buttons {
     display: flex;
     flex-direction: row;
     flex-wrap: nowrap;
-    gap: 4px;
-    justify-content: flex-start;
+    gap: 5px;
+    justify-content: flex-end;
+    align-items: flex-end;
     width: 100%;
     height: 100%;
+    pointer-events: auto;
   }
   .play-action-section .action-btn {
-    width: 64px;
-    height: 64px;
+    width: 46px;
+    height: 46px;
+    min-width: 46px;
+    min-height: 46px;
     flex-shrink: 0;
-    font-size: 8px;
+    font-size: 7px;
     padding: 0;
   }
   .play-message {
     position: absolute;
-    top: 370px;
-    left: 0;
-    width: 932px;
+    top: 392px;
+    left: 56px;
+    width: 820px;
     text-align: center;
-    font-size: 10px;
-    padding: 0 12px;
+    font-size: 9px;
+    padding: 0 8px;
     line-height: 1.2;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    z-index: 5;
+    z-index: 4;
+    pointer-events: none;
   }
   .play-controls .play-hud-utilities {
     position: absolute;
-    top: 382px;
-    left: 0;
-    width: 932px;
-    height: 36px;
-    display: block;
+    top: 108px;
+    left: 66px;
+    width: 72px;
+    height: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
     padding: 0;
-    flex-wrap: nowrap;
-    z-index: 6;
+    z-index: 8;
   }
   .play-controls .play-hud-utilities .btn-ghost {
-    position: absolute;
-    top: 0;
-    min-width: 0;
-    min-height: 0;
-    padding: 0;
+    position: static;
+    width: 72px;
+    min-width: 72px;
+    min-height: 44px;
+    height: 44px;
+    padding: 0 4px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 9px;
-    height: 36px;
-    border-radius: 999px;
+    font-size: 8px;
+    border-radius: var(--radius-sm);
+    white-space: nowrap;
   }
-  .play-controls .play-hud-utilities .play-util-strategy { left: 355px; width: 105px; }
-  .play-controls .play-hud-utilities .play-util-tip { left: 472px; width: 65px; }
-  .play-controls .play-hud-utilities .play-util-hud { left: 548px; width: 65px; }
+  .play-controls .play-hud-utilities .play-util-strategy,
+  .play-controls .play-hud-utilities .play-util-tip,
+  .play-controls .play-hud-utilities .play-util-hud {
+    left: auto;
+    width: 72px;
+  }
   .app-play .tip-panel {
     top: auto;
     bottom: calc(48px * var(--landscape-scale, 1) + 8px);
-    left: 50%;
+    left: 66px;
     right: auto;
-    transform: translateX(-50%) scale(var(--landscape-scale, 1));
-    transform-origin: bottom center;
-    max-width: min(360px, calc(100vw - 32px));
+    transform: scale(var(--landscape-scale, 1));
+    transform-origin: bottom left;
+    max-width: min(280px, calc(100vw - 32px));
     margin: 0;
   }
 }
