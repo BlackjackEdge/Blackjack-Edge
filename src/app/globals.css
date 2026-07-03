@@ -541,25 +541,36 @@ h1 { font-size: clamp(28px, 6vw, 42px); } h2 { font-size: clamp(22px, 4vw, 30px)
   .play-controls-row { display: contents; }
   .play-chip-section {
     position: absolute;
-    left: 178px;
+    left: 195px;
     top: 328px;
-    width: 440px;
-    height: 48px;
-    overflow: hidden;
+    width: auto;
+    height: 44px;
+    overflow: visible;
     z-index: 8;
   }
   .play-chip-section .chip-rack-row {
-    width: 100%;
+    width: auto;
     height: 100%;
-    gap: 2px;
+    gap: 0;
     min-width: 0;
+    justify-content: center;
   }
-  .play-chip-section .chip-tray { gap: 3px; padding: 0; min-width: 0; flex: 1; }
-  .play-chip-section .chip-btn { width: 44px; height: 44px; flex-shrink: 0; }
-  .play-chip-section .chip-scroll-btn { width: 24px; height: 24px; min-width: 24px; min-height: 24px; flex-shrink: 0; }
+  .play-chip-section .chip-scroll-btn,
+  .play-chip-section .chip-scroll-landscape-hide { display: none; }
+  .play-chip-section .chip-tray {
+    gap: 2px;
+    padding: 0;
+    min-width: 0;
+    flex: none;
+    overflow: visible;
+    flex-wrap: nowrap;
+    justify-content: center;
+    scroll-snap-type: none;
+  }
+  .play-chip-section .chip-btn { width: 36px; height: 36px; flex-shrink: 0; }
   .play-bet-section {
     position: absolute;
-    left: 636px;
+    left: 581px;
     top: 328px;
     width: 156px;
     height: 44px;
@@ -591,10 +602,11 @@ h1 { font-size: clamp(28px, 6vw, 42px); } h2 { font-size: clamp(22px, 4vw, 30px)
   }
   .play-action-section {
     position: absolute;
-    left: 50%;
-    top: 262px;
-    transform: translateX(-50%);
-    width: 320px;
+    right: 52px;
+    left: auto;
+    top: 210px;
+    transform: none;
+    width: auto;
     height: 52px;
     overflow: visible;
     z-index: 9;
@@ -604,20 +616,20 @@ h1 { font-size: clamp(28px, 6vw, 42px); } h2 { font-size: clamp(22px, 4vw, 30px)
     display: flex;
     flex-direction: row;
     flex-wrap: nowrap;
-    gap: 8px;
-    justify-content: center;
+    gap: 6px;
+    justify-content: flex-end;
     align-items: center;
-    width: 100%;
+    width: auto;
     height: 100%;
     pointer-events: auto;
   }
   .play-action-section .action-btn {
-    width: 48px;
-    height: 48px;
-    min-width: 48px;
-    min-height: 48px;
+    width: 46px;
+    height: 46px;
+    min-width: 46px;
+    min-height: 46px;
     flex-shrink: 0;
-    font-size: 7px;
+    font-size: 6px;
     padding: 0;
   }
   .play-message {
@@ -637,46 +649,46 @@ h1 { font-size: clamp(28px, 6vw, 42px); } h2 { font-size: clamp(22px, 4vw, 30px)
   }
   .play-controls .play-hud-utilities {
     position: absolute;
-    top: 328px;
-    left: 8px;
-    width: 160px;
-    height: 48px;
+    top: 72px;
+    left: 58px;
+    width: 56px;
+    height: auto;
     display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 4px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
     padding: 0;
-    z-index: 8;
+    z-index: 12;
   }
   .play-controls .play-hud-utilities .btn-ghost {
     position: static;
-    width: 48px;
-    min-width: 48px;
+    width: 56px;
+    min-width: 56px;
     min-height: 44px;
     height: 44px;
-    padding: 0 2px;
+    padding: 0 4px;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 7px;
     border-radius: var(--radius-sm);
     white-space: nowrap;
-    flex: 1;
+    flex: none;
   }
   .play-controls .play-hud-utilities .play-util-strategy,
   .play-controls .play-hud-utilities .play-util-tip,
   .play-controls .play-hud-utilities .play-util-hud {
     left: auto;
-    width: auto;
-    flex: 1;
+    width: 56px;
+    flex: none;
   }
   .app-play .tip-panel {
-    top: auto;
-    bottom: calc(56px * var(--landscape-scale, 1) + 6px);
-    left: 8px;
+    top: 200px;
+    bottom: auto;
+    left: 58px;
     right: auto;
     transform: scale(var(--landscape-scale, 1));
-    transform-origin: bottom left;
+    transform-origin: top left;
     max-width: min(280px, calc(100vw - 32px));
     margin: 0;
   }

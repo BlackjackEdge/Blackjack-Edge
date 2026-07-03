@@ -421,11 +421,11 @@ export function ChipTray({
   }
 
   return (
-    <div className="chip-rack-row">
-      <button type="button" className="chip-scroll-btn" onClick={() => scroll(-1)} aria-label="Scroll chips left">
+    <div className="chip-rack-row chip-rack-landscape-flat">
+      <button type="button" className="chip-scroll-btn chip-scroll-landscape-hide" onClick={() => scroll(-1)} aria-label="Scroll chips left">
         <ChevronLeft size={16} />
       </button>
-      <div className="chip-tray" ref={trayRef}>
+      <div className="chip-tray chip-tray-landscape-flat" ref={trayRef}>
         {CHIP_VALUES.map((value) => (
             <button
               key={value}
@@ -439,7 +439,7 @@ export function ChipTray({
             </button>
         ))}
       </div>
-      <button type="button" className="chip-scroll-btn" onClick={() => scroll(1)} aria-label="Scroll chips right">
+      <button type="button" className="chip-scroll-btn chip-scroll-landscape-hide" onClick={() => scroll(1)} aria-label="Scroll chips right">
         <ChevronRight size={16} />
       </button>
     </div>
