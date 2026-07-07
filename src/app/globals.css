@@ -265,7 +265,8 @@ h1 { font-size: clamp(28px, 6vw, 42px); } h2 { font-size: clamp(22px, 4vw, 30px)
   .casino-table { flex: 1; margin: 0 auto; width: calc(100% - 4px); max-width: min(520px, calc(100vw - 16px)); min-height: 0; }
   .dealer-zone { top: 13%; }
   .dealer-result-banner { max-width: calc(100vw - 48px); overflow: hidden; text-overflow: ellipsis; }
-  .betting-spots { bottom: 13%; gap: clamp(8px, 3.5vw, 28px); }
+  .betting-spots { bottom: 13%; gap: clamp(18px, 6.5vw, 52px); }
+  .dealer-cards-fan { --fan-step: clamp(18px, calc(28px - max(0, var(--card-count, 2) - 2) * 2px), 28px); }
   .bet-spot-cards { min-height: 76px; padding-top: 24px; }
   .hand-result-popup { bottom: calc(100% + 6px); max-width: min(130px, 32vw); }
   .play-controls .play-hud-utilities { padding-top: 2px; padding-bottom: 2px; }
@@ -655,12 +656,12 @@ h1 { font-size: clamp(28px, 6vw, 42px); } h2 { font-size: clamp(22px, 4vw, 30px)
     pointer-events: auto;
     transform-origin: center center;
   }
-  /* Backwards-L cluster on lower-right felt — clear of Deal/chips/betting circles */
-  .play-action-section .action-btn.double { right: 10px; top: 268px; transform: none; }
-  .play-action-section .action-btn.split { right: 60px; top: 268px; transform: none; }
-  .play-action-section .action-btn.surrender { right: 110px; top: 268px; transform: none; }
-  .play-action-section .action-btn.stand { right: 10px; top: 216px; transform: none; }
-  .play-action-section .action-btn.hit { right: 10px; top: 164px; transform: none; }
+  /* Backwards-L cluster on lower-right felt — on table, clear of Deal/chips/betting circles */
+  .play-action-section .action-btn.double { right: 100px; top: 268px; transform: none; }
+  .play-action-section .action-btn.split { right: 150px; top: 268px; transform: none; }
+  .play-action-section .action-btn.surrender { right: 200px; top: 268px; transform: none; }
+  .play-action-section .action-btn.stand { right: 100px; top: 216px; transform: none; }
+  .play-action-section .action-btn.hit { right: 100px; top: 164px; transform: none; }
   .play-message {
     position: absolute;
     top: 384px;
@@ -678,7 +679,8 @@ h1 { font-size: clamp(28px, 6vw, 42px); } h2 { font-size: clamp(22px, 4vw, 30px)
   }
   .play-controls .play-hud-utilities {
     position: absolute;
-    top: 72px;
+    top: auto;
+    bottom: 118px;
     left: 58px;
     width: 56px;
     height: auto;
@@ -712,12 +714,12 @@ h1 { font-size: clamp(28px, 6vw, 42px); } h2 { font-size: clamp(22px, 4vw, 30px)
     flex: none;
   }
   .app-play .tip-panel {
-    top: 200px;
-    bottom: auto;
+    top: auto;
+    bottom: 176px;
     left: 58px;
     right: auto;
     transform: scale(var(--landscape-scale-x, 1), var(--landscape-scale-y, 1));
-    transform-origin: top left;
+    transform-origin: bottom left;
     max-width: min(280px, calc(100vw - 32px));
     margin: 0;
   }
@@ -1091,7 +1093,7 @@ h1 { font-size: clamp(28px, 6vw, 42px); } h2 { font-size: clamp(22px, 4vw, 30px)
 .luxury-card-back-border { position: absolute; inset: 5px; border: 1px solid rgba(212,175,55,.5); border-radius: 5px; }
 .luxury-card-back-core { position: absolute; inset: 10px; display: grid; place-items: center; border: 1px solid rgba(212,175,55,.25); border-radius: 4px; }
 .luxury-card-back-logo { font-size: 24px; color: var(--gold); opacity: .7; }
-@media (max-width: 380px) { .drill-moves { grid-template-columns: repeat(3,1fr); } .betting-spots { gap: 12px; } }
+@media (max-width: 380px) { .drill-moves { grid-template-columns: repeat(3,1fr); } .betting-spots { gap: 20px; } }
 @media (min-width: 768px) { .stats-grid { grid-template-columns: repeat(3,1fr); } }
 
 /* ui.tsx component classes */
