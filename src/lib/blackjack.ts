@@ -155,6 +155,21 @@ export function isPair(cards: string[]) {
   return normalize(cards[0]) === normalize(cards[1]);
 }
 
+/** Late surrender: first decision on an original (non-split) two-card hand, not blackjack. */
+export function canSurrenderHand(hand: {
+  cards: string[];
+  fromSplit?: boolean;
+}): boolean {
+  if (hand.fromSplit) return false;
+  if (hand.cards.length !== 2) return false;
+  if (isBlackjack(hand.cards)) return false;
+  return true;
+}
+
+export function surrenderReturn(bet: number): number {
+  return Math.floor(bet / 2);
+}
+
 export function pairKey(cards: string[]) {
   const rank = cardValue(cards[0]) === 10 ? "10" : cardRank(cards[0]);
   return `${rank},${rank}`;

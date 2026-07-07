@@ -31,6 +31,8 @@ import {
   moveNames,
   recommendedTrainingBet,
   shouldDealerHit,
+  canSurrenderHand,
+  surrenderReturn,
   type Move,
   type TrainingHand,
 } from "@/lib/blackjack";
@@ -196,6 +198,7 @@ const handResultLabel = (result?: string) => {
     Lose: "LOSE",
     Push: "PUSH",
     Bust: "BUST",
+    Surrender: "SURRENDER",
     "Dealer Blackjack": "DEALER BLACKJACK",
   };
   return map[result] ?? result.toUpperCase();
@@ -482,6 +485,7 @@ export default function App() {
   const canHit = Boolean(canAct && activeHandTotal < 21 && !activePlayHand?.aceSplit);
   const canSplit = Boolean(canAct && activePlayHand && isPair(activePlayHand.cards) && bankroll >= activePlayHand.bet);
   const canDouble = Boolean(canAct && activePlayHand && activePlayHand.cards.length === 2 && bankroll >= activePlayHand.bet);
+  const canSurrender = Boolean(canAct && activePlayHand && canSurrenderHand(activePlayHand));
   const tipMove = activePlayHand && dealerUpcard && activePlayHand.cards.length >= 2 ? correctAction(activePlayHand.cards, dealerUpcard) : null;
   const dealerVisibleHand = playPhase === "player" && dealerHand.length > 1 ? [dealerHand[0]] : dealerHand;
   const canBet = playPhase === "betting" || playPhase === "roundOver";
@@ -1004,6 +1008,23 @@ export default function App() {
     finishHand(updated, activeHand);
   }
 
+  function surrenderPlayHand() {
+    if (playPhase !== "player" || !activePlayHand) return;
+    if (!canSurrenderHand(activePlayHand)) {
+      setPlayMessage("Surrender available on first two cards only.");
+      return;
+    }
+    const halfReturn = surrenderReturn(activePlayHand.bet);
+    const updated = playerHands.map((h, i) =>
+      i === activeHand
+        ? { ...h, stood: true, result: "Surrender", payout: halfReturn }
+        : h
+    );
+    setBankroll((b) => b + halfReturn);
+    setPlayMessage("Surrendered. Half bet returned.");
+    finishHand(updated);
+  }
+
   function runDealerAndSettle(hands: PlayerHand[]) {
     setPlayPhase("dealer");
     let dealer = [...dealerHand];
@@ -1023,7 +1044,7 @@ export default function App() {
     const dealerBust = isBust(dealer);
     let additionalReturn = 0;
     const settled = hands.map((hand) => {
-      if (hand.result === "Blackjack") return hand;
+      if (hand.result === "Blackjack" || hand.result === "Surrender") return hand;
       let result = hand.result || "";
       let payout = hand.payout ?? 0;
       if (hand.result === "Bust" || isBust(hand.cards)) {
@@ -1246,11 +1267,12 @@ export default function App() {
                     canStand={canAct}
                     canDouble={canDouble}
                     canSplit={canSplit}
-                    canSurrender={false}
+                    canSurrender={canSurrender}
                     onHit={hitPlayHand}
                     onStand={standPlayHand}
                     onDouble={doublePlayHand}
                     onSplit={splitPlayHand}
+                    onSurrender={surrenderPlayHand}
                   />
                 </div>
               </div>

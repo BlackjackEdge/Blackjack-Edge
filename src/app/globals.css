@@ -646,22 +646,22 @@ h1 { font-size: clamp(28px, 6vw, 42px); } h2 { font-size: clamp(22px, 4vw, 30px)
   }
   .play-action-section .action-btn {
     position: absolute;
-    width: 46px;
-    height: 46px;
-    min-width: 46px;
-    min-height: 46px;
+    width: 54px;
+    height: 54px;
+    min-width: 54px;
+    min-height: 54px;
     flex-shrink: 0;
-    font-size: 6px;
+    font-size: 7px;
     padding: 0;
     pointer-events: auto;
     transform-origin: center center;
   }
   /* Backwards-L cluster on lower-right felt — on table, clear of Deal/chips/betting circles */
-  .play-action-section .action-btn.double { right: 56px; top: 236px; transform: none; }
-  .play-action-section .action-btn.split { right: 106px; top: 236px; transform: none; }
-  .play-action-section .action-btn.surrender { right: 156px; top: 236px; transform: none; }
-  .play-action-section .action-btn.stand { right: 56px; top: 184px; transform: none; }
-  .play-action-section .action-btn.hit { right: 56px; top: 132px; transform: none; }
+  .play-action-section .action-btn.double { right: 56px; top: 266px; transform: none; }
+  .play-action-section .action-btn.split { right: 114px; top: 266px; transform: none; }
+  .play-action-section .action-btn.surrender { right: 172px; top: 266px; transform: none; }
+  .play-action-section .action-btn.stand { right: 56px; top: 208px; transform: none; }
+  .play-action-section .action-btn.hit { right: 56px; top: 150px; transform: none; }
   .play-message {
     position: absolute;
     top: 384px;
