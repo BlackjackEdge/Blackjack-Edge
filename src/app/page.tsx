@@ -80,6 +80,8 @@ type PlayerHand = {
   busted?: boolean;
   result?: string;
   payout?: number;
+  fromSplit?: boolean;
+  aceSplit?: boolean;
 };
 
 type GameStats = {
@@ -203,11 +205,24 @@ const handResultClass = (result?: string) => {
   return result.toLowerCase().replace(/\s+/g, "-");
 };
 const isHandComplete = (hand: PlayerHand) => Boolean(hand.stood || hand.busted || hand.result);
+const isAcePair = (cards: string[]) =>
+  cards.length === 2 && cardRank(cards[0]) === "A" && cardRank(cards[1]) === "A";
 const findNextActiveHandIndex = (hands: PlayerHand[], fromIndex = 0) => {
   for (let i = fromIndex; i < hands.length; i++) {
     if (!isHandComplete(hands[i])) return i;
   }
   return -1;
+};
+const finalizeSplitHand = (hand: PlayerHand, splittingAces: boolean): PlayerHand => {
+  let next: PlayerHand = {
+    ...hand,
+    fromSplit: true,
+    ...(splittingAces ? { aceSplit: true, stood: true } : {}),
+  };
+  const total = handValue(next.cards).total;
+  if (total > 21) return { ...next, busted: true, stood: true, result: "Bust" };
+  if (total === 21 || splittingAces) return { ...next, stood: true };
+  return next;
 };
 const dealerUpcardLabel = (card?: string) => {
   if (!card) return "";
@@ -460,12 +475,11 @@ export default function App() {
   const canAct = Boolean(
     playPhase === "player" &&
     activePlayHand &&
-    !activePlayHand.stood &&
-    !activePlayHand.busted &&
-    !activePlayHand.result &&
+    !isHandComplete(activePlayHand) &&
+    !activePlayHand.aceSplit &&
     activeHandTotal < 21
   );
-  const canHit = Boolean(canAct && activeHandTotal < 21);
+  const canHit = Boolean(canAct && activeHandTotal < 21 && !activePlayHand?.aceSplit);
   const canSplit = Boolean(canAct && activePlayHand && isPair(activePlayHand.cards) && bankroll >= activePlayHand.bet);
   const canDouble = Boolean(canAct && activePlayHand && activePlayHand.cards.length === 2 && bankroll >= activePlayHand.bet);
   const tipMove = activePlayHand && dealerUpcard && activePlayHand.cards.length >= 2 ? correctAction(activePlayHand.cards, dealerUpcard) : null;
@@ -901,19 +915,16 @@ export default function App() {
     setPlayMessage(`Playing ${seatLabel(handsAfterDeal[firstPlayable].seatId)} hand. Your move.`);
   }
 
-  function finishHand(updatedHands: PlayerHand[], nextIndex = activeHand + 1) {
-    let idx = nextIndex;
-    while (idx < updatedHands.length) {
-      const h = updatedHands[idx];
-      if (!h.stood && !h.busted && !h.result) break;
-      idx++;
-    }
-    if (idx < updatedHands.length) {
+  function finishHand(updatedHands: PlayerHand[], searchFrom?: number) {
+    const from = searchFrom ?? activeHand + 1;
+    const idx = findNextActiveHandIndex(updatedHands, from);
+    if (idx !== -1) {
       setPlayerHands(updatedHands);
       setActiveHand(idx);
-      setPlayMessage(`Playing ${seatLabel(updatedHands[idx].seatId)} hand.`);
+      setPlayMessage(`Playing ${seatLabel(updatedHands[idx].seatId)} hand. Your move.`);
       return;
     }
+    setPlayerHands(updatedHands);
     runDealerAndSettle(updatedHands);
   }
 
@@ -974,22 +985,23 @@ export default function App() {
     if (playPhase !== "player" || !activePlayHand) return;
     if (!isPair(activePlayHand.cards)) { setPlayMessage("Split matching pairs only."); return; }
     if (bankroll < activePlayHand.bet) { setPlayMessage("Not enough bankroll to split."); return; }
+    const splittingAces = isAcePair(activePlayHand.cards);
     const { drawn, nextShoe } = drawFromPlayShoe(playShoe, 2);
-    let first: PlayerHand = { cards: [activePlayHand.cards[0], drawn[0]], bet: activePlayHand.bet, seatId: activePlayHand.seatId };
-    let second: PlayerHand = { cards: [activePlayHand.cards[1], drawn[1]], bet: activePlayHand.bet, seatId: activePlayHand.seatId };
-    if (handValue(first.cards).total === 21 && !isBlackjack(first.cards)) first = { ...first, stood: true };
-    if (handValue(second.cards).total === 21 && !isBlackjack(second.cards)) second = { ...second, stood: true };
+    const first = finalizeSplitHand(
+      { cards: [activePlayHand.cards[0], drawn[0]], bet: activePlayHand.bet, seatId: activePlayHand.seatId },
+      splittingAces
+    );
+    const second = finalizeSplitHand(
+      { cards: [activePlayHand.cards[1], drawn[1]], bet: activePlayHand.bet, seatId: activePlayHand.seatId },
+      splittingAces
+    );
     const updated = [...playerHands];
     updated.splice(activeHand, 1, first, second);
     setBankroll((b) => b - activePlayHand.bet);
     setPlayShoe(nextShoe);
     setSeenCards((prev) => [...prev, ...drawn]);
-    if (first.stood && !first.busted) {
-      finishHand(updated);
-      return;
-    }
-    setPlayerHands(updated);
-    setPlayMessage("Split. Playing first hand.");
+    setPlayMessage(splittingAces ? "Split aces — one card each, standing." : "Split. Playing first hand.");
+    finishHand(updated, activeHand);
   }
 
   function runDealerAndSettle(hands: PlayerHand[]) {
