@@ -734,6 +734,7 @@ h1 { font-size: clamp(28px, 6vw, 42px); } h2 { font-size: clamp(22px, 4vw, 30px)
 .trainer-card span { font-size: 12px; color: var(--cream-text-muted); line-height: 1.4; }
 .trainer-card em { margin-top: 4px; font-style: normal; font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--gold-deep); }
 .selector { display: grid; grid-template-columns: repeat(auto-fit, minmax(80px,1fr)); gap: 6px; }
+.selector-label { margin: 12px 0 6px; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--cream-text-muted); }
 .selector button { padding: 12px 8px; border-radius: var(--radius-md); border: 1.5px solid var(--cream-gold); background: var(--cream-panel-bg); font-weight: 700; font-size: 12px; color: var(--cream-text); box-shadow: inset 0 1px 0 rgba(255,255,255,.45); }
 .selector button.selected { background: linear-gradient(180deg, var(--gold-light), var(--gold-deep)); color: #111; border-color: var(--gold); }
 .toggle { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: var(--radius-md); border: var(--cream-panel-border); background: var(--cream-panel-bg); font-size: 13px; color: var(--cream-text); box-shadow: var(--cream-panel-shadow); }
@@ -757,6 +758,10 @@ h1 { font-size: clamp(28px, 6vw, 42px); } h2 { font-size: clamp(22px, 4vw, 30px)
 .swipe-buttons button:nth-child(1) { background: linear-gradient(180deg,#ff7b7b,#b82432); color: #fff; }
 .swipe-buttons button:nth-child(2) { background: linear-gradient(180deg,#999,#555); color: #fff; }
 .swipe-buttons button:nth-child(3) { background: linear-gradient(180deg,#6fdc8c,#1a8a3e); color: #fff; }
+.count-batch-cards { display: flex; align-items: center; justify-content: center; min-height: 140px; padding: 8px 16px; }
+.count-batch-card { flex-shrink: 0; transition: transform .2s ease; }
+.count-batch-caption { margin: 0; font-size: 12px; letter-spacing: .04em; }
+.count-next-btn { min-height: 56px; display: flex; align-items: center; justify-content: center; gap: 6px; font-weight: 800; font-size: 16px; }
 .count-hint { display: flex; justify-content: space-between; font-size: 11px; font-weight: 700; color: var(--ivory-dim); }
 .feedback-bar { text-align: center; padding: 10px 14px; border-radius: var(--radius-md); border: var(--cream-panel-border); background: var(--cream-panel-bg); box-shadow: var(--cream-panel-shadow); font-size: 13px; color: var(--cream-text-muted); }
 .result-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }

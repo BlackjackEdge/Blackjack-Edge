@@ -68,6 +68,8 @@ import {
 
 type HandResult = { hand: TrainingHand; choice: Move; seconds: number };
 type SwipeValue = -1 | 0 | 1;
+type CountDrillMode = "classic" | "batch";
+type CountBatchSize = 1 | 2 | 4;
 type PlayPhase = "betting" | "player" | "dealer" | "roundOver";
 type SeatBets = Record<SeatId, number>;
 type SeatLastChips = Record<SeatId, number | null>;
@@ -272,6 +274,9 @@ export default function App() {
   const [countCards, setCountCards] = useState(20);
   const [countDecks, setCountDecks] = useState(6);
   const [guided, setGuided] = useState(true);
+  const [countDrillMode, setCountDrillMode] = useState<CountDrillMode>("classic");
+  const [countBatchSize, setCountBatchSize] = useState<CountBatchSize>(2);
+  const [countDrillSequence, setCountDrillSequence] = useState<string[]>([]);
   const [countCorrect, setCountCorrect] = useState(0);
   const [cardStart, setCardStart] = useState(0);
   const [swipeTimes, setSwipeTimes] = useState<number[]>([]);
@@ -361,6 +366,10 @@ export default function App() {
       if (typeof saved.countDecks === "number") setCountDecks(saved.countDecks);
       if (typeof saved.countCards === "number") setCountCards(saved.countCards);
       if (typeof saved.guided === "boolean") setGuided(saved.guided);
+      if (saved.countDrillMode === "classic" || saved.countDrillMode === "batch") {
+        setCountDrillMode(saved.countDrillMode);
+      }
+      if ([1, 2, 4].includes(saved.countBatchSize)) setCountBatchSize(saved.countBatchSize);
       if (typeof saved.screen === "string") {
         if (saved.screen === "counting") setScreen("countLearn");
         else if (["home", "play", "trainer", "stats", "vault"].includes(saved.screen)) {
@@ -408,6 +417,8 @@ export default function App() {
           countDecks,
           countCards,
           guided,
+          countDrillMode,
+          countBatchSize,
           screen: ["home", "play", "trainer", "stats", "vault"].includes(screen) ? screen : "home",
           savedAt: Date.now(),
         })
@@ -416,7 +427,7 @@ export default function App() {
   }, [
     hasLoadedSession, bankroll, stats.startingBankroll, stats.bankrollAdded, seatBets, seatLastChip, playDecks, playShoe, seenCards, dealerHand,
     playerHands, activeHand, playPhase, playMessage, roundBanner,
-    countDecks, countCards, guided, screen,
+    countDecks, countCards, guided, countDrillMode, countBatchSize, screen,
   ]);
 
   useEffect(() => {
@@ -466,6 +477,22 @@ export default function App() {
   const finalTrue = finalRunning / decksRemaining;
   const runningGuessIsCorrect = countSubmitted && Number.isFinite(Number(runningGuess)) && Number(runningGuess) === finalRunning;
   const trueGuessIsCorrect = countSubmitted && Number.isFinite(Number(trueGuess)) && Math.abs(Number(trueGuess) - Number(finalTrue.toFixed(1))) <= 0.1;
+
+  const batchTotalSteps = countDrillSequence.length
+    ? Math.ceil(countDrillSequence.length / countBatchSize)
+    : Math.ceil(countCards / countBatchSize);
+  const batchStepsDone = countDrillSequence.length
+    ? Math.ceil(dealt.length / countBatchSize)
+    : 0;
+  const batchVisibleCards =
+    countDrillMode === "batch" && countDrillSequence.length > dealt.length
+      ? countDrillSequence.slice(dealt.length, dealt.length + Math.min(countBatchSize, countDrillSequence.length - dealt.length))
+      : [];
+  const batchDrillActive = countDrillMode === "batch" && batchVisibleCards.length > 0;
+  const countDrillComplete =
+    countDrillMode === "batch"
+      ? countDrillSequence.length > 0 && dealt.length >= countDrillSequence.length
+      : !countCard && dealt.length > 0;
 
   const playRunning = seenCards.reduce((sum, c) => sum + hiLo(c), 0);
   const playDecksRemaining = Math.max(playShoe.length / 52, 0.1);
@@ -611,35 +638,103 @@ export default function App() {
   }
 
   function startCounting() {
+    setRunningGuess("");
+    setTrueGuess("");
+    setCountSubmitted(false);
+    setCountCorrect(0);
+    setSwipeTimes([]);
+    setDealt([]);
+
+    if (countDrillMode === "batch") {
+      const fresh = buildShoe(countDecks);
+      const sequence: string[] = [];
+      const nextShoe = [...fresh];
+      while (sequence.length < countCards && nextShoe.length) {
+        sequence.push(nextShoe.pop()!);
+      }
+      setShoe(nextShoe);
+      setCountDrillSequence(sequence);
+      setCountCard(null);
+      setCardStart(Date.now());
+      setCountFeedback(
+        guided
+          ? `Batch mode: ${countBatchSize} card${countBatchSize > 1 ? "s" : ""} per step. Tap Next when ready.`
+          : "Hidden count: track the running total, then tap Next for the next batch."
+      );
+      setScreen("countDrill");
+      return;
+    }
+
     const fresh = buildShoe(countDecks);
     const { nextCard, nextShoe } = getNextDifferentCard(null, fresh);
     setShoe(nextShoe);
     setCountCard(nextCard);
+    setCountDrillSequence([]);
     setDealt([]);
-    setCountCorrect(0);
-    setSwipeTimes([]);
     setRunningGuess("");
     setTrueGuess("");
     setCountSubmitted(false);
+    setCountCorrect(0);
+    setSwipeTimes([]);
     setCardStart(Date.now());
     setCountFeedback(guided ? "Guided mode: running count shows as you go." : "Hidden mode: keep the running count in your head.");
     setScreen("countDrill");
   }
 
   function reDrillSameCountingCards() {
-    if (!dealt.length) { startCounting(); return; }
-    const repeatCards = [...dealt];
-    setShoe(repeatCards.slice(1).reverse());
-    setCountCard(repeatCards[0]);
-    setDealt([]);
-    setCountCorrect(0);
-    setSwipeTimes([]);
+    const repeatCards = countDrillSequence.length ? [...countDrillSequence] : [...dealt];
+    if (!repeatCards.length) {
+      startCounting();
+      return;
+    }
+
     setRunningGuess("");
     setTrueGuess("");
     setCountSubmitted(false);
+    setCountCorrect(0);
+    setSwipeTimes([]);
+    setDealt([]);
     setCardStart(Date.now());
     setCountFeedback("Same drill loaded. Run the count again.");
+
+    if (countDrillMode === "batch") {
+      setCountDrillSequence(repeatCards);
+      setCountCard(null);
+      setScreen("countDrill");
+      return;
+    }
+
+    setShoe(repeatCards.slice(1).reverse());
+    setCountCard(repeatCards[0]);
+    setCountDrillSequence([]);
     setScreen("countDrill");
+  }
+
+  function advanceBatchCount() {
+    if (countDrillMode !== "batch" || !countDrillSequence.length) return;
+    if (dealt.length >= countDrillSequence.length) return;
+
+    const ms = Date.now() - cardStart;
+    const nextCount = Math.min(countBatchSize, countDrillSequence.length - dealt.length);
+    const nextDealt = [...dealt, ...countDrillSequence.slice(dealt.length, dealt.length + nextCount)];
+    setDealt(nextDealt);
+    setSwipeTimes((prev) => [...prev, ms]);
+    setCardStart(Date.now());
+
+    if (nextDealt.length >= countDrillSequence.length) {
+      setStats((s) => ({ ...s, countDrills: s.countDrills + 1 }));
+      setCountFeedback("Drill complete. Enter your running and true count.");
+      return;
+    }
+
+    setCountFeedback(
+      guided
+        ? (() => {
+            const rc = nextDealt.reduce((sum, c) => sum + hiLo(c), 0);
+            return `Batch passed. Running count is ${rc >= 0 ? "+" : ""}${rc}.`;
+          })()
+        : "Next batch ready. Keep your running count in your head."
+    );
   }
 
   function chooseCount(value: SwipeValue) {
@@ -1445,6 +1540,40 @@ export default function App() {
               <button key={n} className={countDecks === n ? "selected" : ""} onClick={() => setCountDecks(n)}>{n} Deck{n > 1 ? "s" : ""}</button>
             ))}
           </div>
+          <p className="selector-label">Drill style</p>
+          <div className="selector">
+            <button
+              type="button"
+              className={countDrillMode === "classic" ? "selected" : ""}
+              onClick={() => setCountDrillMode("classic")}
+            >
+              Classic swipe
+            </button>
+            <button
+              type="button"
+              className={countDrillMode === "batch" ? "selected" : ""}
+              onClick={() => setCountDrillMode("batch")}
+            >
+              Batch / Quick count
+            </button>
+          </div>
+          {countDrillMode === "batch" && (
+            <>
+              <p className="selector-label">Cards per step</p>
+              <div className="selector">
+                {([1, 2, 4] as CountBatchSize[]).map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    className={countBatchSize === n ? "selected" : ""}
+                    onClick={() => setCountBatchSize(n)}
+                  >
+                    {n} at a time
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
           <label className="toggle">
             <input type="checkbox" checked={guided} onChange={(e) => setGuided(e.target.checked)} />
             Guided mode: show running count
@@ -1459,24 +1588,62 @@ export default function App() {
             <button className="drill-exit-btn" onClick={() => setDrillExitOpen("count")}>Exit</button>
           </div>
           <div className="drill-stats">
-            <div><strong>{dealt.length}/{countCards}</strong><span>Cards</span></div>
-            <div><strong>{dealt.length ? Math.round((countCorrect / dealt.length) * 100) : 0}%</strong><span>Recognition</span></div>
-            <div><strong>{(avg(swipeTimes) / 1000).toFixed(2)}s</strong><span>Avg Speed</span></div>
+            <div><strong>{dealt.length}/{countDrillMode === "batch" ? countDrillSequence.length || countCards : countCards}</strong><span>Cards</span></div>
+            {countDrillMode === "classic" ? (
+              <>
+                <div><strong>{dealt.length ? Math.round((countCorrect / dealt.length) * 100) : 0}%</strong><span>Recognition</span></div>
+                <div><strong>{(avg(swipeTimes) / 1000).toFixed(2)}s</strong><span>Avg Speed</span></div>
+              </>
+            ) : (
+              <>
+                <div><strong>{batchStepsDone}/{batchTotalSteps}</strong><span>Batches</span></div>
+                <div><strong>{countBatchSize}</strong><span>Per step</span></div>
+              </>
+            )}
           </div>
-          {guided && countCard && (
+          {guided && (countDrillMode === "classic" ? countCard : batchDrillActive) && (
             <div className="running-count">Running Count: <strong>{finalRunning >= 0 ? "+" : ""}{finalRunning}</strong></div>
           )}
           <div className="drill-table">
-            {countCard ? <PlayingCard value={countCard} /> : <strong style={{ color: "var(--gold)", fontSize: 24 }}>Drill Complete</strong>}
-            {countCard && <div className="count-hint"><span>← -1</span><span>0</span><span>+1 →</span></div>}
+            {countDrillMode === "batch" ? (
+              batchDrillActive ? (
+                <div className="count-batch-cards">
+                  {batchVisibleCards.map((card, i) => (
+                    <div
+                      key={`${card}-${dealt.length}-${i}`}
+                      className="count-batch-card"
+                      style={{ zIndex: i, marginLeft: i === 0 ? 0 : -28, transform: `rotate(${(i - (batchVisibleCards.length - 1) / 2) * 6}deg)` }}
+                    >
+                      <PlayingCard value={card} />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <strong style={{ color: "var(--gold)", fontSize: 24 }}>Drill Complete</strong>
+              )
+            ) : countCard ? (
+              <PlayingCard value={countCard} />
+            ) : (
+              <strong style={{ color: "var(--gold)", fontSize: 24 }}>Drill Complete</strong>
+            )}
+            {countDrillMode === "classic" && countCard && (
+              <div className="count-hint"><span>← -1</span><span>0</span><span>+1 →</span></div>
+            )}
+            {countDrillMode === "batch" && batchDrillActive && (
+              <p className="count-batch-caption text-muted">Count this batch, then tap Next</p>
+            )}
           </div>
-          {countCard ? (
+          {countDrillMode === "classic" && countCard ? (
             <div className="swipe-buttons">
               <button onClick={() => chooseCount(-1)}><ChevronLeft size={16} /> -1</button>
               <button onClick={() => chooseCount(0)}>0</button>
               <button onClick={() => chooseCount(1)}>+1 <ChevronRight size={16} /></button>
             </div>
-          ) : (
+          ) : countDrillMode === "batch" && batchDrillActive ? (
+            <button type="button" className="btn-primary count-next-btn" onClick={advanceBatchCount}>
+              Next <ChevronRight size={18} />
+            </button>
+          ) : countDrillComplete ? (
             <div className="glass-panel" style={{ padding: 16, display: "flex", flexDirection: "column", gap: 10 }}>
               <h2>Final Count Quiz</h2>
               <p className="text-muted">{countDecks}-deck shoe • Decks remaining: {decksRemaining.toFixed(1)}</p>
@@ -1498,7 +1665,7 @@ export default function App() {
               <button className="btn-primary" onClick={reDrillSameCountingCards}>Re-Drill Same Cards</button>
               <button className="btn-secondary" onClick={() => setScreen("countLearn")}>Back to Academy</button>
             </div>
-          )}
+          ) : null}
           <div className="feedback-bar">{countFeedback}</div>
         </section>
       )}
