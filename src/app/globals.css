@@ -781,6 +781,12 @@ h1 { font-size: clamp(28px, 6vw, 42px); } h2 { font-size: clamp(22px, 4vw, 30px)
 .lesson-card.plus { border-color: rgba(111,220,140,.35); }
 .lesson-card.minus { border-color: rgba(232,93,111,.35); }
 .count-grade { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.count-drill-complete h2 { margin: 0; font-size: 18px; color: var(--gold-deep); letter-spacing: .04em; }
+.count-timing-results { padding: 12px; border-radius: var(--radius-md); border: 1px solid rgba(201,162,39,.25); background: linear-gradient(165deg, rgba(255,247,223,.92), rgba(245,235,210,.75)); box-shadow: var(--cream-panel-shadow); }
+.count-timing-eyebrow { margin: 0 0 8px; font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--gold-deep); }
+.count-timing-grid { margin: 0; }
+.count-timing-formula { margin: 8px 0 0; font-size: 11px; line-height: 1.45; }
+.selector-hint { margin: -2px 0 10px; font-size: 12px; line-height: 1.45; }
 .grade-card { padding: 12px; border-radius: var(--radius-md); border: var(--cream-panel-border); background: var(--cream-panel-bg); box-shadow: var(--cream-panel-shadow); text-align: center; display: flex; flex-direction: column; gap: 4px; color: var(--cream-text); }
 .grade-card.correct { border-color: rgba(111,220,140,.4); }
 .grade-card.wrong { border-color: rgba(232,93,111,.4); }
