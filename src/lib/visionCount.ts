@@ -29,27 +29,31 @@ export type FrameDetection = {
 
 const SUIT_LETTERS = ["S", "H", "D", "C"] as const;
 const RANK_LIST = [...ranks];
-const MIN_REGION_AREA = 4200;
-const MAX_REGION_AREA = 28000;
-const MIN_CARD_W = 28;
-const MAX_CARD_W = 110;
-const MIN_CARD_H = 38;
-const MAX_CARD_H = 150;
-const MIN_ASPECT = 0.58;
-const MAX_ASPECT = 0.82;
-const MIN_FILL_RATIO = 0.62;
-const MAX_REGIONS = 4;
-const CELL_SIZE = 40;
-const TRACK_MISS_LIMIT = 10;
-const MATCH_DISTANCE = 0.14;
-const DETECTION_CONF_MIN = 68;
-const REGISTRATION_CONF_MIN = 74;
-const CONFIRM_FRAMES_REQUIRED = 3;
-const MIN_RANK_MARGIN = 0.12;
-const MIN_RANK_CORRELATION = 0.35;
-const MIN_FACE_BRIGHTNESS = 168;
-const MIN_INK_DARKNESS = 72;
-const MIN_PATCH_STD = 0.28;
+/** Set true in devtools to log per-frame region/rank stats. */
+export const VISION_DEBUG = false;
+
+const MIN_REGION_AREA = 3200;
+const MAX_REGION_AREA = 32000;
+const MIN_CARD_W = 24;
+const MAX_CARD_W = 120;
+const MIN_CARD_H = 32;
+const MAX_CARD_H = 160;
+const MIN_ASPECT = 0.52;
+const MAX_ASPECT = 0.88;
+const MIN_FILL_RATIO = 0.55;
+const MAX_REGIONS = 5;
+const CELL_SIZE = 44;
+const TRACK_MISS_LIMIT = 12;
+const MATCH_DISTANCE = 0.16;
+const DETECTION_CONF_MIN = 58;
+const REGISTRATION_CONF_MIN = 64;
+const CONFIRM_FRAMES_REQUIRED = 2;
+const MIN_RANK_MARGIN = 0.08;
+const MIN_RANK_CORRELATION = 0.28;
+const MIN_FACE_BRIGHTNESS = 152;
+const MIN_INK_DARKNESS = 65;
+const MIN_PATCH_STD = 0.22;
+const BRIGHTNESS_THRESHOLD = 176;
 
 function suitLetter(suit: string): string {
   const idx = suits.indexOf(suit);
@@ -132,12 +136,12 @@ function ensureRankTemplates(): Map<string, Float32Array> {
   if (!ctx) return rankTemplates;
 
   for (const rank of RANK_LIST) {
-    ctx.fillStyle = "#ffffff";
+    ctx.fillStyle = "#f8f8f8";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = "#111111";
-    ctx.font = "bold 15px Georgia, 'Times New Roman', serif";
+    ctx.fillStyle = "#1a1a1a";
+    ctx.font = "bold 16px Arial, Helvetica, sans-serif";
     const text = rank;
-    ctx.fillText(text, rank === "10" ? 1 : 4, 19);
+    ctx.fillText(text, rank === "10" ? 0 : 3, 21);
     const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
     rankTemplates.set(rank, normalizePatch(grayscale(data, canvas.width, canvas.height)));
   }
@@ -167,7 +171,12 @@ function classifyRank(patch: Float32Array): { rank: string; confidence: number }
   if (margin < MIN_RANK_MARGIN || bestScore < MIN_RANK_CORRELATION) {
     return { rank: bestRank, confidence: 0 };
   }
-  const confidence = Math.max(0, Math.min(0.99, 0.42 + margin * 0.55 + bestScore * 0.12));
+  const scoreHeadroom = bestScore - MIN_RANK_CORRELATION;
+  const marginHeadroom = margin - MIN_RANK_MARGIN;
+  const confidence = Math.max(
+    0,
+    Math.min(0.99, 0.52 + scoreHeadroom * 1.1 + marginHeadroom * 0.75)
+  );
   return { rank: bestRank, confidence };
 }
 
@@ -242,16 +251,17 @@ function validateCardRegion(
 
   const face = regionFaceStats(gray, width, height, region);
   if (face.avgBrightness < MIN_FACE_BRIGHTNESS) return false;
-  if (face.darkRatio < 0.018 || face.darkRatio > 0.42) return false;
+  if (face.darkRatio < 0.012 || face.darkRatio > 0.48) return false;
   if (face.std < MIN_PATCH_STD) return false;
 
   return true;
 }
 
 function findCardRegions(gray: Float32Array, width: number, height: number) {
-  const threshold = 182;
+  const threshold = BRIGHTNESS_THRESHOLD;
   const visited = new Uint8Array(width * height);
   const regions: { x: number; y: number; w: number; h: number; area: number }[] = [];
+  let candidates = 0;
 
   for (let y = 0; y < height; y += 2) {
     for (let x = 0; x < width; x += 2) {
@@ -288,9 +298,14 @@ function findCardRegions(gray: Float32Array, width: number, height: number) {
         }
       }
 
+      candidates++;
       const region = { x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1, area };
       if (validateCardRegion(gray, width, height, region)) regions.push(region);
     }
+  }
+
+  if (VISION_DEBUG && candidates > 0) {
+    console.debug("[visionCount] regions", { candidates, validated: regions.length });
   }
 
   return regions.sort((a, b) => b.area - a.area).slice(0, MAX_REGIONS);
@@ -338,10 +353,18 @@ function extractCornerPatch(
   };
 }
 
+export type FrameDetectionStats = {
+  regionsFound: number;
+  regionsPassed: number;
+  rankMatches: number;
+  emitted: number;
+};
+
 export function detectCardsInFrame(
   source: CanvasImageSource,
   processCanvas: HTMLCanvasElement,
-  processCtx: CanvasRenderingContext2D
+  processCtx: CanvasRenderingContext2D,
+  statsOut?: FrameDetectionStats
 ): FrameDetection[] {
   const targetW = 320;
   const targetH = 240;
@@ -353,6 +376,14 @@ export function detectCardsInFrame(
   const gray = grayscale(image.data, targetW, targetH);
   const regions = findCardRegions(gray, targetW, targetH);
   const detections: FrameDetection[] = [];
+  let rankMatches = 0;
+
+  if (statsOut) {
+    statsOut.regionsFound = regions.length;
+    statsOut.regionsPassed = regions.length;
+    statsOut.rankMatches = 0;
+    statsOut.emitted = 0;
+  }
 
   for (const region of regions) {
     const { patch, corner, avg } = extractCornerPatch(image.data, targetW, targetH, region);
@@ -360,6 +391,7 @@ export function detectCardsInFrame(
     const suit = classifySuit(avg[0], avg[1], avg[2], corner);
     const confidence = Math.round(rankConf * 100);
 
+    if (rankConf > 0) rankMatches++;
     if (confidence < DETECTION_CONF_MIN) continue;
 
     detections.push({
@@ -375,6 +407,22 @@ export function detectCardsInFrame(
       },
       cx: (region.x + region.w / 2) / targetW,
       cy: (region.y + region.h / 2) / targetH,
+    });
+  }
+
+  if (statsOut) {
+    statsOut.rankMatches = rankMatches;
+    statsOut.emitted = detections.length;
+  }
+
+  if (VISION_DEBUG && (regions.length > 0 || rankMatches > 0)) {
+    console.debug("[visionCount]", {
+      regions: regions.length,
+      rankMatches,
+      emitted: detections.length,
+      sample: detections[0]
+        ? `${detections[0].rank}${detections[0].suit} @ ${detections[0].confidence}%`
+        : null,
     });
   }
 

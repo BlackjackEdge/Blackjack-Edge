@@ -21,11 +21,18 @@ type VisionCountProps = {
 
 type CameraError = "denied" | "not_found" | "unsupported" | "unknown";
 
-function statusLabel(status: VisionStatus, scanning: boolean, hasConfirmed: boolean, hasUncertain: boolean): string {
+function statusLabel(
+  status: VisionStatus,
+  scanning: boolean,
+  hasConfirmed: boolean,
+  hasUncertain: boolean,
+  hasAnyLive: boolean
+): string {
   if (status === "permission_required") return "Camera Permission Required";
   if (status === "no_camera") return "No Camera Available";
   if (scanning && hasConfirmed) return "Card Confirmed";
   if (scanning && hasUncertain) return "Card Detected (Confirming…)";
+  if (scanning && !hasAnyLive) return "Scanning — No Cards Found";
   if (scanning) return "Scanning";
   if (status === "detected") return "Card Detected";
   if (status === "ready") return "Camera Ready";
@@ -63,6 +70,7 @@ export function VisionCount({ onBack }: VisionCountProps) {
 
   const hasConfirmedLive = liveDetections.some((d) => d.confirmed);
   const hasUncertainLive = liveDetections.some((d) => !d.confirmed);
+  const hasAnyLive = liveDetections.length > 0;
 
   const visionStatus: VisionStatus = useMemo(() => {
     if (cameraError === "denied") return "permission_required";
@@ -276,7 +284,7 @@ export function VisionCount({ onBack }: VisionCountProps) {
       </div>
 
       <div className={`vision-status-pill ${statusClass(visionStatus, scanning)}`}>
-        {statusLabel(visionStatus, scanning, hasConfirmedLive, hasUncertainLive)}
+        {statusLabel(visionStatus, scanning, hasConfirmedLive, hasUncertainLive, hasAnyLive)}
       </div>
 
       <div className="vision-count-layout">
@@ -384,7 +392,7 @@ export function VisionCount({ onBack }: VisionCountProps) {
                   ? `Confirming detection (${lastConfidence}% confidence)…`
                   : `Latest confidence: ${lastConfidence}%`
                 : scanning
-                  ? "Searching for cards…"
+                  ? "Scanning — no cards in frame yet. Hold a card steady in view."
                   : "Start scanning to detect cards."}
             </p>
           </div>
