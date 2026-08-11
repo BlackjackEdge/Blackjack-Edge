@@ -71,6 +71,10 @@ type SwipeValue = -1 | 0 | 1;
 type CountDrillMode = "classic" | "batch";
 type CountBatchSize = 1 | 2 | 4;
 
+function pickRandomBatchSize(): number {
+  return 2 + Math.floor(Math.random() * 4);
+}
+
 const COUNT_DRILL_LENGTH_OPTIONS = [
   { cards: 10, label: "10 cards" },
   { cards: 20, label: "20 cards" },
@@ -300,6 +304,8 @@ export default function App() {
   const [guided, setGuided] = useState(true);
   const [countDrillMode, setCountDrillMode] = useState<CountDrillMode>("classic");
   const [countBatchSize, setCountBatchSize] = useState<CountBatchSize>(2);
+  const [countBatchRandom, setCountBatchRandom] = useState(false);
+  const [currentBatchSize, setCurrentBatchSize] = useState(2);
   const [countDrillSequence, setCountDrillSequence] = useState<string[]>([]);
   const [countCorrect, setCountCorrect] = useState(0);
   const [cardStart, setCardStart] = useState(0);
@@ -400,6 +406,7 @@ export default function App() {
         setCountDrillMode(saved.countDrillMode);
       }
       if ([1, 2, 4].includes(saved.countBatchSize)) setCountBatchSize(saved.countBatchSize);
+      if (typeof saved.countBatchRandom === "boolean") setCountBatchRandom(saved.countBatchRandom);
       if (typeof saved.screen === "string") {
         if (saved.screen === "counting") setScreen("countLearn");
         else if (["home", "play", "trainer", "stats", "vault"].includes(saved.screen)) {
@@ -449,6 +456,7 @@ export default function App() {
           guided,
           countDrillMode,
           countBatchSize,
+          countBatchRandom,
           screen: ["home", "play", "trainer", "stats", "vault"].includes(screen) ? screen : "home",
           savedAt: Date.now(),
         })
@@ -457,7 +465,7 @@ export default function App() {
   }, [
     hasLoadedSession, bankroll, stats.startingBankroll, stats.bankrollAdded, seatBets, seatLastChip, playDecks, playShoe, seenCards, dealerHand,
     playerHands, activeHand, playPhase, playMessage, roundBanner,
-    countDecks, countCards, guided, countDrillMode, countBatchSize, screen,
+    countDecks, countCards, guided, countDrillMode, countBatchSize, countBatchRandom, screen,
   ]);
 
   useEffect(() => {
@@ -508,15 +516,22 @@ export default function App() {
   const runningGuessIsCorrect = countSubmitted && Number.isFinite(Number(runningGuess)) && Number(runningGuess) === finalRunning;
   const trueGuessIsCorrect = countSubmitted && Number.isFinite(Number(trueGuess)) && Math.abs(Number(trueGuess) - Number(finalTrue.toFixed(1))) <= 0.1;
 
-  const batchTotalSteps = countDrillSequence.length
-    ? Math.ceil(countDrillSequence.length / countBatchSize)
-    : Math.ceil(countCards / countBatchSize);
-  const batchStepsDone = countDrillSequence.length
-    ? Math.ceil(dealt.length / countBatchSize)
+  const activeBatchSize = countBatchRandom ? currentBatchSize : countBatchSize;
+  const batchTotalSteps = countBatchRandom
+    ? null
+    : countDrillSequence.length
+      ? Math.ceil(countDrillSequence.length / countBatchSize)
+      : Math.ceil(countCards / countBatchSize);
+  const batchStepsDone = countDrillMode === "batch"
+    ? countBatchRandom
+      ? swipeTimes.length
+      : countDrillSequence.length
+        ? Math.ceil(dealt.length / countBatchSize)
+        : 0
     : 0;
   const batchVisibleCards =
     countDrillMode === "batch" && countDrillSequence.length > dealt.length
-      ? countDrillSequence.slice(dealt.length, dealt.length + Math.min(countBatchSize, countDrillSequence.length - dealt.length))
+      ? countDrillSequence.slice(dealt.length, dealt.length + Math.min(activeBatchSize, countDrillSequence.length - dealt.length))
       : [];
   const batchDrillActive = countDrillMode === "batch" && batchVisibleCards.length > 0;
   const countDrillComplete =
@@ -533,8 +548,8 @@ export default function App() {
   const countDrillAvgSecPerCard =
     countDrillTimedCards > 0 ? countDrillTotalSec / countDrillTimedCards : 0;
   const countDrillAvgSecPerBatch =
-    countDrillMode === "batch" && batchTotalSteps > 0
-      ? countDrillTotalSec / batchTotalSteps
+    countDrillMode === "batch" && batchStepsDone > 0
+      ? countDrillTotalSec / batchStepsDone
       : 0;
   const countDrillDeck52EstSec =
     countDrillTimedCards > 0 ? (52 / countDrillTimedCards) * countDrillTotalSec : 0;
@@ -718,6 +733,8 @@ export default function App() {
     resetCountDrillTimer();
 
     if (countDrillMode === "batch") {
+      const firstBatchSize = countBatchRandom ? pickRandomBatchSize() : countBatchSize;
+      setCurrentBatchSize(firstBatchSize);
       const fresh = buildShoe(countDecks);
       const sequence: string[] = [];
       const nextShoe = [...fresh];
@@ -730,8 +747,12 @@ export default function App() {
       setCardStart(Date.now());
       setCountFeedback(
         guided
-          ? `Batch mode: ${countBatchSize} card${countBatchSize > 1 ? "s" : ""} per step. Tap Next when ready.`
-          : "Hidden count: track the running total, then tap Next for the next batch."
+          ? countBatchRandom
+            ? `Table simulation: ${firstBatchSize} cards this hand (2–5 vary each step). Tap Next when ready.`
+            : `Batch mode: ${countBatchSize} card${countBatchSize > 1 ? "s" : ""} per step. Tap Next when ready.`
+          : countBatchRandom
+            ? "Hidden count: variable hands like the table — track the running total, then tap Next."
+            : "Hidden count: track the running total, then tap Next for the next batch."
       );
       setScreen("countDrill");
       return;
@@ -771,6 +792,7 @@ export default function App() {
     resetCountDrillTimer();
 
     if (countDrillMode === "batch") {
+      setCurrentBatchSize(countBatchRandom ? pickRandomBatchSize() : countBatchSize);
       setCountDrillSequence(repeatCards);
       setCountCard(null);
       setScreen("countDrill");
@@ -788,7 +810,8 @@ export default function App() {
     if (dealt.length >= countDrillSequence.length) return;
 
     const ms = Date.now() - cardStart;
-    const nextCount = Math.min(countBatchSize, countDrillSequence.length - dealt.length);
+    const stepSize = countBatchRandom ? currentBatchSize : countBatchSize;
+    const nextCount = Math.min(stepSize, countDrillSequence.length - dealt.length);
     const nextDealt = [...dealt, ...countDrillSequence.slice(dealt.length, dealt.length + nextCount)];
     setDealt(nextDealt);
     setSwipeTimes((prev) => [...prev, ms]);
@@ -801,13 +824,20 @@ export default function App() {
       return;
     }
 
+    const nextBatchSize = countBatchRandom ? pickRandomBatchSize() : countBatchSize;
+    if (countBatchRandom) setCurrentBatchSize(nextBatchSize);
+
     setCountFeedback(
       guided
         ? (() => {
             const rc = nextDealt.reduce((sum, c) => sum + hiLo(c), 0);
-            return `Batch passed. Running count is ${rc >= 0 ? "+" : ""}${rc}.`;
+            return countBatchRandom
+              ? `Hand passed. Running count is ${rc >= 0 ? "+" : ""}${rc}. Next hand: ${nextBatchSize} cards.`
+              : `Batch passed. Running count is ${rc >= 0 ? "+" : ""}${rc}.`;
           })()
-        : "Next batch ready. Keep your running count in your head."
+        : countBatchRandom
+          ? "Next hand ready. Keep your running count in your head."
+          : "Next batch ready. Keep your running count in your head."
     );
   }
 
@@ -1647,13 +1677,28 @@ export default function App() {
                   <button
                     key={n}
                     type="button"
-                    className={countBatchSize === n ? "selected" : ""}
-                    onClick={() => setCountBatchSize(n)}
+                    className={!countBatchRandom && countBatchSize === n ? "selected" : ""}
+                    onClick={() => {
+                      setCountBatchRandom(false);
+                      setCountBatchSize(n);
+                    }}
                   >
                     {n} at a time
                   </button>
                 ))}
+                <button
+                  type="button"
+                  className={countBatchRandom ? "selected" : ""}
+                  onClick={() => setCountBatchRandom(true)}
+                >
+                  Random hands (2–5)
+                </button>
               </div>
+              {countBatchRandom && (
+                <p className="selector-hint text-muted">
+                  Simulates variable table hands — each Next deals 2–5 cards, like real rounds at the shoe.
+                </p>
+              )}
             </>
           )}
           <label className="toggle">
@@ -1678,8 +1723,8 @@ export default function App() {
               </>
             ) : (
               <>
-                <div><strong>{batchStepsDone}/{batchTotalSteps}</strong><span>Batches</span></div>
-                <div><strong>{countBatchSize}</strong><span>Per step</span></div>
+                <div><strong>{batchStepsDone}{batchTotalSteps !== null ? `/${batchTotalSteps}` : ""}</strong><span>Batches</span></div>
+                <div><strong>{countBatchRandom ? currentBatchSize : countBatchSize}</strong><span>{countBatchRandom ? "This hand" : "Per step"}</span></div>
               </>
             )}
           </div>
