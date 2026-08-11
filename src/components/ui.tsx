@@ -25,7 +25,8 @@ export type AppScreen =
   | "basicResults"
   | "countLearn"
   | "counting"
-  | "countDrill";
+  | "countDrill"
+  | "visionCount";
 export type SeatId = "left" | "center" | "right";
 
 type PipPosition =
@@ -81,7 +82,7 @@ function renderPips(rank: string, suit: string) {
 }
 
 function navHighlight(screen: MainScreen | AppScreen): MainScreen {
-  if (["basic", "basicDrill", "basicResults", "countLearn", "counting", "countDrill"].includes(screen)) {
+  if (["basic", "basicDrill", "basicResults", "countLearn", "counting", "countDrill", "visionCount"].includes(screen)) {
     return "trainer";
   }
   return screen as MainScreen;

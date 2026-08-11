@@ -63,6 +63,7 @@ import {
   VaultStrategyContent,
   VaultWeaknessContent,
 } from "@/components/ui";
+import { VisionCount } from "@/components/VisionCount";
 
 /* ─── Types & Constants ─── */
 
@@ -1498,7 +1499,7 @@ export default function App() {
             <h1>Sharpen Your Edge</h1>
             <p className="text-muted">Build instinct through structured drills and guided lessons.</p>
           </div>
-          <div className="trainer-grid trainer-grid-two">
+          <div className="trainer-grid trainer-grid-academies">
             <button className="trainer-card" onClick={() => goToScreen("basic")}>
               <strong>Basic Strategy Academy</strong>
               <span>Hard, soft, and pair decisions against every dealer upcard.</span>
@@ -1507,6 +1508,11 @@ export default function App() {
             <button className="trainer-card" onClick={() => goToScreen("countLearn")}>
               <strong>Card Counting Academy</strong>
               <span>Hi-Lo values, running/true count, and deck estimation drills.</span>
+              <em>Enter Academy</em>
+            </button>
+            <button className="trainer-card" onClick={() => goToScreen("visionCount")}>
+              <strong>Vision Count</strong>
+              <span>Use your camera to identify cards and practice Hi-Lo counting.</span>
               <em>Enter Academy</em>
             </button>
           </div>
@@ -1817,6 +1823,11 @@ export default function App() {
           ) : null}
           <div className="feedback-bar">{countFeedback}</div>
         </section>
+      )}
+
+      {/* VISION COUNT */}
+      {screen === "visionCount" && (
+        <VisionCount onBack={() => setScreen("trainer")} />
       )}
 
       {/* STATS */}

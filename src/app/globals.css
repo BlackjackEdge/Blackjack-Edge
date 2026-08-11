@@ -727,7 +727,8 @@ h1 { font-size: clamp(28px, 6vw, 42px); } h2 { font-size: clamp(22px, 4vw, 30px)
 .panel-screen { gap: 16px; max-width: 480px; margin: 0 auto; width: 100%; }
 .panel-header { display: flex; flex-direction: column; gap: 6px; }
 .trainer-grid { display: flex; flex-direction: column; gap: 10px; }
-.trainer-grid-two { max-width: 420px; margin: 0 auto; width: 100%; }
+.trainer-grid-two,
+.trainer-grid-academies { max-width: 420px; margin: 0 auto; width: 100%; }
 .trainer-card { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 18px; text-align: left; border-radius: var(--radius-lg); border: var(--cream-panel-border); background: var(--cream-panel-bg); box-shadow: var(--cream-panel-shadow); }
 .trainer-card:hover { border-color: var(--gold); }
 .trainer-card strong { font-family: var(--font-serif); font-size: 18px; color: #1a1410; }
@@ -1181,3 +1182,44 @@ h1 { font-size: clamp(28px, 6vw, 42px); } h2 { font-size: clamp(22px, 4vw, 30px)
 .card-style-classic .playing-card,
 .card-style-classic .mini-card { border-radius: 4px; border-width: 1px; box-shadow: 0 4px 10px rgba(0,0,0,.35); }
 .suit-red { color: #b80f23; }
+
+/* ─── Vision Count ─── */
+.vision-count-screen { max-width: 960px; gap: 14px; padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
+.vision-count-instructions { padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--cream-text-muted); line-height: 1.45; }
+.vision-status-pill { align-self: flex-start; padding: 8px 14px; border-radius: 999px; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; border: 1.5px solid var(--cream-gold); background: var(--cream-panel-bg); color: var(--cream-text); }
+.vision-status-ready { border-color: var(--gold); color: var(--gold-deep); }
+.vision-status-scan { border-color: #2277cc; color: #1a5a99; background: linear-gradient(145deg, #eef6ff, #dceeff); }
+.vision-status-hit { border-color: var(--gold); color: #6b4f0a; box-shadow: 0 0 12px var(--gold-glow); }
+.vision-status-warn { border-color: #b82432; color: #8b1538; background: linear-gradient(145deg, #fff0f0, #ffe0e0); }
+.vision-count-layout { display: flex; flex-direction: column; gap: 12px; width: 100%; min-width: 0; }
+.vision-camera-wrap { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.vision-camera-stage { position: relative; width: 100%; aspect-ratio: 4 / 3; max-height: min(52vh, 420px); border-radius: var(--radius-lg); overflow: hidden; border: var(--cream-panel-border); box-shadow: var(--cream-panel-shadow); background: #111; }
+.vision-camera-video { width: 100%; height: 100%; object-fit: cover; display: block; background: #0a0a0a; }
+.vision-camera-overlay { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.vision-camera-fallback { padding: 20px 16px; display: flex; flex-direction: column; gap: 10px; align-items: flex-start; border-radius: var(--radius-lg); min-height: 180px; justify-content: center; }
+.vision-settings-hint { font-size: 12px; line-height: 1.4; }
+.vision-camera-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.vision-count-side { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.vision-running-count { padding: 16px; text-align: center; display: flex; flex-direction: column; gap: 6px; }
+.vision-running-count strong { font-family: var(--font-serif); font-size: clamp(32px, 8vw, 44px); color: var(--gold-deep); line-height: 1; }
+.vision-detected-panel { padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.vision-detected-summary { font-size: 15px; font-weight: 600; color: var(--cream-text); word-break: break-word; line-height: 1.45; }
+.vision-detected-list { list-style: none; display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; }
+.vision-detected-list li { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; border-radius: var(--radius-sm); border: 1px solid rgba(232,201,130,.45); background: rgba(255,255,255,.35); font-size: 13px; color: var(--cream-text); }
+.vision-card-actions { display: flex; gap: 4px; flex-shrink: 0; }
+.vision-card-actions .btn-ghost { padding: 4px 8px; font-size: 9px; }
+.vision-confidence { padding: 12px 16px; font-size: 13px; color: var(--cream-text-muted); }
+.vision-manual-add { padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.vision-rank-selector { grid-template-columns: repeat(auto-fit, minmax(44px, 1fr)); }
+.vision-suit-selector { grid-template-columns: repeat(4, 1fr); }
+@media (orientation: landscape) and (min-height: 420px) {
+  .vision-count-layout { flex-direction: row; align-items: flex-start; gap: 14px; overflow-x: hidden; }
+  .vision-camera-wrap { flex: 1.1; min-width: 0; max-width: 58%; }
+  .vision-count-side { flex: 0.9; min-width: 0; max-width: 42%; max-height: calc(100dvh - 120px); overflow-y: auto; overscroll-behavior: contain; }
+  .vision-camera-stage { max-height: min(72vh, 480px); aspect-ratio: 16 / 10; }
+}
+@media (min-width: 720px) {
+  .vision-count-layout { flex-direction: row; align-items: flex-start; }
+  .vision-camera-wrap { flex: 1.15; max-width: 56%; }
+  .vision-count-side { flex: 0.85; max-width: 44%; }
+}
