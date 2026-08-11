@@ -21,6 +21,7 @@ export type FrameDetection = {
   rank: string;
   suit: string;
   confidence: number;
+  confirmed: boolean;
   bbox: { x: number; y: number; w: number; h: number };
   cx: number;
   cy: number;
@@ -28,11 +29,27 @@ export type FrameDetection = {
 
 const SUIT_LETTERS = ["S", "H", "D", "C"] as const;
 const RANK_LIST = [...ranks];
-const MIN_REGION_AREA = 2800;
-const MAX_REGIONS = 6;
-const CELL_SIZE = 48;
-const TRACK_MISS_LIMIT = 12;
-const MATCH_DISTANCE = 56;
+const MIN_REGION_AREA = 4200;
+const MAX_REGION_AREA = 28000;
+const MIN_CARD_W = 28;
+const MAX_CARD_W = 110;
+const MIN_CARD_H = 38;
+const MAX_CARD_H = 150;
+const MIN_ASPECT = 0.58;
+const MAX_ASPECT = 0.82;
+const MIN_FILL_RATIO = 0.62;
+const MAX_REGIONS = 4;
+const CELL_SIZE = 40;
+const TRACK_MISS_LIMIT = 10;
+const MATCH_DISTANCE = 0.14;
+const DETECTION_CONF_MIN = 68;
+const REGISTRATION_CONF_MIN = 74;
+const CONFIRM_FRAMES_REQUIRED = 3;
+const MIN_RANK_MARGIN = 0.12;
+const MIN_RANK_CORRELATION = 0.35;
+const MIN_FACE_BRIGHTNESS = 168;
+const MIN_INK_DARKNESS = 72;
+const MIN_PATCH_STD = 0.28;
 
 function suitLetter(suit: string): string {
   const idx = suits.indexOf(suit);
@@ -50,7 +67,14 @@ export function formatRunningCount(count: number): string {
 }
 
 export function computeRunningCount(cards: DetectedCard[]): number {
-  return cards.reduce((sum, card) => sum + hiLo(`${card.rank}${suitLetter(card.suit)}`), 0);
+  return cards.reduce((sum, card) => {
+    const value = hiLo(`${card.rank}${suitLetter(card.suit)}`);
+    return sum + value;
+  }, 0);
+}
+
+export function hiLoValueForRank(rank: string): number {
+  return hiLo(`${rank}S`);
 }
 
 function cellKey(cx: number, cy: number): string {
@@ -140,7 +164,10 @@ function classifyRank(patch: Float32Array): { rank: string; confidence: number }
   }
 
   const margin = bestScore - secondScore;
-  const confidence = Math.max(0, Math.min(0.99, 0.55 + margin * 0.35 + bestScore * 0.08));
+  if (margin < MIN_RANK_MARGIN || bestScore < MIN_RANK_CORRELATION) {
+    return { rank: bestRank, confidence: 0 };
+  }
+  const confidence = Math.max(0, Math.min(0.99, 0.42 + margin * 0.55 + bestScore * 0.12));
   return { rank: bestRank, confidence };
 }
 
@@ -163,8 +190,66 @@ function classifySuit(r: number, g: number, b: number, cornerData: Uint8ClampedA
   return avg > 120 ? "♣" : "♠";
 }
 
+function regionFaceStats(
+  gray: Float32Array,
+  width: number,
+  height: number,
+  bbox: { x: number; y: number; w: number; h: number }
+): { avgBrightness: number; darkRatio: number; std: number } {
+  let sum = 0;
+  let count = 0;
+  let dark = 0;
+  const samples: number[] = [];
+
+  for (let py = bbox.y; py < bbox.y + bbox.h; py++) {
+    for (let px = bbox.x; px < bbox.x + bbox.w; px++) {
+      if (px < 0 || py < 0 || px >= width || py >= height) continue;
+      const v = gray[py * width + px];
+      sum += v;
+      count++;
+      samples.push(v);
+      if (v < MIN_INK_DARKNESS) dark++;
+    }
+  }
+
+  if (!count) return { avgBrightness: 0, darkRatio: 0, std: 0 };
+
+  const mean = sum / count;
+  let variance = 0;
+  for (const v of samples) {
+    const d = v - mean;
+    variance += d * d;
+  }
+  const std = Math.sqrt(variance / count) / 128;
+
+  return { avgBrightness: mean, darkRatio: dark / count, std };
+}
+
+function validateCardRegion(
+  gray: Float32Array,
+  width: number,
+  height: number,
+  region: { x: number; y: number; w: number; h: number; area: number }
+): boolean {
+  const { w, h, area } = region;
+  const aspect = w / (h || 1);
+  const fillRatio = area / (w * h);
+
+  if (area < MIN_REGION_AREA || area > MAX_REGION_AREA) return false;
+  if (aspect < MIN_ASPECT || aspect > MAX_ASPECT) return false;
+  if (w < MIN_CARD_W || w > MAX_CARD_W || h < MIN_CARD_H || h > MAX_CARD_H) return false;
+  if (fillRatio < MIN_FILL_RATIO) return false;
+
+  const face = regionFaceStats(gray, width, height, region);
+  if (face.avgBrightness < MIN_FACE_BRIGHTNESS) return false;
+  if (face.darkRatio < 0.018 || face.darkRatio > 0.42) return false;
+  if (face.std < MIN_PATCH_STD) return false;
+
+  return true;
+}
+
 function findCardRegions(gray: Float32Array, width: number, height: number) {
-  const threshold = 175;
+  const threshold = 182;
   const visited = new Uint8Array(width * height);
   const regions: { x: number; y: number; w: number; h: number; area: number }[] = [];
 
@@ -193,12 +278,7 @@ function findCardRegions(gray: Float32Array, width: number, height: number) {
         minY = Math.min(minY, cy);
         maxY = Math.max(maxY, cy);
 
-        const neighbors = [
-          cur - 1,
-          cur + 1,
-          cur - width,
-          cur + width,
-        ];
+        const neighbors = [cur - 1, cur + 1, cur - width, cur + width];
         for (const n of neighbors) {
           if (n < 0 || n >= width * height) continue;
           const nx = n % width;
@@ -208,13 +288,8 @@ function findCardRegions(gray: Float32Array, width: number, height: number) {
         }
       }
 
-      const w = maxX - minX + 1;
-      const h = maxY - minY + 1;
-      const aspect = w / (h || 1);
-      if (area < MIN_REGION_AREA) continue;
-      if (aspect < 0.45 || aspect > 0.95) continue;
-      if (w < 24 || h < 32) continue;
-      regions.push({ x: minX, y: minY, w, h, area });
+      const region = { x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1, area };
+      if (validateCardRegion(gray, width, height, region)) regions.push(region);
     }
   }
 
@@ -285,12 +360,13 @@ export function detectCardsInFrame(
     const suit = classifySuit(avg[0], avg[1], avg[2], corner);
     const confidence = Math.round(rankConf * 100);
 
-    if (confidence < 52) continue;
+    if (confidence < DETECTION_CONF_MIN) continue;
 
     detections.push({
       rank,
       suit,
       confidence,
+      confirmed: false,
       bbox: {
         x: region.x / targetW,
         y: region.y / targetH,
@@ -312,18 +388,31 @@ type ActiveTrack = {
   cx: number;
   cy: number;
   cell: string;
+  bbox: { x: number; y: number; w: number; h: number };
   confidence: number;
   registered: boolean;
+  confirmFrames: number;
   missedFrames: number;
 };
 
 export class DetectionTracker {
   private tracks: ActiveTrack[] = [];
+  private registeredCells = new Set<string>();
   private nextId = 1;
 
   reset() {
     this.tracks = [];
+    this.registeredCells.clear();
     this.nextId = 1;
+  }
+
+  private findSpatialMatch(det: FrameDetection): ActiveTrack | undefined {
+    return this.tracks.find(
+      (t) =>
+        t.missedFrames < TRACK_MISS_LIMIT &&
+        (t.cell === cellKey(det.cx * 320, det.cy * 240) ||
+          distance(t, { cx: det.cx, cy: det.cy }) < MATCH_DISTANCE)
+    );
   }
 
   processFrame(detections: FrameDetection[]): DetectedCard[] {
@@ -333,12 +422,9 @@ export class DetectionTracker {
 
     for (const det of detections) {
       const cell = cellKey(det.cx * 320, det.cy * 240);
-      let match = this.tracks.find(
-        (t) =>
-          t.missedFrames < TRACK_MISS_LIMIT &&
-          (t.cell === cell || distance(t, { cx: det.cx, cy: det.cy }) < MATCH_DISTANCE / 320) &&
-          t.rank === det.rank
-      );
+      if (this.registeredCells.has(cell)) continue;
+
+      let match = this.findSpatialMatch(det);
 
       if (!match) {
         match = {
@@ -348,8 +434,10 @@ export class DetectionTracker {
           cx: det.cx,
           cy: det.cy,
           cell,
+          bbox: det.bbox,
           confidence: det.confidence,
           registered: false,
+          confirmFrames: 1,
           missedFrames: 0,
         };
         this.tracks.push(match);
@@ -357,21 +445,36 @@ export class DetectionTracker {
         match.cx = det.cx;
         match.cy = det.cy;
         match.cell = cell;
+        match.bbox = det.bbox;
         match.confidence = Math.max(match.confidence, det.confidence);
         match.suit = det.suit;
         match.missedFrames = 0;
+
+        if (match.rank === det.rank) {
+          match.confirmFrames++;
+        } else if (det.confidence >= match.confidence) {
+          match.rank = det.rank;
+          match.confirmFrames = 1;
+        } else {
+          match.confirmFrames = Math.max(0, match.confirmFrames - 1);
+        }
       }
 
-      if (!match.registered && match.confidence >= 58) {
+      const ready =
+        !match.registered &&
+        match.confirmFrames >= CONFIRM_FRAMES_REQUIRED &&
+        match.confidence >= REGISTRATION_CONF_MIN;
+
+      if (ready) {
         match.registered = true;
-        const card: DetectedCard = {
+        this.registeredCells.add(cell);
+        newlyRegistered.push({
           id: match.id,
           rank: match.rank,
           suit: match.suit,
           label: cardLabel(match.rank, match.suit),
           confidence: match.confidence,
-        };
-        newlyRegistered.push(card);
+        });
       }
     }
 
@@ -379,19 +482,15 @@ export class DetectionTracker {
     return newlyRegistered;
   }
 
-  getActiveDetections(): FrameDetection[] {
+  getActiveDetections(minConfidence = DETECTION_CONF_MIN): FrameDetection[] {
     return this.tracks
-      .filter((t) => t.missedFrames === 0)
+      .filter((t) => t.missedFrames === 0 && t.confidence >= minConfidence)
       .map((t) => ({
         rank: t.rank,
         suit: t.suit,
         confidence: t.confidence,
-        bbox: {
-          x: t.cx - 0.04,
-          y: t.cy - 0.06,
-          w: 0.08,
-          h: 0.12,
-        },
+        confirmed: t.registered,
+        bbox: t.bbox,
         cx: t.cx,
         cy: t.cy,
       }));

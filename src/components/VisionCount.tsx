@@ -21,9 +21,11 @@ type VisionCountProps = {
 
 type CameraError = "denied" | "not_found" | "unsupported" | "unknown";
 
-function statusLabel(status: VisionStatus, scanning: boolean): string {
+function statusLabel(status: VisionStatus, scanning: boolean, hasConfirmed: boolean, hasUncertain: boolean): string {
   if (status === "permission_required") return "Camera Permission Required";
   if (status === "no_camera") return "No Camera Available";
+  if (scanning && hasConfirmed) return "Card Confirmed";
+  if (scanning && hasUncertain) return "Card Detected (Confirming…)";
   if (scanning) return "Scanning";
   if (status === "detected") return "Card Detected";
   if (status === "ready") return "Camera Ready";
@@ -59,14 +61,17 @@ export function VisionCount({ onBack }: VisionCountProps) {
 
   const runningCount = useMemo(() => computeRunningCount(detectedCards), [detectedCards]);
 
+  const hasConfirmedLive = liveDetections.some((d) => d.confirmed);
+  const hasUncertainLive = liveDetections.some((d) => !d.confirmed);
+
   const visionStatus: VisionStatus = useMemo(() => {
     if (cameraError === "denied") return "permission_required";
     if (cameraError === "not_found" || cameraError === "unsupported") return "no_camera";
-    if (scanning && liveDetections.length > 0) return "detected";
+    if (scanning && hasConfirmedLive) return "detected";
     if (scanning) return "scanning";
     if (cameraReady) return "ready";
     return "idle";
-  }, [cameraError, cameraReady, liveDetections.length, scanning]);
+  }, [cameraError, cameraReady, hasConfirmedLive, scanning]);
 
   const stopStream = useCallback(() => {
     if (streamRef.current) {
@@ -140,15 +145,19 @@ export function VisionCount({ onBack }: VisionCountProps) {
       const y = det.bbox.y * canvas.height;
       const w = det.bbox.w * canvas.width;
       const h = det.bbox.h * canvas.height;
-      ctx.strokeStyle = "rgba(212, 175, 55, 0.92)";
-      ctx.lineWidth = 2;
+      const confirmed = det.confirmed;
+      ctx.strokeStyle = confirmed ? "rgba(212, 175, 55, 0.95)" : "rgba(160, 160, 160, 0.75)";
+      ctx.lineWidth = confirmed ? 2 : 1.5;
+      ctx.setLineDash(confirmed ? [] : [5, 4]);
       ctx.strokeRect(x, y, w, h);
-      const label = `${det.rank}${det.suit} ${det.confidence}%`;
+      ctx.setLineDash([]);
+      const state = confirmed ? "" : " ?";
+      const label = `${det.rank}${det.suit}${state} ${det.confidence}%`;
       ctx.font = "600 11px DM Sans, system-ui, sans-serif";
       const tw = ctx.measureText(label).width;
-      ctx.fillStyle = "rgba(26, 20, 16, 0.82)";
+      ctx.fillStyle = confirmed ? "rgba(26, 20, 16, 0.82)" : "rgba(40, 40, 40, 0.78)";
       ctx.fillRect(x, Math.max(0, y - 18), tw + 10, 16);
-      ctx.fillStyle = "#f4e4a6";
+      ctx.fillStyle = confirmed ? "#f4e4a6" : "#d0d0d0";
       ctx.fillText(label, x + 5, Math.max(12, y - 6));
     }
   }, []);
@@ -176,7 +185,7 @@ export function VisionCount({ onBack }: VisionCountProps) {
     try {
       const frameDetections = detectCardsInFrame(video, processCanvas, processCtx);
       const newlyRegistered = trackerRef.current.processFrame(frameDetections);
-      const active = frameDetections.length ? frameDetections : trackerRef.current.getActiveDetections();
+      const active = trackerRef.current.getActiveDetections();
 
       setLiveDetections(active);
       if (active.length) setLastConfidence(Math.max(...active.map((d) => d.confidence)));
@@ -267,7 +276,7 @@ export function VisionCount({ onBack }: VisionCountProps) {
       </div>
 
       <div className={`vision-status-pill ${statusClass(visionStatus, scanning)}`}>
-        {statusLabel(visionStatus, scanning)}
+        {statusLabel(visionStatus, scanning, hasConfirmedLive, hasUncertainLive)}
       </div>
 
       <div className="vision-count-layout">
@@ -371,7 +380,9 @@ export function VisionCount({ onBack }: VisionCountProps) {
             <span className="eyebrow">Detection</span>
             <p>
               {lastConfidence != null
-                ? `Latest confidence: ${lastConfidence}%`
+                ? hasUncertainLive && !hasConfirmedLive
+                  ? `Confirming detection (${lastConfidence}% confidence)…`
+                  : `Latest confidence: ${lastConfidence}%`
                 : scanning
                   ? "Searching for cards…"
                   : "Start scanning to detect cards."}
