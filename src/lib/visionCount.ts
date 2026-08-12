@@ -33,11 +33,23 @@ export type FrameDetection = {
   cy: number;
 };
 
+export type DebugMetrics = {
+  widthPx: number;
+  heightPx: number;
+  frameW: number;
+  frameH: number;
+  relWidthPct: number;
+  relHeightPct: number;
+  /** min(w,h)/max(w,h) — orientation-agnostic shape ratio actually used for gating. */
+  aspectRatio: number;
+};
+
 export type DebugRect = {
   bbox: { x: number; y: number; w: number; h: number };
   accepted: boolean;
   detectionConfidence: number;
   reason: string;
+  metrics: DebugMetrics;
 };
 
 export type FrameDetectionStats = {
@@ -56,20 +68,42 @@ export function setVisionDebug(enabled: boolean) {
   VISION_DEBUG = enabled;
 }
 
-const PROCESS_W = 320;
-const PROCESS_H = 240;
+/**
+ * Longest side (px) of the internal processing canvas. The canvas is sized
+ * dynamically each frame to match the *actual* camera aspect ratio (see
+ * `detectCardsInFrame`) — never a fixed 320x240 buffer — so a 16:9 webcam,
+ * a 4:3 webcam, and a portrait phone camera all get scaled uniformly on
+ * both axes instead of being stretched to fit a mismatched shape.
+ */
+const PROCESS_MAX_DIM = 360;
+/** Nominal grid only used to bucket track positions into cells; independent of actual frame size since cx/cy are already 0–1 normalized. */
+const GRID_W = 320;
+const GRID_H = 240;
 
-/* --- Relative geometry (normalized to process frame) --- */
-const MIN_AREA_FRAC = 0.012; // ~1.2% of frame
-const MAX_AREA_FRAC = 0.55;
-const MIN_W_FRAC = 0.06;
-const MAX_W_FRAC = 0.72;
-const MIN_H_FRAC = 0.1;
-const MAX_H_FRAC = 0.92;
-/** Playing-card portrait width/height ≈ 0.65–0.72; allow tilt & crop. */
-const MIN_ASPECT = 0.48;
-const MAX_ASPECT = 0.92;
-const MIN_FILL_RATIO = 0.52;
+/* --- Relative geometry (normalized to the actual camera frame, NOT fixed pixels) ---
+ * Every threshold below is a fraction of the live frame's own width/height,
+ * so the same card is treated identically whether the camera delivers
+ * 320x240, 1280x720, or 4032x3024 — only how close the card is to the lens
+ * changes these fractions, not the source resolution.
+ */
+const MIN_AREA_FRAC = 0.0015; // reject only genuinely tiny specks (~0.15% of frame area)
+const MAX_AREA_FRAC = 0.9;
+/** A real card, even far away, should still span at least ~2.5% of the frame on its short side. */
+const MIN_DIM_FRAC = 0.025;
+const MAX_DIM_FRAC = 0.95;
+/**
+ * Orientation-agnostic shape ratio = min(w,h) / max(w,h).
+ * A standard card is 2.5"x3.5" -> ratio ≈ 0.714, and this is identical
+ * whether the card is held portrait (w<h) or landscape/rotated 90° (w>h),
+ * so a single band covers both orientations without penalizing either.
+ * Band is widened beyond the ideal ~0.71 to tolerate perspective
+ * foreshortening and the extra "squaring" a rotated card's axis-aligned
+ * bounding box picks up at intermediate rotation angles.
+ */
+const MIN_ASPECT_RATIO = 0.5;
+const MAX_ASPECT_RATIO = 0.85;
+/** Lowered from a stricter value to tolerate the lower fill of a rotated card's axis-aligned bbox (corners of a tilted rect fall outside the rect). */
+const MIN_FILL_RATIO = 0.4;
 
 /* --- Face / ink heuristics (grayscale 0–255) --- */
 const BRIGHTNESS_THRESHOLD = 168;
@@ -113,6 +147,7 @@ type ScoredCandidate = {
   accepted: boolean;
   face: { avgBrightness: number; darkRatio: number; std: number };
   edgeScore: number;
+  metrics: DebugMetrics;
 };
 
 function suitLetter(suit: string): string {
@@ -142,7 +177,7 @@ export function hiLoValueForRank(rank: string): number {
 }
 
 function cellKey(cx: number, cy: number): string {
-  return `${Math.floor((cx * PROCESS_W) / CELL_SIZE)},${Math.floor((cy * PROCESS_H) / CELL_SIZE)}`;
+  return `${Math.floor((cx * GRID_W) / CELL_SIZE)},${Math.floor((cy * GRID_H) / CELL_SIZE)}`;
 }
 
 function distance(a: { cx: number; cy: number }, b: { cx: number; cy: number }): number {
@@ -350,11 +385,25 @@ function scoreCardCandidate(
 ): ScoredCandidate {
   const frameArea = width * height;
   const { w, h, area } = region;
-  const aspect = w / (h || 1);
   const fillRatio = area / (w * h || 1);
   const areaFrac = area / frameArea;
   const wFrac = w / width;
   const hFrac = h / height;
+  // Orientation-agnostic: identical value whether the card is portrait or
+  // rotated to landscape, so one band covers both without an "or" branch.
+  const minDim = Math.min(w, h);
+  const maxDim = Math.max(w, h) || 1;
+  const aspectRatio = minDim / maxDim;
+
+  const metrics: DebugMetrics = {
+    widthPx: w,
+    heightPx: h,
+    frameW: width,
+    frameH: height,
+    relWidthPct: Math.round(wFrac * 1000) / 10,
+    relHeightPct: Math.round(hFrac * 1000) / 10,
+    aspectRatio: Math.round(aspectRatio * 1000) / 1000,
+  };
 
   const face = regionFaceStats(gray, width, height, region);
   const edgeScore = perimeterEdgeScore(gray, width, height, region);
@@ -366,15 +415,16 @@ function scoreCardCandidate(
     accepted: false,
     face,
     edgeScore,
+    metrics,
   });
 
-  if (areaFrac < MIN_AREA_FRAC || wFrac < MIN_W_FRAC || hFrac < MIN_H_FRAC) {
+  if (areaFrac < MIN_AREA_FRAC || wFrac < MIN_DIM_FRAC || hFrac < MIN_DIM_FRAC) {
     return fail("too_small");
   }
-  if (areaFrac > MAX_AREA_FRAC || wFrac > MAX_W_FRAC || hFrac > MAX_H_FRAC) {
+  if (areaFrac > MAX_AREA_FRAC || wFrac > MAX_DIM_FRAC || hFrac > MAX_DIM_FRAC) {
     return fail("too_large");
   }
-  if (aspect < MIN_ASPECT || aspect > MAX_ASPECT) {
+  if (aspectRatio < MIN_ASPECT_RATIO || aspectRatio > MAX_ASPECT_RATIO) {
     return fail("aspect_ratio");
   }
   if (fillRatio < MIN_FILL_RATIO) {
@@ -394,9 +444,9 @@ function scoreCardCandidate(
   }
 
   // Composite detection confidence (shape + face + edges) — independent of rank
-  const aspectIdeal = 1 - Math.min(1, Math.abs(aspect - 0.66) / 0.22);
+  const aspectIdeal = 1 - Math.min(1, Math.abs(aspectRatio - 0.71) / 0.22);
   const sizeIdeal =
-    areaFrac >= 0.04 && areaFrac <= 0.35 ? 1 : areaFrac < 0.04 ? areaFrac / 0.04 : Math.max(0, 1 - (areaFrac - 0.35) / 0.2);
+    areaFrac >= 0.03 && areaFrac <= 0.45 ? 1 : areaFrac < 0.03 ? areaFrac / 0.03 : Math.max(0, 1 - (areaFrac - 0.45) / 0.3);
   const fillIdeal = Math.min(1, (fillRatio - MIN_FILL_RATIO) / 0.35);
   const brightIdeal = Math.min(1, Math.max(0, (face.avgBrightness - MIN_FACE_BRIGHTNESS) / 40));
   const inkIdeal =
@@ -424,6 +474,7 @@ function scoreCardCandidate(
       accepted: false,
       face,
       edgeScore,
+      metrics,
     };
   }
 
@@ -434,6 +485,7 @@ function scoreCardCandidate(
     accepted: true,
     face,
     edgeScore,
+    metrics,
   };
 }
 
@@ -482,6 +534,80 @@ function findBrightRegions(gray: Float32Array, width: number, height: number): R
   }
 
   return regions.sort((a, b) => b.area - a.area);
+}
+
+/**
+ * A real card's face is mostly-but-not-uniformly bright: pips, rank text,
+ * suit ink, and soft shadows regularly dip below the brightness threshold
+ * and split what is visually one card into several small disconnected
+ * bright blobs. Without this merge step, `scoreCardCandidate` would only
+ * ever see those small sub-patches (e.g. just the whitespace between two
+ * pips) instead of the true card boundary — which is exactly why a
+ * full-size card in frame was being reported as "too small" / wrong
+ * aspect ratio. Bridge blobs whose (slightly expanded) bounding boxes
+ * touch or overlap into one combined region before scoring.
+ */
+function mergeNearbyRegions(regions: RawRegion[], width: number, height: number): RawRegion[] {
+  if (regions.length <= 1) return regions;
+
+  // Bridge gaps up to ~2% of the frame's longest side — enough to span ink
+  // strokes and minor shadow bands without merging unrelated objects.
+  const gap = Math.max(2, Math.round(Math.max(width, height) * 0.02));
+  const expanded = regions.map((r) => ({
+    minX: r.x - gap,
+    minY: r.y - gap,
+    maxX: r.x + r.w + gap,
+    maxY: r.y + r.h + gap,
+  }));
+
+  const parent = regions.map((_, i) => i);
+  const find = (i: number): number => {
+    while (parent[i] !== i) {
+      parent[i] = parent[parent[i]];
+      i = parent[i];
+    }
+    return i;
+  };
+  const union = (a: number, b: number) => {
+    const ra = find(a);
+    const rb = find(b);
+    if (ra !== rb) parent[ra] = rb;
+  };
+  const overlaps = (a: (typeof expanded)[number], b: (typeof expanded)[number]) =>
+    a.minX < b.maxX && a.maxX > b.minX && a.minY < b.maxY && a.maxY > b.minY;
+
+  for (let i = 0; i < expanded.length; i++) {
+    for (let j = i + 1; j < expanded.length; j++) {
+      if (overlaps(expanded[i], expanded[j])) union(i, j);
+    }
+  }
+
+  const groups = new Map<number, RawRegion[]>();
+  for (let i = 0; i < regions.length; i++) {
+    const root = find(i);
+    const bucket = groups.get(root);
+    if (bucket) bucket.push(regions[i]);
+    else groups.set(root, [regions[i]]);
+  }
+
+  const merged: RawRegion[] = [];
+  for (const group of Array.from(groups.values())) {
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    let area = 0;
+    for (const r of group) {
+      minX = Math.min(minX, r.x);
+      minY = Math.min(minY, r.y);
+      maxX = Math.max(maxX, r.x + r.w);
+      maxY = Math.max(maxY, r.y + r.h);
+      area += r.area;
+    }
+    merged.push({ x: minX, y: minY, w: maxX - minX, h: maxY - minY, area });
+  }
+
+  return merged.sort((a, b) => b.area - a.area);
 }
 
 /**
@@ -538,6 +664,31 @@ function extractCornerPatch(
   };
 }
 
+/**
+ * Read the source's native pixel dimensions. `CanvasImageSource` covers
+ * <video>, <img>, <canvas>, and ImageBitmap — duck-type across them so the
+ * detector always knows the *true* frame aspect ratio instead of assuming
+ * one fixed resolution/shape.
+ */
+function getSourceSize(source: CanvasImageSource): { width: number; height: number } {
+  if ("videoWidth" in source && "videoHeight" in source) {
+    const v = source as HTMLVideoElement;
+    if (v.videoWidth && v.videoHeight) return { width: v.videoWidth, height: v.videoHeight };
+  }
+  if ("naturalWidth" in source && "naturalHeight" in source) {
+    const img = source as HTMLImageElement;
+    if (img.naturalWidth && img.naturalHeight) return { width: img.naturalWidth, height: img.naturalHeight };
+  }
+  const generic = source as { width?: number; height?: number };
+  if (generic.width && generic.height) return { width: generic.width, height: generic.height };
+  return { width: PROCESS_MAX_DIM, height: Math.round((PROCESS_MAX_DIM * 3) / 4) };
+}
+
+function formatDebugReason(accepted: boolean, reason: string, m: DebugMetrics): string {
+  const status = accepted ? "CARD DETECTED" : `Rejected: ${reason.replace(/_/g, " ")}`;
+  return `${status} — W:${m.widthPx}px H:${m.heightPx}px Frame:${m.frameW}x${m.frameH} relW:${m.relWidthPct}% relH:${m.relHeightPct}% AR:${m.aspectRatio}`;
+}
+
 export function detectCardsInFrame(
   source: CanvasImageSource,
   processCanvas: HTMLCanvasElement,
@@ -545,19 +696,30 @@ export function detectCardsInFrame(
   statsOut?: FrameDetectionStats,
   debugOut?: DebugRect[]
 ): FrameDetection[] {
-  processCanvas.width = PROCESS_W;
-  processCanvas.height = PROCESS_H;
-  processCtx.drawImage(source, 0, 0, PROCESS_W, PROCESS_H);
+  // Size the processing canvas to match the camera's own aspect ratio
+  // (uniform scale on both axes) instead of forcing a fixed 320x240 (4:3)
+  // buffer. Forcing a mismatched shape here silently stretches/squishes
+  // every object in frame — including real cards — before any geometry
+  // check ever runs, which was corrupting the aspect-ratio measurement at
+  // the source.
+  const { width: srcW, height: srcH } = getSourceSize(source);
+  const scale = PROCESS_MAX_DIM / Math.max(srcW, srcH, 1);
+  const width = Math.max(1, Math.round(srcW * scale));
+  const height = Math.max(1, Math.round(srcH * scale));
 
-  const image = processCtx.getImageData(0, 0, PROCESS_W, PROCESS_H);
-  const gray = grayscale(image.data, PROCESS_W, PROCESS_H);
-  const rawRegions = findBrightRegions(gray, PROCESS_W, PROCESS_H);
+  processCanvas.width = width;
+  processCanvas.height = height;
+  processCtx.drawImage(source, 0, 0, width, height);
+
+  const image = processCtx.getImageData(0, 0, width, height);
+  const gray = grayscale(image.data, width, height);
+  const rawRegions = mergeNearbyRegions(findBrightRegions(gray, width, height), width, height);
 
   const scored: ScoredCandidate[] = [];
   const rejects: ScoredCandidate[] = [];
 
   for (const region of rawRegions) {
-    const result = scoreCardCandidate(gray, PROCESS_W, PROCESS_H, region);
+    const result = scoreCardCandidate(gray, width, height, region);
     if (result.accepted) scored.push(result);
     else if (rejects.length < MAX_DEBUG_REJECTS) rejects.push(result);
   }
@@ -570,27 +732,29 @@ export function detectCardsInFrame(
     for (const c of accepted) {
       debugOut.push({
         bbox: {
-          x: c.region.x / PROCESS_W,
-          y: c.region.y / PROCESS_H,
-          w: c.region.w / PROCESS_W,
-          h: c.region.h / PROCESS_H,
+          x: c.region.x / width,
+          y: c.region.y / height,
+          w: c.region.w / width,
+          h: c.region.h / height,
         },
         accepted: true,
         detectionConfidence: c.detectionConfidence,
-        reason: `Detected card Confidence: ${c.detectionConfidence}%`,
+        reason: formatDebugReason(true, c.reason, c.metrics),
+        metrics: c.metrics,
       });
     }
     for (const c of rejects) {
       debugOut.push({
         bbox: {
-          x: c.region.x / PROCESS_W,
-          y: c.region.y / PROCESS_H,
-          w: c.region.w / PROCESS_W,
-          h: c.region.h / PROCESS_H,
+          x: c.region.x / width,
+          y: c.region.y / height,
+          w: c.region.w / width,
+          h: c.region.h / height,
         },
         accepted: false,
         detectionConfidence: c.detectionConfidence,
-        reason: `Rejected object Reason: ${c.reason.replace(/_/g, " ")}`,
+        reason: formatDebugReason(false, c.reason, c.metrics),
+        metrics: c.metrics,
       });
     }
   }
@@ -599,7 +763,7 @@ export function detectCardsInFrame(
   let recognized = 0;
 
   for (const candidate of accepted) {
-    const { patch, corner, avg } = extractCornerPatch(image.data, PROCESS_W, PROCESS_H, candidate.region);
+    const { patch, corner, avg } = extractCornerPatch(image.data, width, height, candidate.region);
     const { rank, confidence: rankConf } = classifyRank(patch);
     const recognitionConfidence = Math.round(rankConf * 100);
     const recognitionOk = recognitionConfidence >= RECOGNITION_CONF_MIN;
@@ -607,6 +771,9 @@ export function detectCardsInFrame(
 
     if (recognitionOk) recognized++;
 
+    // Shape/presence is accepted independently of rank recognition: a card
+    // is reported as detected the moment its geometry passes, and rank/suit
+    // recognition is attempted afterward without gating detection on it.
     detections.push({
       rank: recognitionOk ? rank : null,
       suit,
@@ -615,13 +782,13 @@ export function detectCardsInFrame(
       recognitionUncertain: !recognitionOk,
       confirmed: false,
       bbox: {
-        x: candidate.region.x / PROCESS_W,
-        y: candidate.region.y / PROCESS_H,
-        w: candidate.region.w / PROCESS_W,
-        h: candidate.region.h / PROCESS_H,
+        x: candidate.region.x / width,
+        y: candidate.region.y / height,
+        w: candidate.region.w / width,
+        h: candidate.region.h / height,
       },
-      cx: (candidate.region.x + candidate.region.w / 2) / PROCESS_W,
-      cy: (candidate.region.y + candidate.region.h / 2) / PROCESS_H,
+      cx: (candidate.region.x + candidate.region.w / 2) / width,
+      cy: (candidate.region.y + candidate.region.h / 2) / height,
     });
   }
 

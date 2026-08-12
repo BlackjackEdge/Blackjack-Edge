@@ -1216,8 +1216,10 @@ h1 { font-size: clamp(28px, 6vw, 42px); } h2 { font-size: clamp(22px, 4vw, 30px)
 .vision-debug-toggle { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; font-size: 11px; opacity: 0.75; }
 .vision-debug-toggle.vision-debug-on { opacity: 1; color: #8b1538; }
 .vision-debug-panel { padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; font-size: 12px; color: var(--cream-text-muted); border-color: rgba(184, 36, 50, 0.35); }
-.vision-debug-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; max-height: 140px; overflow-y: auto; }
-.vision-debug-list li { padding: 6px 8px; border-radius: var(--radius-sm); background: rgba(255, 240, 240, 0.7); color: #8b1538; font-size: 11px; }
+.vision-debug-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; max-height: 180px; overflow-y: auto; }
+.vision-debug-list li { display: flex; flex-direction: column; gap: 2px; padding: 6px 8px; border-radius: var(--radius-sm); background: rgba(255, 240, 240, 0.7); color: #8b1538; font-size: 11px; }
+.vision-debug-reason { font-weight: 600; }
+.vision-debug-metrics { color: #a5495e; font-size: 10px; }
 .vision-manual-add { padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
 .vision-rank-selector { grid-template-columns: repeat(auto-fit, minmax(44px, 1fr)); }
 .vision-suit-selector { grid-template-columns: repeat(4, 1fr); }

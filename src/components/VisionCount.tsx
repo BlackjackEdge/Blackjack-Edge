@@ -522,8 +522,15 @@ export function VisionCount({ onBack }: VisionCountProps) {
                 <ul className="vision-debug-list">
                   {rejectedDebug.map((r, i) => (
                     <li key={`rej-${i}`}>
-                      {r.reason}
-                      {r.detectionConfidence > 0 ? ` (${r.detectionConfidence}%)` : ""}
+                      <span className="vision-debug-reason">
+                        {r.reason}
+                        {r.detectionConfidence > 0 ? ` (${r.detectionConfidence}%)` : ""}
+                      </span>
+                      <span className="vision-debug-metrics">
+                        {r.metrics.widthPx}×{r.metrics.heightPx}px of {r.metrics.frameW}×
+                        {r.metrics.frameH} · relW {r.metrics.relWidthPct}% · relH {r.metrics.relHeightPct}% ·
+                        AR {r.metrics.aspectRatio}
+                      </span>
                     </li>
                   ))}
                 </ul>
