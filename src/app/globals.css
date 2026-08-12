@@ -1212,6 +1212,7 @@ h1 { font-size: clamp(28px, 6vw, 42px); } h2 { font-size: clamp(22px, 4vw, 30px)
 .vision-live-list { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .vision-live-list li { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: var(--radius-sm); border: 1px solid rgba(34, 119, 204, 0.28); background: rgba(238, 246, 255, 0.55); color: var(--cream-text); font-size: 13px; }
 .vision-live-meta { font-size: 11px; color: var(--cream-text-muted); }
+.vision-debug-inline { font-size: 10px; color: #8b1538; font-family: var(--font-mono, monospace); letter-spacing: .01em; }
 .vision-latest-line { margin-top: 8px; font-size: 12px; color: var(--cream-text); }
 .vision-debug-toggle { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; font-size: 11px; opacity: 0.75; }
 .vision-debug-toggle.vision-debug-on { opacity: 1; color: #8b1538; }

@@ -48,11 +48,29 @@ function statusClass(status: VisionStatus, scanning: boolean): string {
   return "vision-status-ready";
 }
 
+/** "Detection" line — geometry confidence only, always shown once a card shape is found. */
+function detectionCaption(det: FrameDetection): string {
+  return `CARD DETECTED / Detection: ${det.detectionConfidence}%`;
+}
+
+/**
+ * "Recognition" line — driven ENTIRELY by rank confidence, never by
+ * detectionConfidence. A high shape/detection score must never produce this
+ * message; only a low rank confidence does.
+ */
 function recognitionCaption(det: FrameDetection): string {
-  if (!det.recognitionUncertain && det.rank && det.suit) {
-    return `${det.rank}${det.suit} · ${det.recognitionConfidence}%`;
+  if (!det.recognitionUncertain && det.rank) {
+    const suitPart = det.suit ? det.suit : "?";
+    return `${det.rank}${suitPart} / Recognition: ${det.recognitionConfidence}%`;
   }
-  return "Recognition uncertain";
+  return "Rank uncertain";
+}
+
+function suitCaption(det: FrameDetection): string {
+  if (det.suit && det.suitConfidence > 0) {
+    return `Suit: ${det.suit} (${det.suitConfidence}%)`;
+  }
+  return "Suit: uncertain";
 }
 
 export function VisionCount({ onBack }: VisionCountProps) {
@@ -210,7 +228,9 @@ export function VisionCount({ onBack }: VisionCountProps) {
       }
 
       for (const det of detections) {
-        const recognized = !det.recognitionUncertain && !!det.rank && !!det.suit;
+        // Rank recognition alone decides whether this reads as "recognized" —
+        // a high detectionConfidence never overrides a low rank confidence.
+        const recognized = !det.recognitionUncertain && !!det.rank;
         const confirmed = det.confirmed;
         const stroke = confirmed
           ? "rgba(212, 175, 55, 0.95)"
@@ -218,14 +238,17 @@ export function VisionCount({ onBack }: VisionCountProps) {
             ? "rgba(70, 140, 220, 0.9)"
             : "rgba(160, 160, 160, 0.8)";
         const label = recognized
-          ? `Card detected / ${det.rank}${det.suit} / ${det.recognitionConfidence}%`
-          : `Card detected / Recognition uncertain · det ${det.detectionConfidence}%`;
+          ? `${det.rank}${det.suit ?? "?"} / Recognition: ${det.recognitionConfidence}%`
+          : `CARD DETECTED / Rank uncertain`;
+        const fullLabel = showDebug
+          ? `${label} · Detection ${det.detectionConfidence}%${det.suit ? ` · Suit ${det.suitConfidence}%` : ""}`
+          : label;
         drawBox(
           det.bbox,
           stroke,
           confirmed ? 2.25 : 1.75,
           !recognized,
-          showDebug ? `${label} · det ${det.detectionConfidence}%` : label,
+          fullLabel,
           confirmed ? "rgba(26, 20, 16, 0.82)" : "rgba(28, 28, 32, 0.82)",
           confirmed ? "#f4e4a6" : recognized ? "#cfe4ff" : "#d8d8d8"
         );
@@ -271,13 +294,15 @@ export function VisionCount({ onBack }: VisionCountProps) {
 
       if (active.length) {
         setLastDetectionConf(Math.max(...active.map((d) => d.detectionConfidence)));
+        // Pick by rank confidence for the headline label — detection score
+        // alone should never decide what gets reported as "recognized".
         const best = active.reduce((a, b) =>
-          b.detectionConfidence > a.detectionConfidence ? b : a
+          b.recognitionConfidence > a.recognitionConfidence ? b : a
         );
         setLastRecognitionLabel(
           best.recognitionUncertain || !best.rank
-            ? "Card detected — recognition uncertain"
-            : `Card detected / ${best.rank}${best.suit} / ${best.recognitionConfidence}%`
+            ? `CARD DETECTED / Detection: ${best.detectionConfidence}% — Rank uncertain`
+            : `${best.rank}${best.suit ?? "?"} / Recognition: ${best.recognitionConfidence}%`
         );
       } else {
         setLastRecognitionLabel(null);
@@ -464,7 +489,8 @@ export function VisionCount({ onBack }: VisionCountProps) {
                     <span>
                       {card.label}
                       {card.manual ? " (edited)" : ""}
-                      {!card.manual && ` · ${card.confidence}%`}
+                      {!card.manual && ` · Rank ${card.confidence}%`}
+                      {!card.manual && card.suitConfidence != null && ` · Suit ${card.suitConfidence}%`}
                     </span>
                     <div className="vision-card-actions">
                       <button type="button" className="btn-ghost" onClick={() => openEdit(card)}>
@@ -486,12 +512,19 @@ export function VisionCount({ onBack }: VisionCountProps) {
               <ul className="vision-live-list">
                 {liveDetections.map((det, i) => (
                   <li key={`${det.cx.toFixed(3)}-${det.cy.toFixed(3)}-${i}`}>
-                    <span>Card detected</span>
+                    <span>{detectionCaption(det)}</span>
                     <span className="text-muted">{recognitionCaption(det)}</span>
                     <span className="vision-live-meta">
-                      Shape {det.detectionConfidence}%
+                      {suitCaption(det)}
                       {det.confirmed ? " · counted" : ""}
                     </span>
+                    {debugMode && (
+                      <span className="vision-debug-inline">
+                        Debug — Detection: {det.detectionConfidence}% · Rank:{" "}
+                        {det.rank ?? "—"} ({det.recognitionConfidence}%) · Suit:{" "}
+                        {det.suit ?? "—"} ({det.suitConfidence}%)
+                      </span>
+                    )}
                   </li>
                 ))}
               </ul>

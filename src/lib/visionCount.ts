@@ -13,7 +13,10 @@ export type DetectedCard = {
   rank: string;
   suit: string;
   label: string;
+  /** Rank recognition confidence 0–100 (drives the running count trust). */
   confidence: number;
+  /** Suit recognition confidence 0–100 — secondary, does not gate counting. */
+  suitConfidence?: number;
   manual?: boolean;
 };
 
@@ -21,10 +24,13 @@ export type DetectedCard = {
 export type FrameDetection = {
   rank: string | null;
   suit: string | null;
-  /** Shape/presence confidence 0–100 */
+  /** Card shape/presence confidence 0–100 — geometry only, never implies rank/suit are known. */
   detectionConfidence: number;
-  /** Rank recognition confidence 0–100 (0 when uncertain) */
+  /** Rank recognition confidence 0–100 (0 when uncertain). Independent of detectionConfidence. */
   recognitionConfidence: number;
+  /** Suit recognition confidence 0–100 (0 when uncertain). Independent of rank confidence. */
+  suitConfidence: number;
+  /** True only when RANK confidence is below its own threshold — never derived from detectionConfidence. */
   recognitionUncertain: boolean;
   /** True once this track has been registered into the running count */
   confirmed: boolean;
@@ -61,6 +67,7 @@ export type FrameDetectionStats = {
 
 const SUIT_LETTERS = ["S", "H", "D", "C"] as const;
 const RANK_LIST = [...ranks];
+const SUIT_LIST = [...suits];
 
 /** Toggle from Vision Count UI; keep false for production default. */
 export let VISION_DEBUG = false;
@@ -117,13 +124,20 @@ const MIN_FACE_STD = 0.14;
 /* --- Edge strength along bbox perimeter --- */
 const MIN_EDGE_SCORE = 0.22;
 
-/* --- Confidence gates (detection vs recognition are independent) --- */
+/* --- Confidence gates (detection, rank recognition, and suit recognition are all independent) --- */
 const DETECTION_CONF_MIN = 55;
 const RECOGNITION_CONF_MIN = 62;
 const REGISTRATION_CONF_MIN = 68;
 const CONFIRM_FRAMES_REQUIRED = 2;
 const MIN_RANK_MARGIN = 0.07;
 const MIN_RANK_CORRELATION = 0.26;
+/** Suit is secondary priority — its own gate, independent of rank/detection confidence. */
+const SUIT_CONF_MIN = 45;
+const MIN_SUIT_MARGIN = 0.05;
+const MIN_SUIT_CORRELATION = 0.2;
+/** Structural-feature (holes/ink-components) mismatch penalty applied to raw template correlation. */
+const HOLES_PENALTY_WEIGHT = 0.22;
+const COMPONENTS_PENALTY_WEIGHT = 0.4;
 
 const MAX_REGIONS = 6;
 const MAX_DEBUG_REJECTS = 12;
@@ -217,33 +231,297 @@ function correlate(a: Float32Array, b: Float32Array): number {
   return sum / len;
 }
 
-let rankTemplates: Map<string, Float32Array> | null = null;
+/* ============================================================================
+ * RANK / SUIT RECOGNITION
+ * ----------------------------------------------------------------------------
+ * Everything below classifies WHAT a card is (rank + suit) from an already
+ * detected/geometry-accepted region. It never adjusts detectionConfidence,
+ * region bboxes, or any size/aspect gating above — recognition failing simply
+ * yields rank/suit = null with its own independent confidence of 0.
+ * ========================================================================== */
 
-function ensureRankTemplates(): Map<string, Float32Array> {
+const RANK_PATCH_W = 26;
+const RANK_PATCH_H = 32;
+const SUIT_PATCH_W = 20;
+const SUIT_PATCH_H = 18;
+
+/** Supersample factor used when rendering templates for smoother, less-aliased reference glyphs. */
+const TEMPLATE_SUPERSAMPLE = 3;
+
+type RankTemplate = {
+  gray: Float32Array; // normalized (zero-mean/unit-std), RANK_PATCH_W x RANK_PATCH_H
+  holes: number; // enclosed background loops (e.g. 8 has 2, 6/9/0/A/Q have 1, most others have 0)
+  components: number; // separate ink blobs ("10" has 2 — the "1" and the "0" — everything else has 1)
+};
+
+type SuitTemplate = {
+  gray: Float32Array; // normalized, SUIT_PATCH_W x SUIT_PATCH_H
+};
+
+/**
+ * Otsu threshold — picks the split point that best separates ink from
+ * background for THIS patch's own histogram, rather than a fixed global
+ * brightness cut. Needed because corner crops vary in exposure/contrast
+ * far more than a full card face does.
+ */
+function otsuThreshold(gray: Float32Array): number {
+  const hist = new Array(256).fill(0) as number[];
+  for (let i = 0; i < gray.length; i++) {
+    hist[Math.max(0, Math.min(255, Math.round(gray[i])))]++;
+  }
+  const total = gray.length || 1;
+  let sum = 0;
+  for (let t = 0; t < 256; t++) sum += t * hist[t];
+
+  let sumB = 0;
+  let wB = 0;
+  let maxVar = -1;
+  let threshold = 128;
+  for (let t = 0; t < 256; t++) {
+    wB += hist[t];
+    if (wB === 0) continue;
+    const wF = total - wB;
+    if (wF === 0) break;
+    sumB += t * hist[t];
+    const mB = sumB / wB;
+    const mF = (sum - sumB) / wF;
+    const varBetween = wB * wF * (mB - mF) * (mB - mF);
+    if (varBetween > maxVar) {
+      maxVar = varBetween;
+      threshold = t;
+    }
+  }
+  return threshold;
+}
+
+function binarizeInk(gray: Float32Array, threshold: number): Uint8Array {
+  const bin = new Uint8Array(gray.length);
+  for (let i = 0; i < gray.length; i++) bin[i] = gray[i] < threshold ? 1 : 0;
+  return bin;
+}
+
+/**
+ * Counts (a) distinct ink blobs and (b) fully-enclosed background loops
+ * ("holes") in a binarized glyph patch. These two small integers are a
+ * cheap, rotation/font-tolerant structural fingerprint that cleanly
+ * separates every rank pair called out as commonly confused:
+ *   5(0,1) vs 6(1,1) · 6(1,1) vs 8(2,1) · 8(2,1) vs 9(1,1) ·
+ *   9(1,1) vs 10(1,2) · 10(1,2) vs J(0,1) · J(0,1) vs Q(1,1) ·
+ *   Q(1,1) vs K(0,1) · K(0,1) vs A(1,1)          (holes, components)
+ */
+function countHolesAndComponents(
+  bin: Uint8Array,
+  w: number,
+  h: number
+): { holes: number; components: number } {
+  const MIN_AREA = 2;
+  const visited = new Uint8Array(w * h);
+
+  const floodCount = (
+    matches: (i: number) => boolean,
+    seeds: number[]
+  ): number => {
+    let count = 0;
+    const local = new Uint8Array(w * h);
+    for (const seed of seeds) {
+      if (!matches(seed) || local[seed]) continue;
+      local[seed] = 1;
+      let area = 0;
+      const stack = [seed];
+      while (stack.length) {
+        const cur = stack.pop()!;
+        area++;
+        const cx = cur % w;
+        const cy = (cur / w) | 0;
+        const neighbors = [cur - 1, cur + 1, cur - w, cur + w];
+        for (const n of neighbors) {
+          if (n < 0 || n >= w * h) continue;
+          const nx = n % w;
+          const ny = (n / w) | 0;
+          if (Math.abs(nx - cx) + Math.abs(ny - cy) !== 1) continue;
+          if (!local[n] && matches(n)) {
+            local[n] = 1;
+            stack.push(n);
+          }
+        }
+      }
+      if (area >= MIN_AREA) count++;
+    }
+    return count;
+  };
+
+  // Ink components: every dark pixel is a seed; matches() only accepts ink.
+  const inkSeeds: number[] = [];
+  for (let i = 0; i < bin.length; i++) if (bin[i] === 1) inkSeeds.push(i);
+  const components = floodCount((i) => bin[i] === 1, inkSeeds);
+
+  // Background reachable from the patch border is "outside"; whatever
+  // background remains unreached is an enclosed hole.
+  const outside = new Uint8Array(w * h);
+  const borderStack: number[] = [];
+  for (let x = 0; x < w; x++) {
+    if (bin[x] === 0) borderStack.push(x);
+    const bottom = (h - 1) * w + x;
+    if (bin[bottom] === 0) borderStack.push(bottom);
+  }
+  for (let y = 0; y < h; y++) {
+    if (bin[y * w] === 0) borderStack.push(y * w);
+    const right = y * w + (w - 1);
+    if (bin[right] === 0) borderStack.push(right);
+  }
+  for (const seed of borderStack) outside[seed] = 1;
+  const stack = [...borderStack];
+  while (stack.length) {
+    const cur = stack.pop()!;
+    const cx = cur % w;
+    const cy = (cur / w) | 0;
+    const neighbors = [cur - 1, cur + 1, cur - w, cur + w];
+    for (const n of neighbors) {
+      if (n < 0 || n >= w * h) continue;
+      const nx = n % w;
+      const ny = (n / w) | 0;
+      if (Math.abs(nx - cx) + Math.abs(ny - cy) !== 1) continue;
+      if (!outside[n] && bin[n] === 0) {
+        outside[n] = 1;
+        stack.push(n);
+      }
+    }
+  }
+  visited.fill(0);
+  const holeSeeds: number[] = [];
+  for (let i = 0; i < bin.length; i++) if (bin[i] === 0 && !outside[i]) holeSeeds.push(i);
+  const holes = floodCount((i) => bin[i] === 0 && !outside[i], holeSeeds);
+
+  return { holes, components };
+}
+
+/** Downsample a supersampled canvas render by box-averaging NxN blocks — cheap anti-aliasing that mimics camera-blur softness better than raw glyph edges. */
+function boxDownsample(
+  data: Uint8ClampedArray,
+  srcW: number,
+  srcH: number,
+  factor: number
+): Float32Array {
+  const dstW = Math.round(srcW / factor);
+  const dstH = Math.round(srcH / factor);
+  const out = new Float32Array(dstW * dstH);
+  for (let dy = 0; dy < dstH; dy++) {
+    for (let dx = 0; dx < dstW; dx++) {
+      let sum = 0;
+      let count = 0;
+      for (let fy = 0; fy < factor; fy++) {
+        for (let fx = 0; fx < factor; fx++) {
+          const sx = dx * factor + fx;
+          const sy = dy * factor + fy;
+          if (sx >= srcW || sy >= srcH) continue;
+          const i = (sy * srcW + sx) * 4;
+          sum += (data[i] + data[i + 1] + data[i + 2]) / 3;
+          count++;
+        }
+      }
+      out[dy * dstW + dx] = count ? sum / count : 255;
+    }
+  }
+  return out;
+}
+
+let rankTemplates: Map<string, RankTemplate> | null = null;
+let suitTemplates: Map<string, SuitTemplate> | null = null;
+
+/**
+ * Renders index-style rank glyphs at high supersampled resolution using a
+ * bold serif face closer to real card corner-index typography than a plain
+ * sans-serif, then box-downsamples for anti-aliased templates. Structural
+ * features (holes/components) are computed once here and cached alongside
+ * each template so runtime classification only pays for the query patch.
+ */
+function ensureRankTemplates(): Map<string, RankTemplate> {
   if (rankTemplates) return rankTemplates;
   rankTemplates = new Map();
   if (typeof document === "undefined") return rankTemplates;
 
+  const ss = TEMPLATE_SUPERSAMPLE;
   const canvas = document.createElement("canvas");
-  canvas.width = 22;
-  canvas.height = 30;
+  canvas.width = RANK_PATCH_W * ss;
+  canvas.height = RANK_PATCH_H * ss;
   const ctx = canvas.getContext("2d");
   if (!ctx) return rankTemplates;
 
   for (const rank of RANK_LIST) {
-    ctx.fillStyle = "#f8f8f8";
+    ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = "#1a1a1a";
-    ctx.font = "bold 16px Arial, Helvetica, sans-serif";
-    ctx.fillText(rank, rank === "10" ? 0 : 3, 21);
-    const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-    rankTemplates.set(rank, normalizePatch(grayscale(data, canvas.width, canvas.height)));
+    ctx.fillStyle = "#0a0a0a";
+    ctx.textBaseline = "alphabetic";
+    // "10" needs a tighter/narrower face to fit two glyphs the way real
+    // card corners do; single characters use a slightly larger bold serif
+    // that better matches typical corner-index type than a sans-serif.
+    const fontPx = rank === "10" ? 21 * ss : 24 * ss;
+    ctx.font = `bold ${fontPx}px Georgia, "Times New Roman", serif`;
+    const label = rank;
+    const tw = ctx.measureText(label).width;
+    const x = Math.max(2 * ss, (canvas.width - tw) / 2);
+    const y = canvas.height * 0.78;
+    ctx.fillText(label, x, y);
+
+    const raw = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    const gray = boxDownsample(raw, canvas.width, canvas.height, ss);
+    const threshold = otsuThreshold(gray);
+    const bin = binarizeInk(gray, threshold);
+    const { holes, components } = countHolesAndComponents(bin, RANK_PATCH_W, RANK_PATCH_H);
+
+    rankTemplates.set(rank, {
+      gray: normalizePatch(gray),
+      holes,
+      components: Math.max(1, components),
+    });
   }
   return rankTemplates;
 }
 
-function classifyRank(patch: Float32Array): { rank: string; confidence: number } {
+function ensureSuitTemplates(): Map<string, SuitTemplate> {
+  if (suitTemplates) return suitTemplates;
+  suitTemplates = new Map();
+  if (typeof document === "undefined") return suitTemplates;
+
+  const ss = TEMPLATE_SUPERSAMPLE;
+  const canvas = document.createElement("canvas");
+  canvas.width = SUIT_PATCH_W * ss;
+  canvas.height = SUIT_PATCH_H * ss;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return suitTemplates;
+
+  for (const suit of SUIT_LIST) {
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#0a0a0a";
+    ctx.textBaseline = "alphabetic";
+    ctx.textAlign = "center";
+    ctx.font = `${16 * ss}px "Segoe UI Symbol", Arial, sans-serif`;
+    ctx.fillText(suit, canvas.width / 2, canvas.height * 0.82);
+    ctx.textAlign = "left";
+
+    const raw = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    const gray = boxDownsample(raw, canvas.width, canvas.height, ss);
+    suitTemplates.set(suit, { gray: normalizePatch(gray) });
+  }
+  return suitTemplates;
+}
+
+/**
+ * Classify a rank glyph patch using normalized cross-correlation against
+ * every rendered template, refined by a structural penalty from
+ * holes/ink-component mismatches (see countHolesAndComponents doc comment
+ * for exactly which confusable pairs this resolves).
+ */
+function classifyRank(
+  rawGray: Float32Array
+): { rank: string; confidence: number; holes: number; components: number } {
   const templates = ensureRankTemplates();
+  const threshold = otsuThreshold(rawGray);
+  const bin = binarizeInk(rawGray, threshold);
+  const { holes, components } = countHolesAndComponents(bin, RANK_PATCH_W, RANK_PATCH_H);
+  const normQuery = normalizePatch(rawGray);
+
   let bestRank = "A";
   let bestScore = -Infinity;
   let secondScore = -Infinity;
@@ -251,7 +529,10 @@ function classifyRank(patch: Float32Array): { rank: string; confidence: number }
   for (const rank of RANK_LIST) {
     const template = templates.get(rank);
     if (!template) continue;
-    const score = correlate(patch, template);
+    const corr = correlate(normQuery, template.gray);
+    const holesDiff = Math.abs(holes - template.holes);
+    const componentsDiff = Math.abs(Math.max(1, components) - template.components);
+    const score = corr - componentsDiff * COMPONENTS_PENALTY_WEIGHT - holesDiff * HOLES_PENALTY_WEIGHT;
     if (score > bestScore) {
       secondScore = bestScore;
       bestRank = rank;
@@ -263,7 +544,7 @@ function classifyRank(patch: Float32Array): { rank: string; confidence: number }
 
   const margin = bestScore - secondScore;
   if (margin < MIN_RANK_MARGIN || bestScore < MIN_RANK_CORRELATION) {
-    return { rank: bestRank, confidence: 0 };
+    return { rank: bestRank, confidence: 0, holes, components };
   }
 
   // Map passing scores into ~62–99 so recognition gate is reachable
@@ -273,26 +554,69 @@ function classifyRank(patch: Float32Array): { rank: string; confidence: number }
     0,
     Math.min(0.99, 0.62 + scoreHeadroom * 0.95 + marginHeadroom * 0.85)
   );
-  return { rank: bestRank, confidence };
+  return { rank: bestRank, confidence, holes, components };
 }
 
-function classifySuit(r: number, g: number, b: number, cornerData: Uint8ClampedArray): string {
+/**
+ * Classify a suit glyph patch. Color (red vs black) is a near-perfect prior
+ * for playing cards, so it is used first to narrow the candidate set to two
+ * (♥/♦ or ♠/♣), then NCC template correlation picks between those two —
+ * this is far more reliable than the previous brightness-guessing heuristic
+ * and gives a real, independent confidence score.
+ */
+function classifySuit(
+  suitGray: Float32Array,
+  suitColor: Uint8ClampedArray
+): { suit: string; confidence: number } {
   let red = 0;
   let black = 0;
-  for (let i = 0; i < cornerData.length; i += 4) {
-    const pr = cornerData[i];
-    const pg = cornerData[i + 1];
-    const pb = cornerData[i + 2];
-    if (pr > 140 && pg < 110 && pb < 110) red++;
-    else if (pr < 90 && pg < 90 && pb < 90) black++;
+  for (let i = 0; i < suitColor.length; i += 4) {
+    const pr = suitColor[i];
+    const pg = suitColor[i + 1];
+    const pb = suitColor[i + 2];
+    if (pr > 120 && pr - pg > 30 && pr - pb > 30) red++;
+    else if (pr < 110 && pg < 110 && pb < 110) black++;
   }
-  const isRed = red > black * 0.35;
-  if (isRed) {
-    const upperSum = (r + g + b) / 3;
-    return upperSum > 150 ? "♦" : "♥";
+  const totalInk = red + black;
+  const isRed = red >= black;
+  const colorConfidence = totalInk > 0 ? Math.abs(red - black) / totalInk : 0;
+  const candidates = isRed ? ["♥", "♦"] : ["♠", "♣"];
+
+  const templates = ensureSuitTemplates();
+  const normQuery = normalizePatch(suitGray);
+
+  let bestSuit = candidates[0];
+  let bestScore = -Infinity;
+  let secondScore = -Infinity;
+  for (const suit of candidates) {
+    const template = templates.get(suit);
+    if (!template) continue;
+    const score = correlate(normQuery, template.gray);
+    if (score > bestScore) {
+      secondScore = bestScore;
+      bestSuit = suit;
+      bestScore = score;
+    } else if (score > secondScore) {
+      secondScore = score;
+    }
   }
-  const avg = (r + g + b) / 3;
-  return avg > 120 ? "♣" : "♠";
+
+  const margin = bestScore - secondScore;
+  if (margin < MIN_SUIT_MARGIN || bestScore < MIN_SUIT_CORRELATION || totalInk < 3) {
+    return { suit: bestSuit, confidence: 0 };
+  }
+
+  const scoreHeadroom = bestScore - MIN_SUIT_CORRELATION;
+  const marginHeadroom = margin - MIN_SUIT_MARGIN;
+  // Fold color-decision strength in as a multiplier — an ambiguous red/black
+  // split (small corner, glare, etc.) should never report high confidence
+  // even if the shape correlation happens to look good.
+  const shapeConfidence = Math.max(
+    0,
+    Math.min(0.99, 0.5 + scoreHeadroom * 0.9 + marginHeadroom * 0.8)
+  );
+  const confidence = shapeConfidence * (0.55 + 0.45 * colorConfidence);
+  return { suit: bestSuit, confidence };
 }
 
 function regionFaceStats(
@@ -611,57 +935,140 @@ function mergeNearbyRegions(regions: RawRegion[], width: number, height: number)
 }
 
 /**
- * Crop top-left index corner with light perspective-style sampling:
- * sample a parallelogram biased toward the card interior so tilted cards
- * still yield a usable rank patch.
+ * A standard card prints its rank+suit index stacked in the top-left corner
+ * (and again, upside-down, in the bottom-right). Since detection only gives
+ * us an axis-aligned bbox (no true perspective/rotation solve), we sample
+ * each of the four corners *as if it were* the top-left in its own local
+ * "inward" direction — this transparently covers a card presented upright,
+ * upside-down (180°), or on either 180°-symmetric side without ever
+ * touching the bbox/geometry itself. The caller tries all four and keeps
+ * whichever corner actually yields a confident rank read.
  */
-function extractCornerPatch(
+type CornerId = "tl" | "tr" | "bl" | "br";
+const CORNER_IDS: CornerId[] = ["tl", "tr", "bl", "br"];
+const CORNER_DIR: Record<CornerId, { dx: 1 | -1; dy: 1 | -1 }> = {
+  tl: { dx: 1, dy: 1 },
+  tr: { dx: -1, dy: 1 },
+  bl: { dx: 1, dy: -1 },
+  br: { dx: -1, dy: -1 },
+};
+
+/* Index-window geometry, expressed as fractions of the card bbox and measured
+ * inward from whichever corner is being sampled. Rank sits at the very top of
+ * the index block; the suit pip sits directly beneath it. */
+const INDEX_INSET_U = 0.045;
+const INDEX_INSET_V = 0.035;
+const INDEX_SIZE_U = 0.3;
+const RANK_SIZE_V = 0.145;
+const SUIT_GAP_V = 0.012;
+const SUIT_SIZE_V = 0.115;
+const SUIT_SIZE_U = 0.24;
+
+/** Sample a sub-window of the index block (rank or suit) anchored at one bbox corner, resampled to a fixed-size patch. */
+function sampleIndexWindow(
+  data: Uint8ClampedArray,
+  width: number,
+  height: number,
+  bbox: { x: number; y: number; w: number; h: number },
+  corner: CornerId,
+  vOffsetFrac: number,
+  sizeVFrac: number,
+  sizeUFrac: number,
+  patchW: number,
+  patchH: number
+): { gray: Float32Array; color: Uint8ClampedArray } {
+  const { dx, dy } = CORNER_DIR[corner];
+  const originX = dx > 0 ? bbox.x : bbox.x + bbox.w;
+  const originY = dy > 0 ? bbox.y : bbox.y + bbox.h;
+
+  const gray = new Float32Array(patchW * patchH);
+  const color = new Uint8ClampedArray(patchW * patchH * 4);
+
+  for (let py = 0; py < patchH; py++) {
+    for (let px = 0; px < patchW; px++) {
+      const u = px / Math.max(1, patchW - 1);
+      const v = py / Math.max(1, patchH - 1);
+      // Slight shear approximates small perspective tilt, same tolerance as before.
+      const offU = INDEX_INSET_U + u * sizeUFrac + v * sizeVFrac * 0.05;
+      const offV = INDEX_INSET_V + vOffsetFrac + v * sizeVFrac;
+      const sx = Math.min(width - 1, Math.max(0, Math.round(originX + dx * offU * bbox.w)));
+      const sy = Math.min(height - 1, Math.max(0, Math.round(originY + dy * offV * bbox.h)));
+      const src = (sy * width + sx) * 4;
+      const dst = (py * patchW + px) * 4;
+      color[dst] = data[src];
+      color[dst + 1] = data[src + 1];
+      color[dst + 2] = data[src + 2];
+      color[dst + 3] = 255;
+      gray[py * patchW + px] = (data[src] + data[src + 1] + data[src + 2]) / 3;
+    }
+  }
+
+  return { gray, color };
+}
+
+type CardRecognition = {
+  corner: CornerId;
+  rank: string;
+  rankConfidence: number;
+  suit: string;
+  suitConfidence: number;
+};
+
+/**
+ * Full corner/index recognition pipeline for one detected card region:
+ * for each of the four corners, crop+normalize the rank and suit sub-windows
+ * and classify both independently, then keep the corner whose RANK read was
+ * most confident (suit is secondary and follows whichever corner wins).
+ * This is the "try multiple corners" rotation strategy from the spec.
+ */
+function recognizeCard(
   data: Uint8ClampedArray,
   width: number,
   height: number,
   bbox: { x: number; y: number; w: number; h: number }
-): { patch: Float32Array; corner: Uint8ClampedArray; avg: [number, number, number] } {
-  const patchW = 22;
-  const patchH = 30;
-  const ox = bbox.x + Math.floor(bbox.w * 0.05);
-  const oy = bbox.y + Math.floor(bbox.h * 0.04);
-  // Scale sampling window with card size (relative crop)
-  const srcW = Math.max(patchW, Math.floor(bbox.w * 0.28));
-  const srcH = Math.max(patchH, Math.floor(bbox.h * 0.22));
+): CardRecognition {
+  let best: CardRecognition | null = null;
 
-  const patch = new Float32Array(patchW * patchH);
-  const corner = new Uint8ClampedArray(patchW * patchH * 4);
-  let rSum = 0;
-  let gSum = 0;
-  let bSum = 0;
-  let count = 0;
+  for (const corner of CORNER_IDS) {
+    const rankWindow = sampleIndexWindow(
+      data,
+      width,
+      height,
+      bbox,
+      corner,
+      0,
+      RANK_SIZE_V,
+      INDEX_SIZE_U,
+      RANK_PATCH_W,
+      RANK_PATCH_H
+    );
+    const rankResult = classifyRank(rankWindow.gray);
 
-  for (let py = 0; py < patchH; py++) {
-    for (let px = 0; px < patchW; px++) {
-      const u = px / (patchW - 1);
-      const v = py / (patchH - 1);
-      // Slight shear approximates small perspective tilt
-      const sx = Math.min(width - 1, Math.max(0, Math.round(ox + u * srcW + v * srcW * 0.04)));
-      const sy = Math.min(height - 1, Math.max(0, Math.round(oy + v * srcH + u * srcH * 0.02)));
-      const src = (sy * width + sx) * 4;
-      const dst = (py * patchW + px) * 4;
-      corner[dst] = data[src];
-      corner[dst + 1] = data[src + 1];
-      corner[dst + 2] = data[src + 2];
-      corner[dst + 3] = 255;
-      patch[py * patchW + px] = (data[src] + data[src + 1] + data[src + 2]) / 3;
-      rSum += data[src];
-      gSum += data[src + 1];
-      bSum += data[src + 2];
-      count++;
+    const suitWindow = sampleIndexWindow(
+      data,
+      width,
+      height,
+      bbox,
+      corner,
+      RANK_SIZE_V + SUIT_GAP_V,
+      SUIT_SIZE_V,
+      SUIT_SIZE_U,
+      SUIT_PATCH_W,
+      SUIT_PATCH_H
+    );
+    const suitResult = classifySuit(suitWindow.gray, suitWindow.color);
+
+    const rankConfidence = Math.round(rankResult.confidence * 100);
+    const suitConfidence = Math.round(suitResult.confidence * 100);
+
+    if (!best || rankConfidence > best.rankConfidence) {
+      best = { corner, rank: rankResult.rank, rankConfidence, suit: suitResult.suit, suitConfidence };
     }
   }
 
-  return {
-    patch: normalizePatch(patch),
-    corner,
-    avg: [rSum / count, gSum / count, bSum / count],
-  };
+  return (
+    best ?? { corner: "tl", rank: "A", rankConfidence: 0, suit: "♠", suitConfidence: 0 }
+  );
 }
 
 /**
@@ -763,11 +1170,12 @@ export function detectCardsInFrame(
   let recognized = 0;
 
   for (const candidate of accepted) {
-    const { patch, corner, avg } = extractCornerPatch(image.data, width, height, candidate.region);
-    const { rank, confidence: rankConf } = classifyRank(patch);
-    const recognitionConfidence = Math.round(rankConf * 100);
-    const recognitionOk = recognitionConfidence >= RECOGNITION_CONF_MIN;
-    const suit = recognitionOk ? classifySuit(avg[0], avg[1], avg[2], corner) : null;
+    const rec = recognizeCard(image.data, width, height, candidate.region);
+    // Rank and suit each gate on their OWN threshold — a confident rank with
+    // a weak suit read still reports the rank; detectionConfidence never
+    // factors into either decision.
+    const recognitionOk = rec.rankConfidence >= RECOGNITION_CONF_MIN;
+    const suitOk = rec.suitConfidence >= SUIT_CONF_MIN;
 
     if (recognitionOk) recognized++;
 
@@ -775,10 +1183,11 @@ export function detectCardsInFrame(
     // is reported as detected the moment its geometry passes, and rank/suit
     // recognition is attempted afterward without gating detection on it.
     detections.push({
-      rank: recognitionOk ? rank : null,
-      suit,
+      rank: recognitionOk ? rec.rank : null,
+      suit: suitOk ? rec.suit : null,
       detectionConfidence: candidate.detectionConfidence,
-      recognitionConfidence: recognitionOk ? recognitionConfidence : 0,
+      recognitionConfidence: recognitionOk ? rec.rankConfidence : 0,
+      suitConfidence: suitOk ? rec.suitConfidence : 0,
       recognitionUncertain: !recognitionOk,
       confirmed: false,
       bbox: {
@@ -806,8 +1215,8 @@ export function detectCardsInFrame(
       recognized,
       sample: detections[0]
         ? detections[0].recognitionUncertain
-          ? `shape@${detections[0].detectionConfidence}% uncertain`
-          : `${detections[0].rank}${detections[0].suit} det${detections[0].detectionConfidence}% rec${detections[0].recognitionConfidence}%`
+          ? `detection ${detections[0].detectionConfidence}% / rank uncertain`
+          : `${detections[0].rank ?? "?"}${detections[0].suit ?? "?"} — detection ${detections[0].detectionConfidence}% / rank ${detections[0].recognitionConfidence}% / suit ${detections[0].suitConfidence}%`
         : null,
     });
   }
@@ -825,6 +1234,7 @@ type ActiveTrack = {
   bbox: { x: number; y: number; w: number; h: number };
   detectionConfidence: number;
   recognitionConfidence: number;
+  suitConfidence: number;
   recognitionUncertain: boolean;
   registered: boolean;
   confirmFrames: number;
@@ -883,6 +1293,7 @@ export class DetectionTracker {
           bbox: det.bbox,
           detectionConfidence: det.detectionConfidence,
           recognitionConfidence: det.recognitionConfidence,
+          suitConfidence: det.suitConfidence,
           recognitionUncertain: det.recognitionUncertain,
           registered: false,
           confirmFrames: det.recognitionUncertain ? 0 : 1,
@@ -904,7 +1315,10 @@ export class DetectionTracker {
           match.recognitionUncertain = match.recognitionConfidence < REGISTRATION_CONF_MIN;
         } else if (match.rank === det.rank && det.rank) {
           match.rank = det.rank;
-          match.suit = det.suit;
+          if (det.suit && det.suitConfidence >= match.suitConfidence) {
+            match.suit = det.suit;
+            match.suitConfidence = det.suitConfidence;
+          }
           match.recognitionConfidence = Math.max(match.recognitionConfidence, det.recognitionConfidence);
           match.recognitionUncertain = false;
           match.confirmFrames++;
@@ -915,6 +1329,7 @@ export class DetectionTracker {
         ) {
           match.rank = det.rank;
           match.suit = det.suit;
+          match.suitConfidence = det.suitConfidence;
           match.recognitionConfidence = det.recognitionConfidence;
           match.recognitionUncertain = false;
           match.confirmFrames = 1;
@@ -953,6 +1368,7 @@ export class DetectionTracker {
           suit: match.suit!,
           label: cardLabel(match.rank!, match.suit!),
           confidence: match.recognitionConfidence,
+          suitConfidence: match.suitConfidence,
         });
       }
     }
@@ -985,6 +1401,7 @@ export class DetectionTracker {
         suit: t.suit,
         detectionConfidence: t.detectionConfidence,
         recognitionConfidence: t.recognitionConfidence,
+        suitConfidence: t.suitConfidence,
         recognitionUncertain: t.recognitionUncertain || !t.rank,
         confirmed: t.registered,
         bbox: t.bbox,
@@ -1001,6 +1418,7 @@ export function createManualCard(rank: string, suit: string, id?: string): Detec
     suit,
     label: cardLabel(rank, suit),
     confidence: 100,
+    suitConfidence: 100,
     manual: true,
   };
 }
