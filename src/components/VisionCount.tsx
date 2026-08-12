@@ -1,13 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { RotateCcw, Settings2 } from "lucide-react";
+import { Bug, RotateCcw, Settings2 } from "lucide-react";
 import {
   computeRunningCount,
   createManualCard,
   detectCardsInFrame,
   DetectionTracker,
   formatRunningCount,
+  setVisionDebug,
+  type DebugRect,
   type DetectedCard,
   type FrameDetection,
   type VisionStatus,
@@ -25,13 +27,13 @@ function statusLabel(
   status: VisionStatus,
   scanning: boolean,
   hasConfirmed: boolean,
-  hasUncertain: boolean,
+  hasShapeOnly: boolean,
   hasAnyLive: boolean
 ): string {
   if (status === "permission_required") return "Camera Permission Required";
   if (status === "no_camera") return "No Camera Available";
   if (scanning && hasConfirmed) return "Card Confirmed";
-  if (scanning && hasUncertain) return "Card Detected (Confirming…)";
+  if (scanning && hasShapeOnly) return "Card Detected";
   if (scanning && !hasAnyLive) return "Scanning — No Cards Found";
   if (scanning) return "Scanning";
   if (status === "detected") return "Card Detected";
@@ -46,6 +48,13 @@ function statusClass(status: VisionStatus, scanning: boolean): string {
   return "vision-status-ready";
 }
 
+function recognitionCaption(det: FrameDetection): string {
+  if (!det.recognitionUncertain && det.rank && det.suit) {
+    return `${det.rank}${det.suit} · ${det.recognitionConfidence}%`;
+  }
+  return "Recognition uncertain";
+}
+
 export function VisionCount({ onBack }: VisionCountProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const overlayRef = useRef<HTMLCanvasElement>(null);
@@ -55,13 +64,17 @@ export function VisionCount({ onBack }: VisionCountProps) {
   const streamRef = useRef<MediaStream | null>(null);
   const rafRef = useRef<number | null>(null);
   const scanningRef = useRef(false);
+  const debugRef = useRef(false);
 
   const [cameraReady, setCameraReady] = useState(false);
   const [scanning, setScanning] = useState(false);
+  const [debugMode, setDebugMode] = useState(false);
   const [cameraError, setCameraError] = useState<CameraError | null>(null);
   const [detectedCards, setDetectedCards] = useState<DetectedCard[]>([]);
   const [liveDetections, setLiveDetections] = useState<FrameDetection[]>([]);
-  const [lastConfidence, setLastConfidence] = useState<number | null>(null);
+  const [debugRects, setDebugRects] = useState<DebugRect[]>([]);
+  const [lastDetectionConf, setLastDetectionConf] = useState<number | null>(null);
+  const [lastRecognitionLabel, setLastRecognitionLabel] = useState<string | null>(null);
   const [editCardId, setEditCardId] = useState<string | null>(null);
   const [editRank, setEditRank] = useState("A");
   const [editSuit, setEditSuit] = useState("♠");
@@ -69,7 +82,7 @@ export function VisionCount({ onBack }: VisionCountProps) {
   const runningCount = useMemo(() => computeRunningCount(detectedCards), [detectedCards]);
 
   const hasConfirmedLive = liveDetections.some((d) => d.confirmed);
-  const hasUncertainLive = liveDetections.some((d) => !d.confirmed);
+  const hasShapeOnly = liveDetections.some((d) => d.recognitionUncertain || !d.confirmed);
   const hasAnyLive = liveDetections.length > 0;
 
   const visionStatus: VisionStatus = useMemo(() => {
@@ -80,6 +93,11 @@ export function VisionCount({ onBack }: VisionCountProps) {
     if (cameraReady) return "ready";
     return "idle";
   }, [cameraError, cameraReady, hasConfirmedLive, scanning]);
+
+  useEffect(() => {
+    debugRef.current = debugMode;
+    setVisionDebug(debugMode);
+  }, [debugMode]);
 
   const stopStream = useCallback(() => {
     if (streamRef.current) {
@@ -138,37 +156,83 @@ export function VisionCount({ onBack }: VisionCountProps) {
     };
   }, [initCamera, stopStream]);
 
-  const drawOverlay = useCallback((detections: FrameDetection[], video: HTMLVideoElement) => {
-    const canvas = overlayRef.current;
-    if (!canvas) return;
-    const rect = video.getBoundingClientRect();
-    canvas.width = rect.width;
-    canvas.height = rect.height;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const drawOverlay = useCallback(
+    (detections: FrameDetection[], rejects: DebugRect[], video: HTMLVideoElement, showDebug: boolean) => {
+      const canvas = overlayRef.current;
+      if (!canvas) return;
+      const rect = video.getBoundingClientRect();
+      canvas.width = rect.width;
+      canvas.height = rect.height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    for (const det of detections) {
-      const x = det.bbox.x * canvas.width;
-      const y = det.bbox.y * canvas.height;
-      const w = det.bbox.w * canvas.width;
-      const h = det.bbox.h * canvas.height;
-      const confirmed = det.confirmed;
-      ctx.strokeStyle = confirmed ? "rgba(212, 175, 55, 0.95)" : "rgba(160, 160, 160, 0.75)";
-      ctx.lineWidth = confirmed ? 2 : 1.5;
-      ctx.setLineDash(confirmed ? [] : [5, 4]);
-      ctx.strokeRect(x, y, w, h);
-      ctx.setLineDash([]);
-      const state = confirmed ? "" : " ?";
-      const label = `${det.rank}${det.suit}${state} ${det.confidence}%`;
-      ctx.font = "600 11px DM Sans, system-ui, sans-serif";
-      const tw = ctx.measureText(label).width;
-      ctx.fillStyle = confirmed ? "rgba(26, 20, 16, 0.82)" : "rgba(40, 40, 40, 0.78)";
-      ctx.fillRect(x, Math.max(0, y - 18), tw + 10, 16);
-      ctx.fillStyle = confirmed ? "#f4e4a6" : "#d0d0d0";
-      ctx.fillText(label, x + 5, Math.max(12, y - 6));
-    }
-  }, []);
+      const drawBox = (
+        bbox: FrameDetection["bbox"],
+        stroke: string,
+        lineWidth: number,
+        dashed: boolean,
+        label: string,
+        labelBg: string,
+        labelFg: string
+      ) => {
+        const x = bbox.x * canvas.width;
+        const y = bbox.y * canvas.height;
+        const w = bbox.w * canvas.width;
+        const h = bbox.h * canvas.height;
+        ctx.strokeStyle = stroke;
+        ctx.lineWidth = lineWidth;
+        ctx.setLineDash(dashed ? [5, 4] : []);
+        ctx.strokeRect(x, y, w, h);
+        ctx.setLineDash([]);
+        ctx.font = "600 11px DM Sans, system-ui, sans-serif";
+        const tw = ctx.measureText(label).width;
+        const labelY = Math.max(0, y - 18);
+        ctx.fillStyle = labelBg;
+        ctx.fillRect(x, labelY, tw + 10, 16);
+        ctx.fillStyle = labelFg;
+        ctx.fillText(label, x + 5, Math.max(12, y - 6));
+      };
+
+      if (showDebug) {
+        for (const r of rejects) {
+          if (r.accepted) continue;
+          drawBox(
+            r.bbox,
+            "rgba(180, 40, 40, 0.7)",
+            1.25,
+            true,
+            r.reason,
+            "rgba(60, 16, 16, 0.82)",
+            "#ffc9c9"
+          );
+        }
+      }
+
+      for (const det of detections) {
+        const recognized = !det.recognitionUncertain && !!det.rank && !!det.suit;
+        const confirmed = det.confirmed;
+        const stroke = confirmed
+          ? "rgba(212, 175, 55, 0.95)"
+          : recognized
+            ? "rgba(70, 140, 220, 0.9)"
+            : "rgba(160, 160, 160, 0.8)";
+        const label = recognized
+          ? `Card detected / ${det.rank}${det.suit} / ${det.recognitionConfidence}%`
+          : `Card detected / Recognition uncertain · det ${det.detectionConfidence}%`;
+        drawBox(
+          det.bbox,
+          stroke,
+          confirmed ? 2.25 : 1.75,
+          !recognized,
+          showDebug ? `${label} · det ${det.detectionConfidence}%` : label,
+          confirmed ? "rgba(26, 20, 16, 0.82)" : "rgba(28, 28, 32, 0.82)",
+          confirmed ? "#f4e4a6" : recognized ? "#cfe4ff" : "#d8d8d8"
+        );
+      }
+    },
+    []
+  );
 
   const scanLoop = useCallback(() => {
     if (!scanningRef.current) return;
@@ -191,19 +255,44 @@ export function VisionCount({ onBack }: VisionCountProps) {
     }
 
     try {
-      const frameDetections = detectCardsInFrame(video, processCanvas, processCtx);
+      const debugBuf: DebugRect[] = [];
+      const frameDetections = detectCardsInFrame(
+        video,
+        processCanvas,
+        processCtx,
+        undefined,
+        debugRef.current ? debugBuf : undefined
+      );
       const newlyRegistered = trackerRef.current.processFrame(frameDetections);
       const active = trackerRef.current.getActiveDetections();
 
       setLiveDetections(active);
-      if (active.length) setLastConfidence(Math.max(...active.map((d) => d.confidence)));
-      else if (!scanningRef.current) setLastConfidence(null);
+      setDebugRects(debugRef.current ? debugBuf : []);
+
+      if (active.length) {
+        setLastDetectionConf(Math.max(...active.map((d) => d.detectionConfidence)));
+        const best = active.reduce((a, b) =>
+          b.detectionConfidence > a.detectionConfidence ? b : a
+        );
+        setLastRecognitionLabel(
+          best.recognitionUncertain || !best.rank
+            ? "Card detected — recognition uncertain"
+            : `Card detected / ${best.rank}${best.suit} / ${best.recognitionConfidence}%`
+        );
+      } else {
+        setLastRecognitionLabel(null);
+      }
 
       if (newlyRegistered.length) {
         setDetectedCards((prev) => [...prev, ...newlyRegistered]);
       }
 
-      drawOverlay(active, video);
+      drawOverlay(
+        active,
+        debugBuf.filter((d) => !d.accepted),
+        video,
+        debugRef.current
+      );
     } catch {
       /* safe no-op on detection failures */
     }
@@ -223,6 +312,8 @@ export function VisionCount({ onBack }: VisionCountProps) {
     setScanning(false);
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
     setLiveDetections([]);
+    setDebugRects([]);
+    setLastRecognitionLabel(null);
     const canvas = overlayRef.current;
     const ctx = canvas?.getContext("2d");
     if (canvas && ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -233,7 +324,9 @@ export function VisionCount({ onBack }: VisionCountProps) {
     trackerRef.current.reset();
     setDetectedCards([]);
     setLiveDetections([]);
-    setLastConfidence(null);
+    setDebugRects([]);
+    setLastDetectionConf(null);
+    setLastRecognitionLabel(null);
     setEditCardId(null);
   };
 
@@ -246,11 +339,7 @@ export function VisionCount({ onBack }: VisionCountProps) {
   const applyEdit = () => {
     if (!editCardId) return;
     setDetectedCards((prev) =>
-      prev.map((c) =>
-        c.id === editCardId
-          ? createManualCard(editRank, editSuit, c.id)
-          : c
-      )
+      prev.map((c) => (c.id === editCardId ? createManualCard(editRank, editSuit, c.id) : c))
     );
     setEditCardId(null);
   };
@@ -263,6 +352,8 @@ export function VisionCount({ onBack }: VisionCountProps) {
   const detectedSummary = detectedCards.length
     ? detectedCards.map((c) => c.label).join(" ")
     : "No cards yet";
+
+  const rejectedDebug = debugRects.filter((d) => !d.accepted);
 
   return (
     <section className="screen panel-screen vision-count-screen">
@@ -284,7 +375,7 @@ export function VisionCount({ onBack }: VisionCountProps) {
       </div>
 
       <div className={`vision-status-pill ${statusClass(visionStatus, scanning)}`}>
-        {statusLabel(visionStatus, scanning, hasConfirmedLive, hasUncertainLive, hasAnyLive)}
+        {statusLabel(visionStatus, scanning, hasConfirmedLive, hasShapeOnly, hasAnyLive)}
       </div>
 
       <div className="vision-count-layout">
@@ -307,7 +398,9 @@ export function VisionCount({ onBack }: VisionCountProps) {
           {cameraError === "not_found" && (
             <div className="vision-camera-fallback cream-panel">
               <strong>No camera found</strong>
-              <p className="text-muted">This device does not expose a camera. Manual correction is still available below.</p>
+              <p className="text-muted">
+                This device does not expose a camera. Manual correction is still available below.
+              </p>
             </div>
           )}
 
@@ -320,13 +413,7 @@ export function VisionCount({ onBack }: VisionCountProps) {
 
           {!cameraError && (
             <div className="vision-camera-stage">
-              <video
-                ref={videoRef}
-                className="vision-camera-video"
-                playsInline
-                muted
-                autoPlay
-              />
+              <video ref={videoRef} className="vision-camera-video" playsInline muted autoPlay />
               <canvas ref={overlayRef} className="vision-camera-overlay" aria-hidden="true" />
             </div>
           )}
@@ -350,6 +437,15 @@ export function VisionCount({ onBack }: VisionCountProps) {
               <RotateCcw size={16} /> Reset
             </button>
           </div>
+
+          <button
+            type="button"
+            className={`btn-ghost vision-debug-toggle ${debugMode ? "vision-debug-on" : ""}`}
+            onClick={() => setDebugMode((v) => !v)}
+            aria-pressed={debugMode}
+          >
+            <Bug size={14} /> {debugMode ? "Debug On" : "Debug Off"}
+          </button>
         </div>
 
         <div className="vision-count-side">
@@ -386,16 +482,54 @@ export function VisionCount({ onBack }: VisionCountProps) {
 
           <div className="vision-confidence cream-panel">
             <span className="eyebrow">Detection</span>
-            <p>
-              {lastConfidence != null
-                ? hasUncertainLive && !hasConfirmedLive
-                  ? `Confirming detection (${lastConfidence}% confidence)…`
-                  : `Latest confidence: ${lastConfidence}%`
-                : scanning
+            {liveDetections.length > 0 ? (
+              <ul className="vision-live-list">
+                {liveDetections.map((det, i) => (
+                  <li key={`${det.cx.toFixed(3)}-${det.cy.toFixed(3)}-${i}`}>
+                    <span>Card detected</span>
+                    <span className="text-muted">{recognitionCaption(det)}</span>
+                    <span className="vision-live-meta">
+                      Shape {det.detectionConfidence}%
+                      {det.confirmed ? " · counted" : ""}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p>
+                {scanning
                   ? "Scanning — no cards in frame yet. Hold a card steady in view."
                   : "Start scanning to detect cards."}
-            </p>
+              </p>
+            )}
+            {lastRecognitionLabel && (
+              <p className="vision-latest-line">{lastRecognitionLabel}</p>
+            )}
+            {lastDetectionConf != null && !liveDetections.length && (
+              <p className="text-muted">Last shape confidence: {lastDetectionConf}%</p>
+            )}
           </div>
+
+          {debugMode && (
+            <div className="vision-debug-panel cream-panel">
+              <span className="eyebrow">Debug</span>
+              <p className="text-muted">
+                Accepted shapes show on the camera. Rejected candidates list reasons below.
+              </p>
+              {rejectedDebug.length === 0 ? (
+                <p>No rejected objects this frame.</p>
+              ) : (
+                <ul className="vision-debug-list">
+                  {rejectedDebug.map((r, i) => (
+                    <li key={`rej-${i}`}>
+                      {r.reason}
+                      {r.detectionConfidence > 0 ? ` (${r.detectionConfidence}%)` : ""}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
 
           <div className="vision-manual-add cream-panel">
             <span className="eyebrow">Manual Correction</span>
@@ -432,7 +566,9 @@ export function VisionCount({ onBack }: VisionCountProps) {
               <button
                 type="button"
                 className="btn-secondary"
-                onClick={() => setDetectedCards((prev) => [...prev, createManualCard(editRank, editSuit)])}
+                onClick={() =>
+                  setDetectedCards((prev) => [...prev, createManualCard(editRank, editSuit)])
+                }
               >
                 Add Card Manually
               </button>

@@ -17,43 +17,103 @@ export type DetectedCard = {
   manual?: boolean;
 };
 
+/** Live overlay / UI detection — shape first, rank/suit optional. */
 export type FrameDetection = {
-  rank: string;
-  suit: string;
-  confidence: number;
+  rank: string | null;
+  suit: string | null;
+  /** Shape/presence confidence 0–100 */
+  detectionConfidence: number;
+  /** Rank recognition confidence 0–100 (0 when uncertain) */
+  recognitionConfidence: number;
+  recognitionUncertain: boolean;
+  /** True once this track has been registered into the running count */
   confirmed: boolean;
   bbox: { x: number; y: number; w: number; h: number };
   cx: number;
   cy: number;
 };
 
+export type DebugRect = {
+  bbox: { x: number; y: number; w: number; h: number };
+  accepted: boolean;
+  detectionConfidence: number;
+  reason: string;
+};
+
+export type FrameDetectionStats = {
+  candidates: number;
+  accepted: number;
+  recognized: number;
+  emitted: number;
+};
+
 const SUIT_LETTERS = ["S", "H", "D", "C"] as const;
 const RANK_LIST = [...ranks];
-/** Set true in devtools to log per-frame region/rank stats. */
-export const VISION_DEBUG = false;
 
-const MIN_REGION_AREA = 3200;
-const MAX_REGION_AREA = 32000;
-const MIN_CARD_W = 24;
-const MAX_CARD_W = 120;
-const MIN_CARD_H = 32;
-const MAX_CARD_H = 160;
-const MIN_ASPECT = 0.52;
-const MAX_ASPECT = 0.88;
-const MIN_FILL_RATIO = 0.55;
-const MAX_REGIONS = 5;
-const CELL_SIZE = 44;
-const TRACK_MISS_LIMIT = 12;
-const MATCH_DISTANCE = 0.16;
-const DETECTION_CONF_MIN = 58;
-const REGISTRATION_CONF_MIN = 64;
+/** Toggle from Vision Count UI; keep false for production default. */
+export let VISION_DEBUG = false;
+export function setVisionDebug(enabled: boolean) {
+  VISION_DEBUG = enabled;
+}
+
+const PROCESS_W = 320;
+const PROCESS_H = 240;
+
+/* --- Relative geometry (normalized to process frame) --- */
+const MIN_AREA_FRAC = 0.012; // ~1.2% of frame
+const MAX_AREA_FRAC = 0.55;
+const MIN_W_FRAC = 0.06;
+const MAX_W_FRAC = 0.72;
+const MIN_H_FRAC = 0.1;
+const MAX_H_FRAC = 0.92;
+/** Playing-card portrait width/height ≈ 0.65–0.72; allow tilt & crop. */
+const MIN_ASPECT = 0.48;
+const MAX_ASPECT = 0.92;
+const MIN_FILL_RATIO = 0.52;
+
+/* --- Face / ink heuristics (grayscale 0–255) --- */
+const BRIGHTNESS_THRESHOLD = 168;
+const MIN_FACE_BRIGHTNESS = 140;
+const MAX_FACE_BRIGHTNESS = 252;
+const MIN_INK_DARKNESS = 70;
+const MIN_DARK_RATIO = 0.008;
+const MAX_DARK_RATIO = 0.52;
+const MIN_FACE_STD = 0.14;
+
+/* --- Edge strength along bbox perimeter --- */
+const MIN_EDGE_SCORE = 0.22;
+
+/* --- Confidence gates (detection vs recognition are independent) --- */
+const DETECTION_CONF_MIN = 55;
+const RECOGNITION_CONF_MIN = 62;
+const REGISTRATION_CONF_MIN = 68;
 const CONFIRM_FRAMES_REQUIRED = 2;
-const MIN_RANK_MARGIN = 0.08;
-const MIN_RANK_CORRELATION = 0.28;
-const MIN_FACE_BRIGHTNESS = 152;
-const MIN_INK_DARKNESS = 65;
-const MIN_PATCH_STD = 0.22;
-const BRIGHTNESS_THRESHOLD = 176;
+const MIN_RANK_MARGIN = 0.07;
+const MIN_RANK_CORRELATION = 0.26;
+
+const MAX_REGIONS = 6;
+const MAX_DEBUG_REJECTS = 12;
+const CELL_SIZE = 40;
+const TRACK_MISS_LIMIT = 14;
+const MATCH_DISTANCE = 0.14;
+const SIZE_SIMILARITY = 0.45;
+
+type RawRegion = {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  area: number;
+};
+
+type ScoredCandidate = {
+  region: RawRegion;
+  detectionConfidence: number;
+  reason: string;
+  accepted: boolean;
+  face: { avgBrightness: number; darkRatio: number; std: number };
+  edgeScore: number;
+};
 
 function suitLetter(suit: string): string {
   const idx = suits.indexOf(suit);
@@ -82,7 +142,7 @@ export function hiLoValueForRank(rank: string): number {
 }
 
 function cellKey(cx: number, cy: number): string {
-  return `${Math.floor(cx / CELL_SIZE)},${Math.floor(cy / CELL_SIZE)}`;
+  return `${Math.floor((cx * PROCESS_W) / CELL_SIZE)},${Math.floor((cy * PROCESS_H) / CELL_SIZE)}`;
 }
 
 function distance(a: { cx: number; cy: number }, b: { cx: number; cy: number }): number {
@@ -140,8 +200,7 @@ function ensureRankTemplates(): Map<string, Float32Array> {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = "#1a1a1a";
     ctx.font = "bold 16px Arial, Helvetica, sans-serif";
-    const text = rank;
-    ctx.fillText(text, rank === "10" ? 0 : 3, 21);
+    ctx.fillText(rank, rank === "10" ? 0 : 3, 21);
     const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
     rankTemplates.set(rank, normalizePatch(grayscale(data, canvas.width, canvas.height)));
   }
@@ -171,11 +230,13 @@ function classifyRank(patch: Float32Array): { rank: string; confidence: number }
   if (margin < MIN_RANK_MARGIN || bestScore < MIN_RANK_CORRELATION) {
     return { rank: bestRank, confidence: 0 };
   }
+
+  // Map passing scores into ~62–99 so recognition gate is reachable
   const scoreHeadroom = bestScore - MIN_RANK_CORRELATION;
   const marginHeadroom = margin - MIN_RANK_MARGIN;
   const confidence = Math.max(
     0,
-    Math.min(0.99, 0.52 + scoreHeadroom * 1.1 + marginHeadroom * 0.75)
+    Math.min(0.99, 0.62 + scoreHeadroom * 0.95 + marginHeadroom * 0.85)
   );
   return { rank: bestRank, confidence };
 }
@@ -208,10 +269,15 @@ function regionFaceStats(
   let sum = 0;
   let count = 0;
   let dark = 0;
+  let varianceAcc = 0;
+
+  // Subsample for speed
+  const stepY = Math.max(1, Math.floor(bbox.h / 24));
+  const stepX = Math.max(1, Math.floor(bbox.w / 18));
   const samples: number[] = [];
 
-  for (let py = bbox.y; py < bbox.y + bbox.h; py++) {
-    for (let px = bbox.x; px < bbox.x + bbox.w; px++) {
+  for (let py = bbox.y; py < bbox.y + bbox.h; py += stepY) {
+    for (let px = bbox.x; px < bbox.x + bbox.w; px += stepX) {
       if (px < 0 || py < 0 || px >= width || py >= height) continue;
       const v = gray[py * width + px];
       sum += v;
@@ -224,44 +290,157 @@ function regionFaceStats(
   if (!count) return { avgBrightness: 0, darkRatio: 0, std: 0 };
 
   const mean = sum / count;
-  let variance = 0;
   for (const v of samples) {
     const d = v - mean;
-    variance += d * d;
+    varianceAcc += d * d;
   }
-  const std = Math.sqrt(variance / count) / 128;
+  const std = Math.sqrt(varianceAcc / count) / 128;
 
   return { avgBrightness: mean, darkRatio: dark / count, std };
 }
 
-function validateCardRegion(
+/** Average Sobel magnitude along the four bbox edges (normalized 0–1). */
+function perimeterEdgeScore(
   gray: Float32Array,
   width: number,
   height: number,
-  region: { x: number; y: number; w: number; h: number; area: number }
-): boolean {
-  const { w, h, area } = region;
-  const aspect = w / (h || 1);
-  const fillRatio = area / (w * h);
+  bbox: { x: number; y: number; w: number; h: number }
+): number {
+  const sample = (x: number, y: number) => {
+    const cx = Math.max(1, Math.min(width - 2, x | 0));
+    const cy = Math.max(1, Math.min(height - 2, y | 0));
+    const i = cy * width + cx;
+    const gx =
+      -gray[i - width - 1] -
+      2 * gray[i - 1] -
+      gray[i + width - 1] +
+      gray[i - width + 1] +
+      2 * gray[i + 1] +
+      gray[i + width + 1];
+    const gy =
+      -gray[i - width - 1] -
+      2 * gray[i - width] -
+      gray[i - width + 1] +
+      gray[i + width - 1] +
+      2 * gray[i + width] +
+      gray[i + width + 1];
+    return Math.sqrt(gx * gx + gy * gy);
+  };
 
-  if (area < MIN_REGION_AREA || area > MAX_REGION_AREA) return false;
-  if (aspect < MIN_ASPECT || aspect > MAX_ASPECT) return false;
-  if (w < MIN_CARD_W || w > MAX_CARD_W || h < MIN_CARD_H || h > MAX_CARD_H) return false;
-  if (fillRatio < MIN_FILL_RATIO) return false;
-
-  const face = regionFaceStats(gray, width, height, region);
-  if (face.avgBrightness < MIN_FACE_BRIGHTNESS) return false;
-  if (face.darkRatio < 0.012 || face.darkRatio > 0.48) return false;
-  if (face.std < MIN_PATCH_STD) return false;
-
-  return true;
+  let sum = 0;
+  let n = 0;
+  const steps = 12;
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    sum += sample(bbox.x + t * bbox.w, bbox.y);
+    sum += sample(bbox.x + t * bbox.w, bbox.y + bbox.h);
+    sum += sample(bbox.x, bbox.y + t * bbox.h);
+    sum += sample(bbox.x + bbox.w, bbox.y + t * bbox.h);
+    n += 4;
+  }
+  // Typical card edge magnitude on 0–255 gray is ~40–180
+  return Math.min(1, sum / (n * 120));
 }
 
-function findCardRegions(gray: Float32Array, width: number, height: number) {
+function scoreCardCandidate(
+  gray: Float32Array,
+  width: number,
+  height: number,
+  region: RawRegion
+): ScoredCandidate {
+  const frameArea = width * height;
+  const { w, h, area } = region;
+  const aspect = w / (h || 1);
+  const fillRatio = area / (w * h || 1);
+  const areaFrac = area / frameArea;
+  const wFrac = w / width;
+  const hFrac = h / height;
+
+  const face = regionFaceStats(gray, width, height, region);
+  const edgeScore = perimeterEdgeScore(gray, width, height, region);
+
+  const fail = (reason: string): ScoredCandidate => ({
+    region,
+    detectionConfidence: 0,
+    reason,
+    accepted: false,
+    face,
+    edgeScore,
+  });
+
+  if (areaFrac < MIN_AREA_FRAC || wFrac < MIN_W_FRAC || hFrac < MIN_H_FRAC) {
+    return fail("too_small");
+  }
+  if (areaFrac > MAX_AREA_FRAC || wFrac > MAX_W_FRAC || hFrac > MAX_H_FRAC) {
+    return fail("too_large");
+  }
+  if (aspect < MIN_ASPECT || aspect > MAX_ASPECT) {
+    return fail("aspect_ratio");
+  }
+  if (fillRatio < MIN_FILL_RATIO) {
+    return fail("fill_ratio");
+  }
+  if (face.avgBrightness < MIN_FACE_BRIGHTNESS || face.avgBrightness > MAX_FACE_BRIGHTNESS) {
+    return fail("face_brightness");
+  }
+  if (face.darkRatio < MIN_DARK_RATIO || face.darkRatio > MAX_DARK_RATIO) {
+    return fail("ink_ratio");
+  }
+  if (face.std < MIN_FACE_STD) {
+    return fail("texture");
+  }
+  if (edgeScore < MIN_EDGE_SCORE) {
+    return fail("edge_strength");
+  }
+
+  // Composite detection confidence (shape + face + edges) — independent of rank
+  const aspectIdeal = 1 - Math.min(1, Math.abs(aspect - 0.66) / 0.22);
+  const sizeIdeal =
+    areaFrac >= 0.04 && areaFrac <= 0.35 ? 1 : areaFrac < 0.04 ? areaFrac / 0.04 : Math.max(0, 1 - (areaFrac - 0.35) / 0.2);
+  const fillIdeal = Math.min(1, (fillRatio - MIN_FILL_RATIO) / 0.35);
+  const brightIdeal = Math.min(1, Math.max(0, (face.avgBrightness - MIN_FACE_BRIGHTNESS) / 40));
+  const inkIdeal =
+    face.darkRatio >= 0.02 && face.darkRatio <= 0.28
+      ? 1
+      : face.darkRatio < 0.02
+        ? face.darkRatio / 0.02
+        : Math.max(0, 1 - (face.darkRatio - 0.28) / 0.24);
+
+  const raw =
+    0.22 * aspectIdeal +
+    0.16 * sizeIdeal +
+    0.14 * fillIdeal +
+    0.18 * brightIdeal +
+    0.12 * inkIdeal +
+    0.18 * Math.min(1, edgeScore / 0.55);
+
+  const detectionConfidence = Math.round(Math.max(0, Math.min(0.99, 0.5 + raw * 0.5)) * 100);
+
+  if (detectionConfidence < DETECTION_CONF_MIN) {
+    return {
+      region,
+      detectionConfidence,
+      reason: "low_detection_confidence",
+      accepted: false,
+      face,
+      edgeScore,
+    };
+  }
+
+  return {
+    region,
+    detectionConfidence,
+    reason: "ok",
+    accepted: true,
+    face,
+    edgeScore,
+  };
+}
+
+function findBrightRegions(gray: Float32Array, width: number, height: number): RawRegion[] {
   const threshold = BRIGHTNESS_THRESHOLD;
   const visited = new Uint8Array(width * height);
-  const regions: { x: number; y: number; w: number; h: number; area: number }[] = [];
-  let candidates = 0;
+  const regions: RawRegion[] = [];
 
   for (let y = 0; y < height; y += 2) {
     for (let x = 0; x < width; x += 2) {
@@ -298,19 +477,18 @@ function findCardRegions(gray: Float32Array, width: number, height: number) {
         }
       }
 
-      candidates++;
-      const region = { x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1, area };
-      if (validateCardRegion(gray, width, height, region)) regions.push(region);
+      regions.push({ x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1, area });
     }
   }
 
-  if (VISION_DEBUG && candidates > 0) {
-    console.debug("[visionCount] regions", { candidates, validated: regions.length });
-  }
-
-  return regions.sort((a, b) => b.area - a.area).slice(0, MAX_REGIONS);
+  return regions.sort((a, b) => b.area - a.area);
 }
 
+/**
+ * Crop top-left index corner with light perspective-style sampling:
+ * sample a parallelogram biased toward the card interior so tilted cards
+ * still yield a usable rank patch.
+ */
 function extractCornerPatch(
   data: Uint8ClampedArray,
   width: number,
@@ -319,8 +497,12 @@ function extractCornerPatch(
 ): { patch: Float32Array; corner: Uint8ClampedArray; avg: [number, number, number] } {
   const patchW = 22;
   const patchH = 30;
-  const sx = bbox.x + Math.floor(bbox.w * 0.06);
-  const sy = bbox.y + Math.floor(bbox.h * 0.05);
+  const ox = bbox.x + Math.floor(bbox.w * 0.05);
+  const oy = bbox.y + Math.floor(bbox.h * 0.04);
+  // Scale sampling window with card size (relative crop)
+  const srcW = Math.max(patchW, Math.floor(bbox.w * 0.28));
+  const srcH = Math.max(patchH, Math.floor(bbox.h * 0.22));
+
   const patch = new Float32Array(patchW * patchH);
   const corner = new Uint8ClampedArray(patchW * patchH * 4);
   let rSum = 0;
@@ -330,9 +512,12 @@ function extractCornerPatch(
 
   for (let py = 0; py < patchH; py++) {
     for (let px = 0; px < patchW; px++) {
-      const fx = Math.min(width - 1, sx + px);
-      const fy = Math.min(height - 1, sy + py);
-      const src = (fy * width + fx) * 4;
+      const u = px / (patchW - 1);
+      const v = py / (patchH - 1);
+      // Slight shear approximates small perspective tilt
+      const sx = Math.min(width - 1, Math.max(0, Math.round(ox + u * srcW + v * srcW * 0.04)));
+      const sy = Math.min(height - 1, Math.max(0, Math.round(oy + v * srcH + u * srcH * 0.02)));
+      const src = (sy * width + sx) * 4;
       const dst = (py * patchW + px) * 4;
       corner[dst] = data[src];
       corner[dst + 1] = data[src + 1];
@@ -353,75 +538,109 @@ function extractCornerPatch(
   };
 }
 
-export type FrameDetectionStats = {
-  regionsFound: number;
-  regionsPassed: number;
-  rankMatches: number;
-  emitted: number;
-};
-
 export function detectCardsInFrame(
   source: CanvasImageSource,
   processCanvas: HTMLCanvasElement,
   processCtx: CanvasRenderingContext2D,
-  statsOut?: FrameDetectionStats
+  statsOut?: FrameDetectionStats,
+  debugOut?: DebugRect[]
 ): FrameDetection[] {
-  const targetW = 320;
-  const targetH = 240;
-  processCanvas.width = targetW;
-  processCanvas.height = targetH;
-  processCtx.drawImage(source, 0, 0, targetW, targetH);
+  processCanvas.width = PROCESS_W;
+  processCanvas.height = PROCESS_H;
+  processCtx.drawImage(source, 0, 0, PROCESS_W, PROCESS_H);
 
-  const image = processCtx.getImageData(0, 0, targetW, targetH);
-  const gray = grayscale(image.data, targetW, targetH);
-  const regions = findCardRegions(gray, targetW, targetH);
-  const detections: FrameDetection[] = [];
-  let rankMatches = 0;
+  const image = processCtx.getImageData(0, 0, PROCESS_W, PROCESS_H);
+  const gray = grayscale(image.data, PROCESS_W, PROCESS_H);
+  const rawRegions = findBrightRegions(gray, PROCESS_W, PROCESS_H);
 
-  if (statsOut) {
-    statsOut.regionsFound = regions.length;
-    statsOut.regionsPassed = regions.length;
-    statsOut.rankMatches = 0;
-    statsOut.emitted = 0;
+  const scored: ScoredCandidate[] = [];
+  const rejects: ScoredCandidate[] = [];
+
+  for (const region of rawRegions) {
+    const result = scoreCardCandidate(gray, PROCESS_W, PROCESS_H, region);
+    if (result.accepted) scored.push(result);
+    else if (rejects.length < MAX_DEBUG_REJECTS) rejects.push(result);
   }
 
-  for (const region of regions) {
-    const { patch, corner, avg } = extractCornerPatch(image.data, targetW, targetH, region);
-    const { rank, confidence: rankConf } = classifyRank(patch);
-    const suit = classifySuit(avg[0], avg[1], avg[2], corner);
-    const confidence = Math.round(rankConf * 100);
+  scored.sort((a, b) => b.detectionConfidence - a.detectionConfidence);
+  const accepted = scored.slice(0, MAX_REGIONS);
 
-    if (rankConf > 0) rankMatches++;
-    if (confidence < DETECTION_CONF_MIN) continue;
+  if (debugOut) {
+    debugOut.length = 0;
+    for (const c of accepted) {
+      debugOut.push({
+        bbox: {
+          x: c.region.x / PROCESS_W,
+          y: c.region.y / PROCESS_H,
+          w: c.region.w / PROCESS_W,
+          h: c.region.h / PROCESS_H,
+        },
+        accepted: true,
+        detectionConfidence: c.detectionConfidence,
+        reason: `Detected card Confidence: ${c.detectionConfidence}%`,
+      });
+    }
+    for (const c of rejects) {
+      debugOut.push({
+        bbox: {
+          x: c.region.x / PROCESS_W,
+          y: c.region.y / PROCESS_H,
+          w: c.region.w / PROCESS_W,
+          h: c.region.h / PROCESS_H,
+        },
+        accepted: false,
+        detectionConfidence: c.detectionConfidence,
+        reason: `Rejected object Reason: ${c.reason.replace(/_/g, " ")}`,
+      });
+    }
+  }
+
+  const detections: FrameDetection[] = [];
+  let recognized = 0;
+
+  for (const candidate of accepted) {
+    const { patch, corner, avg } = extractCornerPatch(image.data, PROCESS_W, PROCESS_H, candidate.region);
+    const { rank, confidence: rankConf } = classifyRank(patch);
+    const recognitionConfidence = Math.round(rankConf * 100);
+    const recognitionOk = recognitionConfidence >= RECOGNITION_CONF_MIN;
+    const suit = recognitionOk ? classifySuit(avg[0], avg[1], avg[2], corner) : null;
+
+    if (recognitionOk) recognized++;
 
     detections.push({
-      rank,
+      rank: recognitionOk ? rank : null,
       suit,
-      confidence,
+      detectionConfidence: candidate.detectionConfidence,
+      recognitionConfidence: recognitionOk ? recognitionConfidence : 0,
+      recognitionUncertain: !recognitionOk,
       confirmed: false,
       bbox: {
-        x: region.x / targetW,
-        y: region.y / targetH,
-        w: region.w / targetW,
-        h: region.h / targetH,
+        x: candidate.region.x / PROCESS_W,
+        y: candidate.region.y / PROCESS_H,
+        w: candidate.region.w / PROCESS_W,
+        h: candidate.region.h / PROCESS_H,
       },
-      cx: (region.x + region.w / 2) / targetW,
-      cy: (region.y + region.h / 2) / targetH,
+      cx: (candidate.region.x + candidate.region.w / 2) / PROCESS_W,
+      cy: (candidate.region.y + candidate.region.h / 2) / PROCESS_H,
     });
   }
 
   if (statsOut) {
-    statsOut.rankMatches = rankMatches;
+    statsOut.candidates = rawRegions.length;
+    statsOut.accepted = accepted.length;
+    statsOut.recognized = recognized;
     statsOut.emitted = detections.length;
   }
 
-  if (VISION_DEBUG && (regions.length > 0 || rankMatches > 0)) {
+  if (VISION_DEBUG) {
     console.debug("[visionCount]", {
-      regions: regions.length,
-      rankMatches,
-      emitted: detections.length,
+      candidates: rawRegions.length,
+      accepted: accepted.length,
+      recognized,
       sample: detections[0]
-        ? `${detections[0].rank}${detections[0].suit} @ ${detections[0].confidence}%`
+        ? detections[0].recognitionUncertain
+          ? `shape@${detections[0].detectionConfidence}% uncertain`
+          : `${detections[0].rank}${detections[0].suit} det${detections[0].detectionConfidence}% rec${detections[0].recognitionConfidence}%`
         : null,
     });
   }
@@ -431,36 +650,50 @@ export function detectCardsInFrame(
 
 type ActiveTrack = {
   id: string;
-  rank: string;
-  suit: string;
+  rank: string | null;
+  suit: string | null;
   cx: number;
   cy: number;
   cell: string;
   bbox: { x: number; y: number; w: number; h: number };
-  confidence: number;
+  detectionConfidence: number;
+  recognitionConfidence: number;
+  recognitionUncertain: boolean;
   registered: boolean;
   confirmFrames: number;
   missedFrames: number;
+  area: number;
 };
+
+function bboxArea(b: { w: number; h: number }) {
+  return b.w * b.h;
+}
 
 export class DetectionTracker {
   private tracks: ActiveTrack[] = [];
-  private registeredCells = new Set<string>();
+  private registeredKeys = new Set<string>();
   private nextId = 1;
 
   reset() {
     this.tracks = [];
-    this.registeredCells.clear();
+    this.registeredKeys.clear();
     this.nextId = 1;
   }
 
+  private identityKey(track: ActiveTrack): string {
+    return `${track.cell}:${track.rank ?? "?"}`;
+  }
+
   private findSpatialMatch(det: FrameDetection): ActiveTrack | undefined {
-    return this.tracks.find(
-      (t) =>
-        t.missedFrames < TRACK_MISS_LIMIT &&
-        (t.cell === cellKey(det.cx * 320, det.cy * 240) ||
-          distance(t, { cx: det.cx, cy: det.cy }) < MATCH_DISTANCE)
-    );
+    const detArea = bboxArea(det.bbox);
+    return this.tracks.find((t) => {
+      if (t.missedFrames >= TRACK_MISS_LIMIT) return false;
+      const sameCell = t.cell === cellKey(det.cx, det.cy);
+      const near = distance(t, { cx: det.cx, cy: det.cy }) < MATCH_DISTANCE;
+      if (!sameCell && !near) return false;
+      const areaRatio = Math.min(t.area, detArea) / Math.max(t.area, detArea || 1e-6);
+      return areaRatio >= SIZE_SIMILARITY;
+    });
   }
 
   processFrame(detections: FrameDetection[]): DetectedCard[] {
@@ -469,9 +702,7 @@ export class DetectionTracker {
     for (const track of this.tracks) track.missedFrames++;
 
     for (const det of detections) {
-      const cell = cellKey(det.cx * 320, det.cy * 240);
-      if (this.registeredCells.has(cell)) continue;
-
+      const cell = cellKey(det.cx, det.cy);
       let match = this.findSpatialMatch(det);
 
       if (!match) {
@@ -483,10 +714,13 @@ export class DetectionTracker {
           cy: det.cy,
           cell,
           bbox: det.bbox,
-          confidence: det.confidence,
+          detectionConfidence: det.detectionConfidence,
+          recognitionConfidence: det.recognitionConfidence,
+          recognitionUncertain: det.recognitionUncertain,
           registered: false,
-          confirmFrames: 1,
+          confirmFrames: det.recognitionUncertain ? 0 : 1,
           missedFrames: 0,
+          area: bboxArea(det.bbox),
         };
         this.tracks.push(match);
       } else {
@@ -494,35 +728,81 @@ export class DetectionTracker {
         match.cy = det.cy;
         match.cell = cell;
         match.bbox = det.bbox;
-        match.confidence = Math.max(match.confidence, det.confidence);
-        match.suit = det.suit;
+        match.area = bboxArea(det.bbox);
+        match.detectionConfidence = Math.max(match.detectionConfidence, det.detectionConfidence);
         match.missedFrames = 0;
 
-        if (match.rank === det.rank) {
-          match.confirmFrames++;
-        } else if (det.confidence >= match.confidence) {
+        if (det.recognitionUncertain) {
+          // Keep last good rank guess but do not advance confirmation
+          match.recognitionUncertain = match.recognitionConfidence < REGISTRATION_CONF_MIN;
+        } else if (match.rank === det.rank && det.rank) {
           match.rank = det.rank;
+          match.suit = det.suit;
+          match.recognitionConfidence = Math.max(match.recognitionConfidence, det.recognitionConfidence);
+          match.recognitionUncertain = false;
+          match.confirmFrames++;
+        } else if (
+          det.recognitionConfidence >= match.recognitionConfidence ||
+          match.recognitionUncertain ||
+          !match.rank
+        ) {
+          match.rank = det.rank;
+          match.suit = det.suit;
+          match.recognitionConfidence = det.recognitionConfidence;
+          match.recognitionUncertain = false;
           match.confirmFrames = 1;
         } else {
           match.confirmFrames = Math.max(0, match.confirmFrames - 1);
         }
       }
 
+      const key = this.identityKey(match);
+      if (match.registered || this.registeredKeys.has(key)) {
+        // Same card still in view — never re-count
+        if (match.registered) this.registeredKeys.add(key);
+        continue;
+      }
+
+      // Also block nearby cells for the same recognized rank (duplicate prevention)
+      const nearbyRegistered = Array.from(this.registeredKeys).some((k) => {
+        const [c, r] = k.split(":");
+        return r === match!.rank && r !== "?" && c === match!.cell;
+      });
+      if (nearbyRegistered) continue;
+
       const ready =
-        !match.registered &&
+        !match.recognitionUncertain &&
+        !!match.rank &&
+        !!match.suit &&
         match.confirmFrames >= CONFIRM_FRAMES_REQUIRED &&
-        match.confidence >= REGISTRATION_CONF_MIN;
+        match.recognitionConfidence >= REGISTRATION_CONF_MIN;
 
       if (ready) {
         match.registered = true;
-        this.registeredCells.add(cell);
+        this.registeredKeys.add(key);
         newlyRegistered.push({
           id: match.id,
-          rank: match.rank,
-          suit: match.suit,
-          label: cardLabel(match.rank, match.suit),
-          confidence: match.confidence,
+          rank: match.rank!,
+          suit: match.suit!,
+          label: cardLabel(match.rank!, match.suit!),
+          confidence: match.recognitionConfidence,
         });
+      }
+    }
+
+    // Free identity keys when the track fully disappears (re-entry allowed later)
+    const aliveKeys = new Set(
+      this.tracks
+        .filter((t) => t.registered && t.missedFrames < TRACK_MISS_LIMIT)
+        .map((t) => this.identityKey(t))
+    );
+    for (const key of Array.from(this.registeredKeys)) {
+      if (!aliveKeys.has(key)) {
+        // Keep lock briefly via tracks filter below; drop when track gone
+        const stillTracked = this.tracks.some(
+          (t) => this.identityKey(t) === key && t.missedFrames < TRACK_MISS_LIMIT
+        );
+        if (!stillTracked) this.registeredKeys.delete(key);
       }
     }
 
@@ -530,13 +810,15 @@ export class DetectionTracker {
     return newlyRegistered;
   }
 
-  getActiveDetections(minConfidence = DETECTION_CONF_MIN): FrameDetection[] {
+  getActiveDetections(): FrameDetection[] {
     return this.tracks
-      .filter((t) => t.missedFrames === 0 && t.confidence >= minConfidence)
+      .filter((t) => t.missedFrames === 0 && t.detectionConfidence >= DETECTION_CONF_MIN)
       .map((t) => ({
         rank: t.rank,
         suit: t.suit,
-        confidence: t.confidence,
+        detectionConfidence: t.detectionConfidence,
+        recognitionConfidence: t.recognitionConfidence,
+        recognitionUncertain: t.recognitionUncertain || !t.rank,
         confirmed: t.registered,
         bbox: t.bbox,
         cx: t.cx,
