@@ -135,9 +135,24 @@ const MIN_RANK_CORRELATION = 0.26;
 const SUIT_CONF_MIN = 45;
 const MIN_SUIT_MARGIN = 0.05;
 const MIN_SUIT_CORRELATION = 0.2;
-/** Structural-feature (holes/ink-components) mismatch penalty applied to raw template correlation. */
-const HOLES_PENALTY_WEIGHT = 0.22;
-const COMPONENTS_PENALTY_WEIGHT = 0.4;
+/**
+ * Structural-feature (holes/ink-components) mismatch penalty applied to raw
+ * template correlation. This must stay a gentle TIE-BREAKER between visually
+ * similar templates, never a hard gate: a real camera crop routinely picks up
+ * 1 stray hole/component from anti-aliasing or sensor noise around glyph
+ * edges, so a per-unit weight anywhere near the correlation gate's own
+ * magnitude (MIN_RANK_CORRELATION) would let a single spurious blob veto an
+ * otherwise-correct match. Weights are kept well below typical rank-to-rank
+ * correlation gaps, and MAX_STRUCTURAL_DIFF caps the worst case so a noisy
+ * patch with many spurious blobs can't blow the score arbitrarily negative.
+ */
+const HOLES_PENALTY_WEIGHT = 0.05;
+const COMPONENTS_PENALTY_WEIGHT = 0.06;
+const MAX_STRUCTURAL_DIFF = 2;
+/** Ignore ink/background blobs smaller than this many pixels — anti-aliasing
+ * and camera sensor noise routinely create 1–3px specks after Otsu
+ * thresholding that are not real structural holes/components. */
+const MIN_BLOB_AREA = 6;
 
 const MAX_REGIONS = 6;
 const MAX_DEBUG_REJECTS = 12;
@@ -314,7 +329,6 @@ function countHolesAndComponents(
   w: number,
   h: number
 ): { holes: number; components: number } {
-  const MIN_AREA = 2;
   const visited = new Uint8Array(w * h);
 
   const floodCount = (
@@ -345,7 +359,7 @@ function countHolesAndComponents(
           }
         }
       }
-      if (area >= MIN_AREA) count++;
+      if (area >= MIN_BLOB_AREA) count++;
     }
     return count;
   };
@@ -513,9 +527,25 @@ function ensureSuitTemplates(): Map<string, SuitTemplate> {
  * holes/ink-component mismatches (see countHolesAndComponents doc comment
  * for exactly which confusable pairs this resolves).
  */
+export type RankDebug = {
+  rank: string;
+  rawCorrelation: number;
+  holesDiff: number;
+  componentsDiff: number;
+  penalty: number;
+  score: number;
+  margin: number;
+};
+
 function classifyRank(
   rawGray: Float32Array
-): { rank: string; confidence: number; holes: number; components: number } {
+): {
+  rank: string;
+  confidence: number;
+  holes: number;
+  components: number;
+  debug: RankDebug;
+} {
   const templates = ensureRankTemplates();
   const threshold = otsuThreshold(rawGray);
   const bin = binarizeInk(rawGray, threshold);
@@ -524,27 +554,50 @@ function classifyRank(
 
   let bestRank = "A";
   let bestScore = -Infinity;
+  let bestCorr = -Infinity;
+  let bestHolesDiff = 0;
+  let bestComponentsDiff = 0;
   let secondScore = -Infinity;
 
   for (const rank of RANK_LIST) {
     const template = templates.get(rank);
     if (!template) continue;
     const corr = correlate(normQuery, template.gray);
-    const holesDiff = Math.abs(holes - template.holes);
-    const componentsDiff = Math.abs(Math.max(1, components) - template.components);
+    // Cap each diff so a handful of noise-induced blobs can't blow the
+    // penalty (and therefore the score) arbitrarily negative — this keeps
+    // the structural check a tie-breaker between close correlation scores
+    // instead of a hard veto over the raw template match.
+    const holesDiff = Math.min(MAX_STRUCTURAL_DIFF, Math.abs(holes - template.holes));
+    const componentsDiff = Math.min(
+      MAX_STRUCTURAL_DIFF,
+      Math.abs(Math.max(1, components) - template.components)
+    );
     const score = corr - componentsDiff * COMPONENTS_PENALTY_WEIGHT - holesDiff * HOLES_PENALTY_WEIGHT;
     if (score > bestScore) {
       secondScore = bestScore;
       bestRank = rank;
       bestScore = score;
+      bestCorr = corr;
+      bestHolesDiff = holesDiff;
+      bestComponentsDiff = componentsDiff;
     } else if (score > secondScore) {
       secondScore = score;
     }
   }
 
   const margin = bestScore - secondScore;
+  const debug: RankDebug = {
+    rank: bestRank,
+    rawCorrelation: bestCorr,
+    holesDiff: bestHolesDiff,
+    componentsDiff: bestComponentsDiff,
+    penalty: bestComponentsDiff * COMPONENTS_PENALTY_WEIGHT + bestHolesDiff * HOLES_PENALTY_WEIGHT,
+    score: bestScore,
+    margin,
+  };
+
   if (margin < MIN_RANK_MARGIN || bestScore < MIN_RANK_CORRELATION) {
-    return { rank: bestRank, confidence: 0, holes, components };
+    return { rank: bestRank, confidence: 0, holes, components, debug };
   }
 
   // Map passing scores into ~62–99 so recognition gate is reachable
@@ -554,7 +607,7 @@ function classifyRank(
     0,
     Math.min(0.99, 0.62 + scoreHeadroom * 0.95 + marginHeadroom * 0.85)
   );
-  return { rank: bestRank, confidence, holes, components };
+  return { rank: bestRank, confidence, holes, components, debug };
 }
 
 /**
@@ -1012,6 +1065,7 @@ type CardRecognition = {
   rankConfidence: number;
   suit: string;
   suitConfidence: number;
+  rankDebug: RankDebug;
 };
 
 /**
@@ -1062,12 +1116,34 @@ function recognizeCard(
     const suitConfidence = Math.round(suitResult.confidence * 100);
 
     if (!best || rankConfidence > best.rankConfidence) {
-      best = { corner, rank: rankResult.rank, rankConfidence, suit: suitResult.suit, suitConfidence };
+      best = {
+        corner,
+        rank: rankResult.rank,
+        rankConfidence,
+        suit: suitResult.suit,
+        suitConfidence,
+        rankDebug: rankResult.debug,
+      };
     }
   }
 
   return (
-    best ?? { corner: "tl", rank: "A", rankConfidence: 0, suit: "♠", suitConfidence: 0 }
+    best ?? {
+      corner: "tl",
+      rank: "A",
+      rankConfidence: 0,
+      suit: "♠",
+      suitConfidence: 0,
+      rankDebug: {
+        rank: "A",
+        rawCorrelation: 0,
+        holesDiff: 0,
+        componentsDiff: 0,
+        penalty: 0,
+        score: 0,
+        margin: 0,
+      },
+    }
   );
 }
 
@@ -1168,9 +1244,11 @@ export function detectCardsInFrame(
 
   const detections: FrameDetection[] = [];
   let recognized = 0;
+  let topRankDebug: RankDebug | null = null;
 
   for (const candidate of accepted) {
     const rec = recognizeCard(image.data, width, height, candidate.region);
+    if (!topRankDebug) topRankDebug = rec.rankDebug;
     // Rank and suit each gate on their OWN threshold — a confident rank with
     // a weak suit read still reports the rank; detectionConfidence never
     // factors into either decision.
@@ -1209,6 +1287,7 @@ export function detectCardsInFrame(
   }
 
   if (VISION_DEBUG) {
+    const topDebug = topRankDebug;
     console.debug("[visionCount]", {
       candidates: rawRegions.length,
       accepted: accepted.length,
@@ -1217,6 +1296,24 @@ export function detectCardsInFrame(
         ? detections[0].recognitionUncertain
           ? `detection ${detections[0].detectionConfidence}% / rank uncertain`
           : `${detections[0].rank ?? "?"}${detections[0].suit ?? "?"} — detection ${detections[0].detectionConfidence}% / rank ${detections[0].recognitionConfidence}% / suit ${detections[0].suitConfidence}%`
+        : null,
+      // Raw correlation/structural breakdown for the top candidate's best
+      // corner+rank guess — use this to see WHY a read passed or failed the
+      // MIN_RANK_CORRELATION / MIN_RANK_MARGIN gates (e.g. correlation is
+      // fine but margin is too tight, or the structural penalty is eating
+      // too much of the score).
+      topRankDebug: topDebug
+        ? {
+            bestGuess: topDebug.rank,
+            rawCorrelation: Number(topDebug.rawCorrelation.toFixed(3)),
+            holesDiff: topDebug.holesDiff,
+            componentsDiff: topDebug.componentsDiff,
+            penalty: Number(topDebug.penalty.toFixed(3)),
+            finalScore: Number(topDebug.score.toFixed(3)),
+            margin: Number(topDebug.margin.toFixed(3)),
+            passedCorrelationGate: topDebug.score >= MIN_RANK_CORRELATION,
+            passedMarginGate: topDebug.margin >= MIN_RANK_MARGIN,
+          }
         : null,
     });
   }
